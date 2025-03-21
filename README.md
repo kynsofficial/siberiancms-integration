@@ -197,26 +197,9 @@ Customize the button appearance and behavior with these parameters:
 | `id` | Custom HTML ID | `"main-login-button"` |
 
 ### Style Examples
+<img src="assets/images/screenshot-7.png" alt=Button Styling" style="max-width: 100%; height: auto;">
 
-<table>
-  <tr>
-    <td width="33%">
-      <strong>Primary Style</strong><br>
-      <code>[swsib_login style="primary" class="large"]</code><br>
-      <img src="assets/images/button-primary.png" alt="Primary Button Style">
-    </td>
-    <td width="33%">
-      <strong>Success Style</strong><br>
-      <code>[swsib_login style="success" class="rounded"]</code><br>
-      <img src="assets/images/button-success.png" alt="Success Button Style">
-    </td>
-    <td width="33%">
-      <strong>Outline Style</strong><br>
-      <code>[swsib_login style="outline" class="block"]</code><br>
-      <img src="assets/images/button-outline.png" alt="Outline Button Style">
-    </td>
-  </tr>
-</table>
+
 
 ### Programmatic Usage
 

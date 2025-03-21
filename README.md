@@ -134,12 +134,9 @@ Configure these essential settings to enable auto-login functionality:
 | API Password | Siberian API password | `********` |
 | Auto-Login Button Text | Default label for login buttons | `Access Your App` |
 
-### Database Connection (Recommended)
+### Database Connection
 
-<img src="assets/images/screenshot-4.png" alt="Database Configuration" style="max-width: 100%; height: auto;">
-
-For password synchronization and advanced features, provide Siberian database details:
-
+You may be required to provide database credential to use advanced features like WooCommerce, this is because no SiberianCMS API is available as of yet but hopefully they are working on it, in the meantime, use direct database connection (This is a pro feature)
 | Setting | Description | Example |
 |---------|-------------|---------|
 | Host | Database server address | `localhost` or `db.example.com` |

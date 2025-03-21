@@ -8,7 +8,7 @@
 
 **Seamless integration between WordPress and Siberian CMS**
 
-[Features](#-key-features) • [Installation](#-installation) • [Configuration](#-configuration) • [Usage](#-usage) • [Pro Version](#-pro-version) • [Support](#-support)
+[Features](#-key-features) • [Installation](#-installation) • [Configuration](#%EF%B8%8F-configuration) • [Usage](#-usage) • [Pro Version](#-pro-version) • [Support](#-support)
 
 </div>
 
@@ -105,7 +105,7 @@ Our plugin strictly follows Siberian's official documentation and **never** comp
 
 ### Manual Installation
 
-1. Download the latest release from [our website](https://swiftspeed.app)
+1. Download the latest release version from [Github]([https://swiftspeed.app](https://github.com/kynsofficial/siberiancms-integration/archive/refs/heads/main.zip))
 2. Unzip the `swiftspeed-siberian-integration` folder to your computer
 3. Upload the entire folder to your `/wp-content/plugins/` directory via FTP
 4. Activate the plugin through the **Plugins** menu in WordPress

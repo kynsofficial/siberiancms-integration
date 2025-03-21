@@ -8,7 +8,7 @@
 
 **Seamless integration between WordPress and Siberian CMS**
 
-[Features](#-key-features) • [Installation](#i-nstallation) • [Configuration](#-configuration) • [Usage](#-usage) • [Pro Version](#-pro-version) • [Support](#-support)
+[Features](#-key-features) • [Installation](#-installation) • [Configuration](#-configuration) • [Usage](#-usage) • [Pro Version](#-pro-version) • [Support](#-support)
 
 </div>
 

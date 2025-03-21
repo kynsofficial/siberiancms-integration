@@ -105,7 +105,7 @@ Our plugin strictly follows Siberian's official documentation and **never** comp
 
 ### Manual Installation
 
-1. Download the latest release version from [aptlearn](https://github.com/kynsofficial/siberiancms-integration/archive/refs/heads/main.zip])
+1. Download the latest release version [Here](https://github.com/kynsofficial/siberiancms-integration/archive/refs/heads/main.zip])
 2. Unzip the `swiftspeed-siberian-integration` folder to your computer
 3. Upload the entire folder to your `/wp-content/plugins/` directory via FTP
 4. Activate the plugin through the **Plugins** menu in WordPress

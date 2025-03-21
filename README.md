@@ -197,7 +197,7 @@ Customize the button appearance and behavior with these parameters:
 | `id` | Custom HTML ID | `"main-login-button"` |
 
 ### Style Examples
-<img src="assets/images/screenshot-7.png" alt=Button Styling" style="max-width: 100%; height: auto;">
+<img src="assets/images/screenshot-7.png" alt="Database Configuration" style="max-width: 100%; height: auto;">
 
 
 
@@ -228,9 +228,6 @@ For backward compatibility with older integrations, we support the legacy shortc
 
 ## 📱 Pro Version
 
-<div align="center">
-  <img src="assets/images/pro-features.png" alt="SwiftSpeed Siberian Integration Pro Features" style="max-width: 80%; height: auto;">
-</div>
 
 ### WooCommerce Integration (Pro)
 
@@ -242,8 +239,6 @@ Ideal for Siberian Platform Edition (PE) owners, this feature provides:
 - **Custom Product Mapping**: Associate WooCommerce products with specific Siberian app templates or features
 
 ### Automation Tools (Pro)
-
-<img src="assets/images/automation-tab.png" alt="Automation Tools" style="max-width: 100%; height: auto;">
 
 Create sophisticated workflows with our automation engine:
 

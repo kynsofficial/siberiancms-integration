@@ -152,6 +152,7 @@ For password synchronization and advanced features, provide Siberian database de
 > ⚠️ **Security Note**: Ensure your database user has minimal required permissions. Read-write access to Siberian tables is sufficient.
 
 ### Compatibility Settings
+<img src="assets/images/screenshot-4.png" alt="Database Configuration" style="max-width: 100%; height: auto;">
 
 The plugin includes a dedicated compatibility tab to address potential conflicts with other Siberian modules:
 

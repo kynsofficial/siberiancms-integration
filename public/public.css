@@ -1,0 +1,133 @@
+/* SwiftSpeed Siberian Integration Public Styles */
+.swsib-button {
+    display: inline-block;
+    padding: 12px 20px;
+
+    color: #fff;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+    line-height: 1.2;
+    font-size: 14px;
+}
+
+/* Set a default for buttons that don't have custom color */
+a.swsib-button:not([style*="background-color"]) {
+    background-color: #3a4b79;
+}
+
+.swsib-button:hover {
+    filter: brightness(115%); /* Brighten button on hover for any color */
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+.swsib-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.swsib-button.loading {
+    position: relative;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.swsib-button.loading:after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    right: 10px;
+    margin-top: -8px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-top-color: #ffffff;
+    animation: swsib-spinner 0.6s linear infinite;
+    display: inline-block;
+}
+
+@keyframes swsib-spinner {
+    to {transform: rotate(360deg);}
+}
+
+/* Notification Styles */
+.swsib-notification {
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    font-size: 14px;
+    position: relative;
+}
+
+.swsib-processing {
+    background-color: #fff8e5;
+    color: #95600a;
+    border: 1px solid #fbbc05;
+}
+
+.swsib-success {
+    background-color: #edfaef;
+    color: #0a7a35;
+    border: 1px solid #34a853;
+}
+
+.swsib-error {
+    background-color: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #ea4335;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.swsib-login-required {
+    padding: 15px;
+    background-color: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #ea4335;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+/* Button Variations - still supported but custom color takes precedence */
+.swsib-button-primary {
+    background-color: #3a4b79;
+}
+
+.swsib-button-secondary {
+    background-color: #f0f0f1;
+    color: #2c3338;
+    border: 1px solid #dadce0;
+}
+
+.swsib-button-secondary:hover {
+    background-color: #e5e5e5;
+    color: #1d2327;
+    filter: none;
+}
+
+.swsib-button-success {
+    background-color: #34a853;
+}
+
+.swsib-button-outline {
+    background-color: transparent;
+    border: 2px solid #3a4b79;
+    color: #3a4b79;
+}
+
+.swsib-button-outline:hover {
+    background-color: #3a4b79;
+    color: #fff;
+    filter: none;
+}

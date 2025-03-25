@@ -8,7 +8,7 @@
 
 **Seamless integration between WordPress and Siberian CMS**
 
-[Features](#key-features) • [Installation](#installation) • [Configuration](#configuration) • [Usage](#usage) • [Pro Version](#pro-version) • [Support](#support)
+[Features](#-key-features) • [Installation](#-installation) • [Configuration](#%EF%B8%8F-configuration) • [Usage](#-usage) • [Pro Version](#-pro-version) • [Support](#%EF%B8%8F-support)
 
 </div>
 
@@ -16,11 +16,11 @@
 
 ## 📋 Overview
 
-SwiftSpeed Siberian Integration creates a robust bridge between WordPress and [Siberian CMS](https://www.siberiancms.com/), delivering a frictionless experience for both administrators and users. Unlike outdated solutions that charged premium fees (119€+), we offer core functionality **completely free** while maintaining the highest standards of security and performance.
+SiberianCMS Integration plugin creates a robust bridge between WordPress and [Siberian CMS](https://www.siberiancms.com/), delivering a frictionless experience for both administrators and users. Unlike outdated solutions that charged premium fees (119€+), we offer core functionality **completely free** while maintaining the highest standards of security and performance.
 
 Our plugin strictly follows Siberian's official documentation and **never** compromises your Siberian installation's integrity or security modules.
 
-### Why Choose SwiftSpeed Siberian Integration?
+### Why Migrate to this?
 
 - **Security-First Approach**: Implements secure authentication practices without modifying Siberian core files
 - **Modern Architecture**: Built with the latest WordPress development standards
@@ -100,12 +100,12 @@ Our plugin strictly follows Siberian's official documentation and **never** comp
 
 1. Log in to your WordPress admin dashboard
 2. Navigate to **Plugins > Add New**
-3. Search for "SwiftSpeed Siberian Integration"
+3. Search for "Swiftspeed Siberian Integration"
 4. Click **Install Now** and then **Activate**
 
 ### Manual Installation
 
-1. Download the latest release from [our website](https://swiftspeed.app)
+1. Download the latest release version [Here](https://github.com/kynsofficial/siberiancms-integration/archive/refs/heads/main.zip])
 2. Unzip the `swiftspeed-siberian-integration` folder to your computer
 3. Upload the entire folder to your `/wp-content/plugins/` directory via FTP
 4. Activate the plugin through the **Plugins** menu in WordPress
@@ -134,12 +134,9 @@ Configure these essential settings to enable auto-login functionality:
 | API Password | Siberian API password | `********` |
 | Auto-Login Button Text | Default label for login buttons | `Access Your App` |
 
-### Database Connection (Recommended)
+### Database Connection
 
-<img src="assets/images/screenshot-4.png" alt="Database Configuration" style="max-width: 100%; height: auto;">
-
-For password synchronization and advanced features, provide Siberian database details:
-
+You may be required to provide database credential to use advanced features like WooCommerce, this is because no SiberianCMS API is available as of yet but hopefully they are working on it, in the meantime, use direct database connection (This is a pro feature)
 | Setting | Description | Example |
 |---------|-------------|---------|
 | Host | Database server address | `localhost` or `db.example.com` |
@@ -152,6 +149,7 @@ For password synchronization and advanced features, provide Siberian database de
 > ⚠️ **Security Note**: Ensure your database user has minimal required permissions. Read-write access to Siberian tables is sufficient.
 
 ### Compatibility Settings
+<img src="assets/images/screenshot-4.png" alt="Database Configuration" style="max-width: 100%; height: auto;">
 
 The plugin includes a dedicated compatibility tab to address potential conflicts with other Siberian modules:
 
@@ -199,26 +197,9 @@ Customize the button appearance and behavior with these parameters:
 | `id` | Custom HTML ID | `"main-login-button"` |
 
 ### Style Examples
+<img src="assets/images/screenshot-7.png" alt="Database Configuration" style="max-width: 100%; height: auto;">
 
-<table>
-  <tr>
-    <td width="33%">
-      <strong>Primary Style</strong><br>
-      <code>[swsib_login style="primary" class="large"]</code><br>
-      <img src="assets/images/button-primary.png" alt="Primary Button Style">
-    </td>
-    <td width="33%">
-      <strong>Success Style</strong><br>
-      <code>[swsib_login style="success" class="rounded"]</code><br>
-      <img src="assets/images/button-success.png" alt="Success Button Style">
-    </td>
-    <td width="33%">
-      <strong>Outline Style</strong><br>
-      <code>[swsib_login style="outline" class="block"]</code><br>
-      <img src="assets/images/button-outline.png" alt="Outline Button Style">
-    </td>
-  </tr>
-</table>
+
 
 ### Programmatic Usage
 
@@ -247,9 +228,6 @@ For backward compatibility with older integrations, we support the legacy shortc
 
 ## 📱 Pro Version
 
-<div align="center">
-  <img src="assets/images/pro-features.png" alt="SwiftSpeed Siberian Integration Pro Features" style="max-width: 80%; height: auto;">
-</div>
 
 ### WooCommerce Integration (Pro)
 
@@ -261,8 +239,6 @@ Ideal for Siberian Platform Edition (PE) owners, this feature provides:
 - **Custom Product Mapping**: Associate WooCommerce products with specific Siberian app templates or features
 
 ### Automation Tools (Pro)
-
-<img src="assets/images/automation-tab.png" alt="Automation Tools" style="max-width: 100%; height: auto;">
 
 Create sophisticated workflows with our automation engine:
 
@@ -282,7 +258,7 @@ Keep your Siberian installation running optimally with specialized tools:
 
 ### How to Upgrade
 
-1. Purchase a Pro license from [our website](https://swiftspeed.app/product/siberian-integration/)
+1. Purchase a Pro license from [our website](https://swiftspeed.app/siberiancms-integration-pro/)
 2. Enter your license key in the **License** tab of the plugin settings
 3. Instantly unlock all Pro features while maintaining your existing configuration
 
@@ -300,7 +276,7 @@ We prioritize security throughout the plugin's architecture:
 
 ### Security Best Practices
 
-- Regularly update both WordPress and the SwiftSpeed Siberian Integration plugin
+- Regularly update both WordPress and the Swiftspeed Siberian Integration plugin
 - Use strong, unique passwords for API and database access
 - Implement proper user role management in both WordPress and Siberian
 - Consider IP restrictions for sensitive admin functionalities
@@ -313,7 +289,7 @@ Follow these steps to migrate from outdated Siberian integration plugins:
 
 1. **Backup**: Create complete backups of both WordPress and Siberian before proceeding
 2. **Deactivate Old Plugin**: Disable the existing integration plugin through the WordPress Plugins page
-3. **Install SwiftSpeed**: Install and activate SwiftSpeed Siberian Integration
+3. **Install Swiftspeed**: Install and activate Swiftspeed Siberian Integration
 4. **Configure Settings**: Enter your credentials in the Auto Login and Database Connection tabs
 5. **Replace Shortcodes**: Update any existing shortcodes in your content (though legacy formats are supported)
 6. **Test Thoroughly**: Verify that user authentication and all features work properly
@@ -412,7 +388,7 @@ GNU General Public License for more details.
 ---
 
 <div align="center">
-  <p><strong>Developed with ❤️ by <a href="https://swiftspeed.app">SwiftSpeed</a></strong></p>
+  <p><strong>Developed with ❤️ by <a href="https://swiftspeed.app">Swiftspeed</a></strong></p>
   <p>
     <a href="https://twitter.com/swiftspeedapp">Twitter</a> •
     <a href="https://facebook.com/swiftspeedapp">Facebook</a> •

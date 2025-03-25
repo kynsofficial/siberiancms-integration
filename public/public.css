@@ -131,3 +131,43 @@ a.swsib-button:not([style*="background-color"]) {
     color: #fff;
     filter: none;
 }
+
+/* Existing CSS will be here... */
+
+/* Processing screen styles */
+.swsib-processing-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+}
+
+.swsib-processing-content {
+    text-align: center;
+}
+
+.swsib-processing-text {
+    display: block;
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+.swsib-processing-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(0,0,0,0.1);
+    border-radius: 50%;
+    border-top-color: #3498db;
+    animation: swsib-spin 1s ease-in-out infinite;
+}
+
+@keyframes swsib-spin {
+    to { transform: rotate(360deg); }
+}

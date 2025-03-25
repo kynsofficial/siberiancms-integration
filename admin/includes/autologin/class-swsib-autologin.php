@@ -70,30 +70,37 @@ class SwiftSpeed_Siberian_Autologin {
         }
         
         // Text fields
-        $text_fields = array('autologin_text', 'notification_text', 'api_user', 'default_role_id');
+        $text_fields = array('autologin_text', 'notification_text', 'api_user', 'default_role_id', 'processing_text');
         foreach ($text_fields as $field) {
             if (isset($auto_login[$field])) {
                 $options['auto_login'][$field] = sanitize_text_field($auto_login[$field]);
                 $this->log_message("Updated $field to: " . $options['auto_login'][$field]);
             }
         }
-        
-        // Color field
-        if (isset($auto_login['button_color'])) {
-            $options['auto_login']['button_color'] = sanitize_hex_color($auto_login['button_color']);
-            $this->log_message("Updated button_color to: " . $options['auto_login']['button_color']);
+
+        // Color fields
+        $color_fields = array('button_color', 'processing_bg_color', 'processing_text_color');
+        foreach ($color_fields as $field) {
+            if (isset($auto_login[$field])) {
+                $options['auto_login'][$field] = sanitize_hex_color($auto_login[$field]);
+                $this->log_message("Updated $field to: " . $options['auto_login'][$field]);
+            }
         }
-        
+
         // Password field (no sanitization)
         if (isset($auto_login['api_password'])) {
             $options['auto_login']['api_password'] = $auto_login['api_password'];
             $this->log_message("Updated api_password (value hidden)");
         }
-        
-        // Checkbox field
+
+        // Checkbox fields
         $options['auto_login']['keep_data_on_uninstall'] = isset($auto_login['keep_data_on_uninstall']);
         $this->log_message("Updated keep_data_on_uninstall to: " . ($options['auto_login']['keep_data_on_uninstall'] ? 'true' : 'false'));
-        
+
+        // Auto-authenticate checkbox field
+        $options['auto_login']['auto_authenticate'] = isset($auto_login['auto_authenticate']);
+        $this->log_message("Updated auto_authenticate to: " . ($options['auto_login']['auto_authenticate'] ? 'true' : 'false'));
+
         // Preserve other fields if they exist
         $preserve_fields = array('app_key', 'connection_type');
         foreach ($preserve_fields as $field) {
@@ -106,11 +113,11 @@ class SwiftSpeed_Siberian_Autologin {
                 $this->log_message("Set default empty value for $field");
             }
         }
-        
+
         // Save options
         update_option('swsib_options', $options);
         $this->log_message("Saved options to database");
-        
+
         // Add settings updated notice
         add_settings_error(
             'swsib_options',
@@ -119,12 +126,12 @@ class SwiftSpeed_Siberian_Autologin {
             'updated'
         );
         set_transient('settings_errors', get_settings_errors(), 30);
-        
+
         // Redirect back to the tab
         wp_redirect(admin_url('admin.php?page=swsib-integration&tab_id=auto_login&settings-updated=true'));
         exit;
     }
-    
+
     /**
      * Display Auto Login settings
      */
@@ -138,7 +145,11 @@ class SwiftSpeed_Siberian_Autologin {
         $api_password = isset($auto_login_options['api_password']) ? $auto_login_options['api_password'] : '';
         $default_role_id = isset($auto_login_options['default_role_id']) ? $auto_login_options['default_role_id'] : '2';
         $keep_data = isset($auto_login_options['keep_data_on_uninstall']) ? $auto_login_options['keep_data_on_uninstall'] : true;
-        
+        $auto_authenticate = isset($auto_login_options['auto_authenticate']) ? $auto_login_options['auto_authenticate'] : false;
+        $processing_text = isset($auto_login_options['processing_text']) ? $auto_login_options['processing_text'] : 'Processing...';
+        $processing_bg_color = isset($auto_login_options['processing_bg_color']) ? $auto_login_options['processing_bg_color'] : '#f5f5f5';
+        $processing_text_color = isset($auto_login_options['processing_text_color']) ? $auto_login_options['processing_text_color'] : '#333333';
+
         // Log current settings for debugging
         $this->log_message("Displaying settings with autologin_text: $autologin_text");
         ?>
@@ -146,106 +157,169 @@ class SwiftSpeed_Siberian_Autologin {
         <p class="panel-description">
             <?php _e('Configure settings for automatic login between WordPress and Siberian CMS using API integration.', 'swiftspeed-siberian'); ?>
         </p>
-        
+
         <!-- Direct form submission to admin-post.php -->
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" id="swsib-auto-login-form" class="swsib-settings-form">
             <?php wp_nonce_field('swsib_autologin_nonce'); ?>
             <input type="hidden" name="action" value="swsib_save_autologin_settings">
             <input type="hidden" name="tab_id" value="auto_login">
-            
+
             <div class="swsib-field">
                 <label for="swsib_options_auto_login_siberian_url"><?php _e('Siberian CMS URL', 'swiftspeed-siberian'); ?></label>
-                <input type="url" id="swsib_options_auto_login_siberian_url" 
-                    name="swsib_options[auto_login][siberian_url]" 
-                    value="<?php echo esc_url($siberian_url); ?>" 
-                    placeholder="https://your-siberian-installation.com" 
+                <input type="url" id="swsib_options_auto_login_siberian_url"
+                    name="swsib_options[auto_login][siberian_url]"
+                    value="<?php echo esc_url($siberian_url); ?>"
+                    placeholder="https://your-siberian-installation.com"
                     required />
                 <p class="swsib-field-note"><?php _e('The URL to your Siberian CMS installation.', 'swiftspeed-siberian'); ?></p>
             </div>
-            
+
             <div class="swsib-field">
                 <label for="swsib_options_auto_login_autologin_text"><?php _e('Auto-Login Button Text', 'swiftspeed-siberian'); ?></label>
-                <input type="text" id="swsib_options_auto_login_autologin_text" 
-                    name="swsib_options[auto_login][autologin_text]" 
-                    value="<?php echo esc_attr($autologin_text); ?>" 
+                <input type="text" id="swsib_options_auto_login_autologin_text"
+                    name="swsib_options[auto_login][autologin_text]"
+                    value="<?php echo esc_attr($autologin_text); ?>"
                     placeholder="App Dashboard" />
                 <p class="swsib-field-note"><?php _e('Text to display on the auto-login button.', 'swiftspeed-siberian'); ?></p>
             </div>
-            
+
             <div class="swsib-field">
                 <label for="swsib_options_auto_login_button_color"><?php _e('Button Color', 'swiftspeed-siberian'); ?></label>
-                <input type="text" id="swsib_options_auto_login_button_color" 
-                    class="swsib-color-picker" 
-                    name="swsib_options[auto_login][button_color]" 
-                    value="<?php echo esc_attr($button_color); ?>" 
+                <input type="text" id="swsib_options_auto_login_button_color"
+                    class="swsib-color-picker"
+                    name="swsib_options[auto_login][button_color]"
+                    value="<?php echo esc_attr($button_color); ?>"
                     data-default-color="#3a4b79" />
                 <p class="swsib-field-note"><?php _e('Choose a custom color for the auto-login button.', 'swiftspeed-siberian'); ?></p>
             </div>
-            
+
             <div class="swsib-field">
                 <label for="swsib_options_auto_login_notification_text"><?php _e('Notification Text', 'swiftspeed-siberian'); ?></label>
-                <input type="text" id="swsib_options_auto_login_notification_text" 
-                    name="swsib_options[auto_login][notification_text]" 
-                    value="<?php echo esc_attr($notification_text); ?>" 
+                <input type="text" id="swsib_options_auto_login_notification_text"
+                    name="swsib_options[auto_login][notification_text]"
+                    value="<?php echo esc_attr($notification_text); ?>"
                     placeholder="Connecting to Siberian. Please wait..." />
                 <p class="swsib-field-note"><?php _e('Text to display while connecting to Siberian.', 'swiftspeed-siberian'); ?></p>
             </div>
-            
+
             <div class="swsib-field">
                 <label for="swsib_options_auto_login_api_user"><?php _e('API Username', 'swiftspeed-siberian'); ?></label>
-                <input type="text" id="swsib_options_auto_login_api_user" 
-                    name="swsib_options[auto_login][api_user]" 
-                    value="<?php echo esc_attr($api_user); ?>" 
+                <input type="text" id="swsib_options_auto_login_api_user"
+                    name="swsib_options[auto_login][api_user]"
+                    value="<?php echo esc_attr($api_user); ?>"
                     placeholder="API Username" />
                 <p class="swsib-field-note"><?php _e('Your Siberian CMS API username.', 'swiftspeed-siberian'); ?></p>
             </div>
-            
+
             <div class="swsib-field">
                 <label for="swsib_options_auto_login_api_password"><?php _e('API Password', 'swiftspeed-siberian'); ?></label>
-                <input type="password" id="swsib_options_auto_login_api_password" 
-                    name="swsib_options[auto_login][api_password]" 
-                    value="<?php echo esc_attr($api_password); ?>" 
+                <input type="password" id="swsib_options_auto_login_api_password"
+                    name="swsib_options[auto_login][api_password]"
+                    value="<?php echo esc_attr($api_password); ?>"
                     placeholder="API Password" />
                 <p class="swsib-field-note"><?php _e('Your Siberian CMS API password.', 'swiftspeed-siberian'); ?></p>
             </div>
-            
+
             <div class="swsib-field">
                 <label for="swsib_options_auto_login_default_role_id"><?php _e('Default User Role ID', 'swiftspeed-siberian'); ?></label>
-                <input type="text" id="swsib_options_auto_login_default_role_id" 
-                    name="swsib_options[auto_login][default_role_id]" 
-                    value="<?php echo esc_attr($default_role_id); ?>" 
+                <input type="text" id="swsib_options_auto_login_default_role_id"
+                    name="swsib_options[auto_login][default_role_id]"
+                    value="<?php echo esc_attr($default_role_id); ?>"
                     placeholder="2" />
                 <p class="swsib-field-note"><?php _e('Default role ID to assign to new users created in Siberian CMS. Standard user role is 2.', 'swiftspeed-siberian'); ?></p>
             </div>
-            
+
             <div class="swsib-field">
                 <button type="button" id="test_api_connection" class="button button-secondary"><?php _e('Test API Connection', 'swiftspeed-siberian'); ?></button>
             </div>
-            
+
+            <!-- New Auto-authenticate setting -->
+            <div class="swsib-section-header">
+                <h3><?php _e('Automatic Authentication', 'swiftspeed-siberian'); ?></h3>
+            </div>
+
+            <div class="swsib-field switch-field">
+                <label for="swsib_options_auto_login_auto_authenticate"><?php _e('Auto-Authenticate', 'swiftspeed-siberian'); ?></label>
+                <div class="toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="swsib_options_auto_login_auto_authenticate"
+                            name="swsib_options[auto_login][auto_authenticate]"
+                            value="1"
+                            <?php checked($auto_authenticate); ?> />
+                        <span class="slider round"></span>
+                    </label>
+                    <p class="swsib-field-note"><?php _e('When enabled, users will be automatically authenticated when visiting a page with the shortcode, without needing to click the login button.', 'swiftspeed-siberian'); ?></p>
+                </div>
+            </div>
+
+            <!-- Processing screen settings -->
+            <div id="auto-authenticate-settings" style="<?php echo $auto_authenticate ? '' : 'display: none;'; ?>">
+                <div class="swsib-field">
+                    <label for="swsib_options_auto_login_processing_text"><?php _e('Processing Screen Text', 'swiftspeed-siberian'); ?></label>
+                    <input type="text" id="swsib_options_auto_login_processing_text"
+                        name="swsib_options[auto_login][processing_text]"
+                        value="<?php echo esc_attr($processing_text); ?>"
+                        placeholder="Processing..." />
+                    <p class="swsib-field-note"><?php _e('Text to display during automatic authentication.', 'swiftspeed-siberian'); ?></p>
+                </div>
+
+                <div class="swsib-field">
+                    <label for="swsib_options_auto_login_processing_bg_color"><?php _e('Processing Screen Background Color', 'swiftspeed-siberian'); ?></label>
+                    <input type="text" id="swsib_options_auto_login_processing_bg_color"
+                        class="swsib-color-picker"
+                        name="swsib_options[auto_login][processing_bg_color]"
+                        value="<?php echo esc_attr($processing_bg_color); ?>"
+                        data-default-color="#f5f5f5" />
+                    <p class="swsib-field-note"><?php _e('Background color for the processing screen.', 'swiftspeed-siberian'); ?></p>
+                </div>
+
+                <div class="swsib-field">
+                    <label for="swsib_options_auto_login_processing_text_color"><?php _e('Processing Screen Text Color', 'swiftspeed-siberian'); ?></label>
+                    <input type="text" id="swsib_options_auto_login_processing_text_color"
+                        class="swsib-color-picker"
+                        name="swsib_options[auto_login][processing_text_color]"
+                        value="<?php echo esc_attr($processing_text_color); ?>"
+                        data-default-color="#333333" />
+                    <p class="swsib-field-note"><?php _e('Text color for the processing screen.', 'swiftspeed-siberian'); ?></p>
+                </div>
+
+                <div class="swsib-field">
+                    <div class="processing-preview">
+                        <h4><?php _e('Processing Screen Preview', 'swiftspeed-siberian'); ?></h4>
+                        <div id="processing-preview-container" style="background-color: <?php echo esc_attr($processing_bg_color); ?>; color: <?php echo esc_attr($processing_text_color); ?>;">
+                            <div class="processing-content">
+                                <span class="processing-text"><?php echo esc_html($processing_text); ?></span>
+                                <span class="processing-spinner"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="swsib-field switch-field">
                 <label for="swsib_options_auto_login_keep_data"><?php _e('Data Retention', 'swiftspeed-siberian'); ?></label>
                 <div class="toggle-container">
                     <label class="switch">
-                        <input type="checkbox" id="swsib_options_auto_login_keep_data" 
-                            name="swsib_options[auto_login][keep_data_on_uninstall]" 
-                            value="1" 
+                        <input type="checkbox" id="swsib_options_auto_login_keep_data"
+                            name="swsib_options[auto_login][keep_data_on_uninstall]"
+                            value="1"
                             <?php checked($keep_data); ?> />
                         <span class="slider round"></span>
                     </label>
                     <p class="swsib-field-note"><?php _e('Keep plugin data when uninstalling. If enabled, all plugin settings and user data will be preserved.', 'swiftspeed-siberian'); ?></p>
                 </div>
             </div>
-            
+
             <div class="shortcode-info">
                 <h3><?php _e('Shortcode Usage', 'swiftspeed-siberian'); ?></h3>
                 <p>
                     <?php _e('Use the following shortcode to display the auto-login button on your site:', 'swiftspeed-siberian'); ?>
-                    <code class="shortcode-example">[swsib_login<?php 
+                    <code class="shortcode-example">[swsib_login<?php
                         echo !empty($autologin_text) ? ' text="' . esc_attr($autologin_text) . '"' : '';
                         echo ($button_color !== '#3a4b79') ? ' color="' . esc_attr($button_color) . '"' : '';
                     ?>]</code>
                 </p>
-                
+
                 <h4><?php _e('Button Preview', 'swiftspeed-siberian'); ?></h4>
                 <div class="button-preview" style="--button-hover-color: <?php echo esc_attr($this->adjust_color_brightness($button_color, -20)); ?>">
                     <div class="preview-row">
@@ -253,17 +327,63 @@ class SwiftSpeed_Siberian_Autologin {
                         <a href="#" class="swsib-button" style="background-color: <?php echo esc_attr($button_color); ?>"><?php echo esc_html($autologin_text ?: __('App Dashboard', 'swiftspeed-siberian')); ?></a>
                     </div>
                 </div>
-                
+
                 <p class="swsib-field-note">
                     <?php _e('Note: Legacy shortcode <code>[swiftspeedsiberiancms]</code> is supported for backward compatibility.', 'swiftspeed-siberian'); ?>
                 </p>
             </div>
-            
+
             <div class="swsib-actions" id="auto-login-save-button-container">
                 <input type="submit" name="submit" id="auto-login-save-button" class="button button-primary" value="<?php _e('Save Changes', 'swiftspeed-siberian'); ?>">
             </div>
         </form>
-        
+
+        <style>
+            /* Processing Screen preview styles */
+            .processing-preview {
+                margin-top: 15px;
+            }
+            #processing-preview-container {
+                width: 100%;
+                height: 200px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 5px;
+                box-shadow: 0 0 5px rgba(0,0,0,0.1);
+                margin-top: 10px;
+            }
+            .processing-content {
+                text-align: center;
+            }
+            .processing-text {
+                display: block;
+                font-size: 24px;
+                margin-bottom: 20px;
+            }
+            .processing-spinner {
+                display: inline-block;
+                width: 40px;
+                height: 40px;
+                border: 4px solid rgba(0,0,0,0.1);
+                border-radius: 50%;
+                border-top-color: #3498db;
+                animation: spin 1s ease-in-out infinite;
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            .swsib-section-header {
+                margin-top: 30px;
+                border-bottom: 1px solid #e5e5e5;
+                padding-bottom: 10px;
+                margin-bottom: 20px;
+            }
+            .swsib-section-header h3 {
+                margin: 0;
+            }
+        </style>
+
         <script>
         jQuery(document).ready(function($) {
             // Update button preview when text changes
@@ -271,27 +391,35 @@ class SwiftSpeed_Siberian_Autologin {
                 var text = $(this).val() || 'App Dashboard';
                 $('.button-preview .swsib-button').text(text);
             });
-            
+
             // Update button preview when color changes
             $('.swsib-color-picker').wpColorPicker({
                 change: function(event, ui) {
                     // Update the button preview with the new color
                     var color = ui.color.toString();
-                    updateButtonPreview(color);
+                    var id = $(this.el).attr('id');
+
+                    if (id === 'swsib_options_auto_login_button_color') {
+                        updateButtonPreview(color);
+                    } else if (id === 'swsib_options_auto_login_processing_bg_color') {
+                        $('#processing-preview-container').css('background-color', color);
+                    } else if (id === 'swsib_options_auto_login_processing_text_color') {
+                        $('#processing-preview-container').css('color', color);
+                    }
                 }
             });
-            
+
             // Force initial update of button preview
             var initialColor = $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
             updateButtonPreview(initialColor);
-            
+
             // Function to update button preview
             function updateButtonPreview(color) {
                 $('.button-preview .swsib-button').css('background-color', color);
                 var hoverColor = adjustColor(color, -20);
                 document.documentElement.style.setProperty('--button-hover-color', hoverColor);
             }
-            
+
             // Function to adjust color brightness
             function adjustColor(color, amount) {
                 return '#' + color.replace(/^#/, '').replace(/../g, function(hex) {
@@ -300,6 +428,21 @@ class SwiftSpeed_Siberian_Autologin {
                     return ('0' + colorVal.toString(16)).slice(-2);
                 });
             }
+
+            // Toggle processing screen settings visibility
+            $('#swsib_options_auto_login_auto_authenticate').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#auto-authenticate-settings').slideDown();
+                } else {
+                    $('#auto-authenticate-settings').slideUp();
+                }
+            });
+
+            // Update processing text preview
+            $('#swsib_options_auto_login_processing_text').on('input change', function() {
+                var text = $(this).val() || 'Processing...';
+                $('.processing-text').text(text);
+            });
             
             // Test API connection
             $('#test_api_connection').on('click', function(e) {

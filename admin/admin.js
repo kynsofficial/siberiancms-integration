@@ -20,21 +20,60 @@
             $('.swsib-color-picker').wpColorPicker({
                 change: function(event, ui) {
                     // Use toHexString() to get a valid hex color
-                    var color = ui.color.toHexString();
-                    updateButtonPreview(color);
+                    var color = ui.color.toString();
+                    var id = $(this.el).attr('id');
+                    
+                    if (id === 'swsib_options_auto_login_button_color') {
+                        // Store in localStorage for persistence
+                        localStorage.setItem('swsib_button_bg_color', color);
+                        updateButtonPreview(color);
+                    } else if (id === 'swsib_options_auto_login_button_text_color') {
+                        localStorage.setItem('swsib_button_text_color', color);
+                        updateButtonPreview(undefined, color);
+                    } else if (id === 'swsib_options_auto_login_processing_bg_color') {
+                        $('#processing-preview-container').css('background-color', color);
+                    } else if (id === 'swsib_options_auto_login_processing_text_color') {
+                        $('#processing-preview-container').css('color', color);
+                    }
                 },
                 clear: function() {
-                    // Update button preview when color is cleared
-                    updateButtonPreview('#3a4b79');
+                    var id = $(this.el).attr('id');
+                    if (id === 'swsib_options_auto_login_button_color') {
+                        localStorage.setItem('swsib_button_bg_color', '#3a4b79');
+                        updateButtonPreview('#3a4b79');
+                    } else if (id === 'swsib_options_auto_login_button_text_color') {
+                        localStorage.setItem('swsib_button_text_color', '#ffffff');
+                        updateButtonPreview(undefined, '#ffffff');
+                    }
                 }
             });
         }
         
         // Force an initial update of the button preview shortly after load
         setTimeout(function() {
-            var initialColor = $('.swsib-color-picker').val() || '#3a4b79';
-            updateButtonPreview(initialColor);
+            var storedBgColor = localStorage.getItem('swsib_button_bg_color');
+            var initialColor = storedBgColor || $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
+            var storedTextColor = localStorage.getItem('swsib_button_text_color');
+            var initialTextColor = storedTextColor || $('#swsib_options_auto_login_button_text_color').val() || '#ffffff';
+            
+            updateButtonPreview(initialColor, initialTextColor);
         }, 100);
+        
+        // Add periodic refresh to ensure colors don't revert
+        setInterval(function() {
+            var storedBgColor = localStorage.getItem('swsib_button_bg_color');
+            var storedTextColor = localStorage.getItem('swsib_button_text_color');
+            updateButtonPreview(storedBgColor, storedTextColor);
+        }, 60000); // Check every minute
+        
+        // Also refresh when tab becomes visible again
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                var storedBgColor = localStorage.getItem('swsib_button_bg_color');
+                var storedTextColor = localStorage.getItem('swsib_button_text_color');
+                updateButtonPreview(storedBgColor, storedTextColor);
+            }
+        });
         
         // Advanced features toggle
         $('#swsib_options_db_connect_enabled').on('change', function() {
@@ -143,12 +182,57 @@
             $('.button-preview .swsib-button').text(text);
         });
         
+        // Update login button text preview
+        $('#swsib_options_auto_login_login_button_text').on('input change', function() {
+            var text = $(this).val() || 'Login';
+            $('#login-button-preview').text(text);
+        });
+        
+        // Update login message preview
+        $('#swsib_options_auto_login_not_logged_in_message').on('input change', function() {
+            var text = $(this).val() || 'You must be logged in to access or create an app.';
+            $('.login-message').text(text);
+        });
+        
+        // Toggle auto-authenticate settings visibility
+        $('#swsib_options_auto_login_auto_authenticate').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#auto-authenticate-settings').slideDown();
+            } else {
+                $('#auto-authenticate-settings').slideUp();
+            }
+        });
+        
+        // Toggle login redirect settings visibility
+        $('#swsib_options_auto_login_enable_login_redirect').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#login-redirect-settings').slideDown();
+            } else {
+                $('#login-redirect-settings').slideUp();
+            }
+        });
+        
+        // Toggle Siberian configuration settings visibility
+        $('#swsib_options_auto_login_enable_siberian_config').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#siberian-config-settings').slideDown();
+            } else {
+                $('#siberian-config-settings').slideUp();
+            }
+        });
+        
         // Initialize button preview with current settings
-        updateButtonPreview($('.swsib-color-picker').val() || '#3a4b79');
+        var storedBgColor = localStorage.getItem('swsib_button_bg_color');
+        var initialColor = storedBgColor || $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
+        updateButtonPreview(initialColor);
         
         // Set initial button text
         var buttonText = $('#swsib_options_auto_login_autologin_text').val() || 'App Dashboard';
         $('.button-preview .swsib-button').text(buttonText);
+        
+        // Set initial login button text
+        var loginButtonText = $('#swsib_options_auto_login_login_button_text').val() || 'Login';
+        $('#login-button-preview').text(loginButtonText);
         
         // Restore active tab from URL parameter
         restoreActiveTab();
@@ -217,10 +301,13 @@
                     .prop('required', false);
             }
             
-            // NEW: If the activated tab is Auto Login, update the button preview
+            // If the activated tab is Auto Login, update the button preview
             if (tabId === 'auto_login') {
-                var currentColor = $('#swsib_options_auto_login_button_color').val() || $('.swsib-color-picker').val() || '#3a4b79';
-                updateButtonPreview(currentColor);
+                var storedBgColor = localStorage.getItem('swsib_button_bg_color');
+                var storedTextColor = localStorage.getItem('swsib_button_text_color');
+                var bgColor = storedBgColor || $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
+                var textColor = storedTextColor || $('#swsib_options_auto_login_button_text_color').val() || '#ffffff';
+                updateButtonPreview(bgColor, textColor);
             }
             
             console.log('Tab activated: ' + tabId);
@@ -308,16 +395,44 @@
     
     /**
      * Update button preview with specific color
+     * @param {string} bgColor Optional background color
+     * @param {string} textColor Optional text color
      */
-    function updateButtonPreview(color) {
-        color = color || '#3a4b79';
-        $('.button-preview .swsib-button').css('background-color', color);
-        var hoverColor = adjustColor(color, -20);
+    function updateButtonPreview(bgColor, textColor) {
+        // Get stored values if not provided
+        bgColor = bgColor || localStorage.getItem('swsib_button_bg_color') || $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
+        textColor = textColor || localStorage.getItem('swsib_button_text_color') || $('#swsib_options_auto_login_button_text_color').val() || '#ffffff';
+        
+        // Store current values in localStorage
+        localStorage.setItem('swsib_button_bg_color', bgColor);
+        localStorage.setItem('swsib_button_text_color', textColor);
+        
+        // Update main shortcode button preview - use attr for highest specificity
+        $('.button-preview .swsib-button').attr('style', 
+            'background-color: ' + bgColor + ' !important; ' + 
+            'color: ' + textColor + ' !important;'
+        );
+        
+        // Update login redirect button preview with all necessary styles
+        $('#login-button-preview').attr('style', 
+            'background-color: ' + bgColor + ' !important; ' + 
+            'color: ' + textColor + ' !important; ' + 
+            'display: inline-block; ' + 
+            'padding: 10px 20px; ' + 
+            'border-radius: 4px; ' + 
+            'text-decoration: none; ' + 
+            'font-weight: 600; ' + 
+            'transition: all 0.3s ease; ' + 
+            'box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); ' + 
+            'border: none; ' + 
+            'cursor: pointer;'
+        );
+        
+        // Set the hover color CSS variable
+        var hoverColor = adjustColor(bgColor, -20);
         document.documentElement.style.setProperty('--button-hover-color', hoverColor);
-        setTimeout(function() {
-            $('.button-preview .swsib-button').css('background-color', color);
-        }, 100);
-        console.log('Button preview updated with color: ' + color);
+        
+        console.log('Button preview updated with bg color: ' + bgColor + ', text color: ' + textColor);
     }
     
     /**
@@ -331,4 +446,4 @@
         });
     }
     
-})(jQuery);
+})(jQuery)

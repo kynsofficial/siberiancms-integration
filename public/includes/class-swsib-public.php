@@ -57,6 +57,11 @@ class SwiftSpeed_Siberian_Public {
             ? $this->options['auto_login']['notification_text']
             : 'Connecting to Siberian. Please wait...';
 
+        // Get login notification text
+        $login_notification_text = isset($this->options['auto_login']['login_notification_text'])
+            ? $this->options['auto_login']['login_notification_text']
+            : 'You are being redirected to login page. Please wait...';
+            
         // Enqueue CSS
         wp_enqueue_style(
             'swsib-public-css',
@@ -74,12 +79,13 @@ class SwiftSpeed_Siberian_Public {
             true
         );
 
-        // Localize with optional notification text
+        // Localize with notification texts
         wp_localize_script(
             'swsib-public-js',
             'swsib_vars',
             array(
                 'notification_text' => esc_html($notification_text),
+                'login_notification_text' => esc_html($login_notification_text),
             )
         );
     }
@@ -90,6 +96,16 @@ class SwiftSpeed_Siberian_Public {
     public function process_auth_request() {
         if (!isset($_GET['swsib_auth'])) {
             return;
+        }
+
+        // Check if Siberian configuration is enabled
+        $enable_siberian_config = isset($this->options['auto_login']['enable_siberian_config']) 
+            ? $this->options['auto_login']['enable_siberian_config'] 
+            : true;
+            
+        if (!$enable_siberian_config) {
+            $this->log_frontend('Auto-login attempted but Integration configuration is disabled in settngs.');
+            wp_die('Incomplete access configurations. Please contact the administrator.');
         }
 
         // If user not logged in, redirect them to WP login
@@ -126,7 +142,7 @@ class SwiftSpeed_Siberian_Public {
         // Ensure trailing slash
         $siberian_url = trailingslashit($siberian_url);
 
-        // Get or create the user’s Siberian password from WP user meta
+        // Get or create the user's Siberian password from WP user meta
         $siberian_password = get_user_meta($current_user->ID, 'siberian_cms_password', true);
 
         // Check if user exists in Siberian
@@ -376,101 +392,200 @@ class SwiftSpeed_Siberian_Public {
 
         $code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
-        if ($code !== 200) {
-            return new WP_Error('api_error', 'API returned code ' . $code);
-        }
+         if ($code !== 200) {
+           return new WP_Error('api_error', 'API returned code ' . $code);
+       }
 
-        $data = json_decode($body, true);
-        if (!$data) {
-            return new WP_Error('invalid_response', 'Invalid JSON response from Siberian');
-        }
-        if (!empty($data['error'])) {
-            return new WP_Error('api_error', $data['message'] ?? 'Unknown API error');
-        }
+       $data = json_decode($body, true);
+       if (!$data) {
+           return new WP_Error('invalid_response', 'Invalid JSON response from Siberian');
+       }
+       if (!empty($data['error'])) {
+           return new WP_Error('api_error', $data['message'] ?? 'Unknown API error');
+       }
 
-        return $data;
-    }
+       return $data;
+   }
 
-    /**
-     * Generate a strong password for Siberian
-     */
-    private function generate_strong_password() {
-        // Basic combination logic
-        $uppercase    = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $lowercase    = 'abcdefghijklmnopqrstuvwxyz';
-        $numbers      = '0123456789';
-        $specials     = '!@#$%^&*()-_=+';
-        $all_chars    = $uppercase . $lowercase . $numbers . $specials;
+   /**
+    * Generate a strong password for Siberian
+    */
+   private function generate_strong_password() {
+       // Basic combination logic
+       $uppercase    = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+       $lowercase    = 'abcdefghijklmnopqrstuvwxyz';
+       $numbers      = '0123456789';
+       $specials     = '!@#$%^&*()-_=+';
+       $all_chars    = $uppercase . $lowercase . $numbers . $specials;
 
-        // Ensure at least 1 uppercase, 1 lowercase, 1 digit, 1 special
-        $password  = $uppercase[rand(0, strlen($uppercase) - 1)];
-        $password .= $lowercase[rand(0, strlen($lowercase) - 1)];
-        $password .= $numbers[rand(0, strlen($numbers) - 1)];
-        $password .= $specials[rand(0, strlen($specials) - 1)];
+       // Ensure at least 1 uppercase, 1 lowercase, 1 digit, 1 special
+       $password  = $uppercase[rand(0, strlen($uppercase) - 1)];
+       $password .= $lowercase[rand(0, strlen($lowercase) - 1)];
+       $password .= $numbers[rand(0, strlen($numbers) - 1)];
+       $password .= $specials[rand(0, strlen($specials) - 1)];
 
-        // Fill up to at least 9 chars
-        for ($i = 0; $i < 8; $i++) {
-            $password .= $all_chars[rand(0, strlen($all_chars) - 1)];
-        }
+       // Fill up to at least 9 chars
+       for ($i = 0; $i < 8; $i++) {
+           $password .= $all_chars[rand(0, strlen($all_chars) - 1)];
+       }
 
-        // Shuffle
-        return str_shuffle($password);
-    }
+       // Shuffle
+       return str_shuffle($password);
+   }
 
-    /**
-     * Generate an auto-login button
-     */
-    public function generate_autologin_button($text = '', $class = '', $redirect = '', $color = '') {
-        // Check if user is logged in
-        if (!is_user_logged_in()) {
-            // This is not necessarily an "error," but let's let the user know
-            return '<div class="swsib-login-required">You must be logged in to access your Siberian app.</div>';
-        }
+   /**
+    * Generate an auto-login button
+    * 
+    * @param string $text Display text for the button
+    * @param string $class CSS classes to add to the button
+    * @param string $redirect Optional URL to redirect to after login
+    * @param string $color Background color for the button
+    * @param string $text_color Text color for the button
+    * @return string HTML for the button
+    */
+   public function generate_autologin_button($text = '', $class = '', $redirect = '', $color = '', $text_color = '') {
+       // Check if Siberian configuration is enabled
+       $enable_siberian_config = isset($this->options['auto_login']['enable_siberian_config']) 
+           ? $this->options['auto_login']['enable_siberian_config'] 
+           : true;
+           
+       if (!$enable_siberian_config) {
+           $this->log_frontend('Auto-login button requested but Siberian configuration is disabled.');
+           return '<div class="swsib-disabled">Incomplete access configurations. Please contact the administrator.</div>';
+       }
+   
+       // Check if user is logged in
+       if (!is_user_logged_in()) {
+           // Check if login redirect is enabled
+           $enable_login_redirect = isset($this->options['auto_login']['enable_login_redirect']) 
+               ? $this->options['auto_login']['enable_login_redirect'] 
+               : false;
+           
+           // If login redirect is enabled, show login button
+           if ($enable_login_redirect) {
+               // Get custom message and button text
+               $not_logged_in_message = isset($this->options['auto_login']['not_logged_in_message']) 
+                   ? $this->options['auto_login']['not_logged_in_message'] 
+                   : 'You must be logged in to access or create an app.';
+               
+               $login_button_text = isset($this->options['auto_login']['login_button_text']) 
+                   ? $this->options['auto_login']['login_button_text'] 
+                   : 'Login';
+               
+               // Get login redirect URL
+               $login_redirect_url = isset($this->options['auto_login']['login_redirect_url']) && !empty($this->options['auto_login']['login_redirect_url']) 
+                   ? $this->options['auto_login']['login_redirect_url'] 
+                   : wp_login_url(get_permalink());
+               
+               // Use default colors if none specified
+               if (empty($color)) {
+                   $color = $this->options['auto_login']['button_color'] ?? '#3a4b79';
+               }
+               
+               if (empty($text_color)) {
+                   $text_color = $this->options['auto_login']['button_text_color'] ?? '#ffffff';
+               }
+               
+               // Create a unique ID for the button
+               $button_id = 'swsib-login-button-' . wp_rand(1000, 9999);
+               
+               // Generate login button HTML
+               $html = '<div class="swsib-login-required">';
+               $html .= '<p>' . esc_html($not_logged_in_message) . '</p>';
+               $html .= '<style type="text/css">
+                   #' . $button_id . ' {
+                       background-color: ' . esc_attr($color) . ' !important;
+                       color: ' . esc_attr($text_color) . ' !important;
+                   }
+                   #' . $button_id . ':hover {
+                       filter: brightness(115%) !important;
+                   }
+                   .swsib-login-required {
+                       text-align: center;
+                       padding: 20px;
+                       margin: 20px 0;
+                       background-color: #f8f9fa;
+                       border-radius: 5px;
+                   }
+                   .swsib-login-required p {
+                       margin-bottom: 15px;
+                   }
+                   .swsib-disabled {
+                       text-align: center;
+                       padding: 10px;
+                       margin: 10px 0;
+                       background-color: #f8d7da;
+                       color: #721c24;
+                       border-radius: 5px;
+                   }
+               </style>';
+               $html .= '<a id="' . esc_attr($button_id) . '" href="' . esc_url($login_redirect_url) . '" class="swsib-button">' . esc_html($login_button_text) . '</a>';
+               $html .= '</div>';
+               
+               return $html;
+           }
+           
+           // Default message if login redirect is not enabled
+           return '<div class="swsib-login-required">You must be logged in to access your app.</div>';
+       }
 
-        // Check if Siberian URL is configured
-        $siberian_url = $this->options['auto_login']['siberian_url'] ?? '';
-        if (empty($siberian_url)) {
-            $this->log_frontend('Siberian URL not configured for auto-login button.');
-            return '<div class="swsib-error">Siberian URL is not configured. Please contact the administrator.</div>';
-        }
+       // Check if Siberian URL is configured
+       $siberian_url = $this->options['auto_login']['siberian_url'] ?? '';
+       if (empty($siberian_url)) {
+           $this->log_frontend('Siberian URL not configured for auto-login button.');
+           return '<div class="swsib-error">Siberian URL is not configured. Please contact the administrator.</div>';
+       }
 
-        // Default button text from plugin settings
-        if (empty($text)) {
-            $text = $this->options['auto_login']['autologin_text'] ?? 'App Dashboard';
-        }
-        // Merge with any custom classes
-        $class = 'swsib-button ' . trim($class);
+       // Default button text from plugin settings
+       if (empty($text)) {
+           $text = $this->options['auto_login']['autologin_text'] ?? 'App Dashboard';
+       }
+       // Merge with any custom classes
+       $class = 'swsib-button ' . trim($class);
 
-        // Use default color if none specified
-        if (empty($color)) {
-            $color = $this->options['auto_login']['button_color'] ?? '#3a4b79';
-        }
+       // Use default colors if none specified
+       if (empty($color)) {
+           $color = $this->options['auto_login']['button_color'] ?? '#3a4b79';
+       }
+       
+       if (empty($text_color)) {
+           $text_color = $this->options['auto_login']['button_text_color'] ?? '#ffffff';
+       }
 
-        // Build auth URL with optional redirect param
-        $auth_url = add_query_arg('swsib_auth', '1', home_url('/'));
-        if (!empty($redirect)) {
-            $auth_url = add_query_arg('redirect', urlencode($redirect), $auth_url);
-        }
+       // Build auth URL with optional redirect param
+       $auth_url = add_query_arg('swsib_auth', '1', home_url('/'));
+       if (!empty($redirect)) {
+           $auth_url = add_query_arg('redirect', urlencode($redirect), $auth_url);
+       }
 
-        // Create a unique ID so we can override color with highest specificity
-        $button_id    = 'swsib-button-' . wp_rand(1000, 9999);
-        $inline_style = '
-            <style type="text/css">
-                #' . $button_id . ' {
-                    background-color: ' . esc_attr($color) . ' !important;
-                }
-                #' . $button_id . ':hover {
-                    filter: brightness(115%) !important;
-                }
-            </style>';
+       // Create a unique ID so we can override color with highest specificity
+       $button_id    = 'swsib-button-' . wp_rand(1000, 9999);
+       $inline_style = '
+           <style type="text/css">
+               #' . $button_id . ' {
+                   background-color: ' . esc_attr($color) . ' !important;
+                   color: ' . esc_attr($text_color) . ' !important;
+               }
+               #' . $button_id . ':hover {
+                   filter: brightness(115%) !important;
+               }
+               .swsib-disabled {
+                   text-align: center;
+                   padding: 10px;
+                   margin: 10px 0;
+                   background-color: #f8d7da;
+                   color: #721c24;
+                   border-radius: 5px;
+               }
+           </style>';
 
-        // Return final HTML
-        return $inline_style . '
-            <a id="' . esc_attr($button_id) . '" 
-               href="' . esc_url($auth_url) . '" 
-               class="' . esc_attr($class) . '" 
-               data-color="' . esc_attr($color) . '">
-               ' . esc_html($text) . '
-            </a>';
-    }
+       // Return final HTML
+       return $inline_style . '
+           <a id="' . esc_attr($button_id) . '" 
+              href="' . esc_url($auth_url) . '" 
+              class="' . esc_attr($class) . '" 
+              data-color="' . esc_attr($color) . '">
+              ' . esc_html($text) . '
+           </a>';
+   }
 }

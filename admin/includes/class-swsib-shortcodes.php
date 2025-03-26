@@ -34,22 +34,22 @@ public function login_shortcode($atts) {
     
     // Check if auto-authenticate is enabled
     $auto_authenticate = isset($options['auto_login']['auto_authenticate']) ? $options['auto_login']['auto_authenticate'] : false;
-
+    
     // Get processing screen settings if auto-authenticate is enabled
     if ($auto_authenticate) {
         $processing_text = isset($options['auto_login']['processing_text']) ? $options['auto_login']['processing_text'] : 'Processing...';
         $processing_bg_color = isset($options['auto_login']['processing_bg_color']) ? $options['auto_login']['processing_bg_color'] : '#f5f5f5';
         $processing_text_color = isset($options['auto_login']['processing_text_color']) ? $options['auto_login']['processing_text_color'] : '#333333';
-
+        
         // Start auto authentication if user is logged in
         if (is_user_logged_in()) {
-
+            
             // Log authentication process
             $this->log_message('Auto-authenticate enabled, showing processing screen and initiating authentication');
-
+            
             // Generate processing screen HTML
             $html = $this->generate_processing_screen($processing_text, $processing_bg_color, $processing_text_color);
-
+            
             // Add JavaScript to initiate authentication
             $auth_url = add_query_arg('swsib_auth', '1', home_url('/'));
             $html .= '<script type="text/javascript">
@@ -60,43 +60,48 @@ public function login_shortcode($atts) {
                     }, 1000);
                 });
             </script>';
-
+            
             return $html;
         }
     }
-
+    
     // If auto-authentication is disabled or user is not logged in, display the button
-    // Set default color from options
+    // Set default colors from options
     $default_color = isset($options['auto_login']['button_color']) ? $options['auto_login']['button_color'] : '#3a4b79';
-
+    $default_text_color = isset($options['auto_login']['button_text_color']) ? $options['auto_login']['button_text_color'] : '#ffffff';
+    
     $atts = shortcode_atts(array(
         'text' => '',
         'class' => '',
         'redirect' => '',
         'style' => 'default', // default, primary, secondary, success
         'color' => $default_color, // Custom color attribute
+        'textcolor' => $default_text_color, // Custom text color attribute
     ), $atts, 'swsib_login');
-
+    
     // Get public class instance
     $public = new SwiftSpeed_Siberian_Public();
-
+    
     // Add style class if provided
     $class = $atts['class'];
     if (!empty($atts['style']) && $atts['style'] !== 'default') {
         $class .= ' swsib-button-' . $atts['style'];
     }
-
-    // Specifically override color with shortcode attribute if provided
+    
+    // Specifically override colors with shortcode attributes if provided
     $color = $atts['color'];
-
-    $this->log_message('Generating login button with text: ' . ($atts['text'] ? $atts['text'] : 'default') . ' and color: ' . $color);
-
+    $text_color = $atts['textcolor'];
+    
+    $this->log_message('Generating login button with text: ' . ($atts['text'] ? $atts['text'] : 'default') . 
+                      ', background color: ' . $color . ', and text color: ' . $text_color);
+    
     // Generate and return button HTML
     return $public->generate_autologin_button(
         $atts['text'],
         $class,
         $atts['redirect'],
-        $color
+        $color,
+        $text_color
     );
 }
 
@@ -146,7 +151,7 @@ public function login_shortcode($atts) {
                 <span class="swsib-processing-spinner"></span>
             </div>
         </div>';
-
+        
         return $html;
     }
 

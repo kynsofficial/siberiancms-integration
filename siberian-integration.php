@@ -167,11 +167,17 @@ class SwiftSpeed_Siberian_Integration {
         // Shortcodes
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/class-swsib-shortcodes.php';
         
+        // Advanced Auto Login Shortcodes
+        require_once SWSIB_PLUGIN_DIR . 'admin/includes/advanced-autologin/class-swsib-advanced-shortcodes.php';
+        
         // Public
         require_once SWSIB_PLUGIN_DIR . 'public/includes/class-swsib-public.php';
         
         // Password Sync
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/compatibility/class-swsib-password-sync.php';
+
+        // Advanced Auto Login
+        require_once SWSIB_PLUGIN_DIR . 'admin/includes/advanced-autologin/class-swsib-advanced-autologin.php';
     }
     
     /**
@@ -193,6 +199,9 @@ class SwiftSpeed_Siberian_Integration {
             add_action('init', array($this, 'init_admin'), 20);
             // Add settings link on plugin page
             add_filter('plugin_action_links_' . SWSIB_PLUGIN_BASENAME, array($this, 'add_settings_link'));
+            
+            // Register all settings groups
+            add_action('admin_init', array($this, 'register_settings'));
         } else {
             // Public (only if auto-login is enabled)
             if (SWSIB_ENABLE_AUTO_LOGIN) {
@@ -211,7 +220,25 @@ class SwiftSpeed_Siberian_Integration {
     }
     
     /**
-     * Check memory limit and potentially show admin notice (no log unless it’s truly problematic)
+     * Register settings
+     */
+    public function register_settings() {
+        // Simply register the main plugin option
+        register_setting('swsib_options', 'swsib_options');
+        
+        // Register each tab's settings group - this makes WordPress recognize these option groups
+        // without actually interfering with the value saving
+        register_setting('swsib_db_connect_options', 'swsib_options'); 
+        register_setting('swsib_woocommerce_options', 'swsib_options');
+        register_setting('swsib_clean_options', 'swsib_options');
+        register_setting('swsib_automate_options', 'swsib_options');
+        register_setting('swsib_logging_options', 'swsib_options');
+        register_setting('swsib_advanced_autologin_options', 'swsib_options');
+       register_setting('swsib_backup_restore_options', 'swsib_options');
+    }
+    
+    /**
+     * Check memory limit and potentially show admin notice (no log unless it's truly problematic)
      */
     private function check_memory_limit() {
         $memory_limit = $this->get_memory_limit();
@@ -285,6 +312,7 @@ class SwiftSpeed_Siberian_Integration {
      */
     public function init_shortcodes() {
         new SwiftSpeed_Siberian_Shortcodes();
+        new SwiftSpeed_Siberian_Advanced_Shortcodes();
     }
     
     /**
@@ -331,6 +359,10 @@ class SwiftSpeed_Siberian_Integration {
                 'port' => '3306',
                 'prefix' => '',
                 'is_configured' => false
+            ),
+            'advanced_autologin' => array(
+                'enabled' => false,
+                'buttons' => array()
             ),
             'logging' => array(
                 'loggers' => array()

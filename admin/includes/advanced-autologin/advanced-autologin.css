@@ -1,0 +1,147 @@
+/**
+ * SwiftSpeed Siberian Integration - Advanced Auto Login Styles
+/* Advanced Auto Login Styles */
+.swsib-button-creator {
+    background-color: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.swsib-buttons-list {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.swsib-button-item {
+    display: flex;
+    flex-wrap: wrap;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.swsib-button-item.editing {
+    background-color: #f9f9f9;
+    border-color: #007cba;
+}
+
+.button-info {
+    flex: 1;
+}
+
+.button-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.button-role {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.button-shortcode {
+    display: flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    padding: 5px 10px;
+    border-radius: 3px;
+    width: fit-content;
+}
+
+.button-shortcode code {
+    margin-right: 5px;
+    background: transparent;
+    padding: 0;
+}
+
+.button-actions {
+    display: flex;
+    gap: 5px;
+    align-items: flex-start;
+}
+
+.button-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    color: #666;
+}
+
+.edit-button:hover {
+    color: #007cba;
+    background-color: #f0f0f0;
+}
+
+.delete-button:hover {
+    color: #d63638;
+    background-color: #f0f0f0;
+}
+
+.button-edit-form {
+    width: 100%;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #ccc;
+}
+
+.edit-field {
+    margin-bottom: 12px;
+}
+
+.edit-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.edit-field input,
+.edit-field select {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.swsib-no-buttons {
+    padding: 20px;
+    text-align: center;
+    background-color: #f8f8f8;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    color: #666;
+}
+
+.copy-shortcode {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: #007cba;
+}
+
+.copy-shortcode:hover {
+    color: #00a0d2;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 782px) {
+    .button-actions {
+        margin-top: 10px;
+    }
+}

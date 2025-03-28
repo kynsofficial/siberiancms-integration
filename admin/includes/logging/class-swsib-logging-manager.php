@@ -22,6 +22,10 @@ class SwiftSpeed_Siberian_Logging_Manager {
             'backend' => 'Auto Login Backend',
             'frontend' => 'Auto Login Frontend'
         ),
+         'autologin_advanced' => array(
+            'backend' => 'Auto-Login Advanced Backend',
+            'frontend' => 'Auto Login Advanced Frontend'
+        ),
         'compatibility' => array(
             'backend' => 'Compatibility Backend',
             'frontend' => 'Compatibility Frontend'
@@ -31,7 +35,8 @@ class SwiftSpeed_Siberian_Logging_Manager {
             'frontend' => 'License Frontend'
         ),
         'db_connect' => array(
-            'backend' => 'DB Connect Backend'
+            'backend' => 'DB Connect Backend',
+            'frontend' => 'DB Connect Frontend'
         ),
         'woocommerce' => array(
             'backend' => 'WooCommerce Integration Backend',

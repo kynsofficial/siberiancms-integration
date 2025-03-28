@@ -19,11 +19,13 @@ class SwiftSpeed_Siberian_Admin {
      */
     private $autologin;
     private $password_sync; // Using existing password_sync instead of a separate compatibility class
-    private $advanced_features;
+    private $db_connect;    // Changed from advanced_features to db_connect
     private $woocommerce;
     private $clean;
     private $automate;
     private $logging; // New logging manager instance
+    private $advanced_autologin; // New advanced autologin instance
+    private $backup_restore; // New backup & restore instance
     
     /**
      * Track if license form has been displayed
@@ -73,15 +75,19 @@ class SwiftSpeed_Siberian_Admin {
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/clean/class-swsib-clean.php';
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/automate/class-swsib-automate.php';
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/logging/class-swsib-logging-manager.php';
+        require_once SWSIB_PLUGIN_DIR . 'admin/includes/advanced-autologin/class-swsib-advanced-autologin.php';
+        require_once SWSIB_PLUGIN_DIR . 'admin/includes/backup-restore/class-swsib-backup-restore.php';
         
         // Initialize all feature classes
         $this->autologin = new SwiftSpeed_Siberian_Autologin();
         $this->password_sync = new SwiftSpeed_Siberian_Password_Sync();
-        $this->advanced_features = new SwiftSpeed_Siberian_Advanced_Features();
+        $this->db_connect = new SwiftSpeed_Siberian_Advanced_Features(); // Class name remains the same, variable renamed
         $this->woocommerce = new SwiftSpeed_Siberian_WooCommerce();
         $this->clean = new SwiftSpeed_Siberian_Clean();
         $this->automate = new SwiftSpeed_Siberian_Automate();
         $this->logging = swsib()->logging ?: new SwiftSpeed_Siberian_Logging_Manager();
+        $this->advanced_autologin = new SwiftSpeed_Siberian_Advanced_AutoLogin();
+        $this->backup_restore = new SwiftSpeed_Siberian_Backup_Restore();
     }
     
     /**
@@ -173,9 +179,9 @@ class SwiftSpeed_Siberian_Admin {
                 'nonce' => wp_create_nonce('swsib-nonce'),
                 'is_db_configured' => swsib()->is_db_configured(),
                 'is_license_valid' => swsib()->license->is_valid(),
-                'tabs_with_save_button' => json_encode(array('auto_login', 'db_connect', 'woocommerce', 'clean', 'automate', 'logging')),
+                'tabs_with_save_button' => json_encode(array('auto_login', 'db_connect', 'woocommerce', 'clean', 'automate', 'logging', 'advanced_autologin', 'backup_restore')),
                 'tabs_always_no_save' => json_encode(array('compatibility', 'license')),
-                'premium_tabs' => json_encode(array('db_connect', 'woocommerce', 'clean', 'automate'))
+                'premium_tabs' => json_encode(array('woocommerce', 'clean', 'automate', 'advanced_autologin', 'backup_restore'))
             )
         );
     }
@@ -241,9 +247,9 @@ class SwiftSpeed_Siberian_Admin {
         settings_errors('swsib_options');
         settings_errors('swsib_license');
         
-        $tabs_with_save_button = array('auto_login', 'db_connect', 'woocommerce', 'clean', 'automate', 'logging');
+        $tabs_with_save_button = array('auto_login', 'db_connect', 'woocommerce', 'clean', 'automate', 'logging', 'advanced_autologin', 'backup_restore');
         $tabs_always_no_save = array('compatibility', 'license');
-        $premium_tabs = array('db_connect', 'woocommerce', 'clean', 'automate');
+        $premium_tabs = array('woocommerce', 'clean', 'automate', 'advanced_autologin', 'backup_restore');
         
         $showing_license_form = in_array($this->active_tab, $premium_tabs) && !$is_license_valid;
         
@@ -264,16 +270,24 @@ class SwiftSpeed_Siberian_Admin {
                                     <?php _e('Auto Login', 'swiftspeed-siberian'); ?>
                                 </a>
                             </li>
+                            <!-- Moved DB Connect to be second tab -->
+                            <li>
+                                <a href="#db-connect-tab" class="<?php echo $this->active_tab === 'db_connect' ? 'active' : ''; ?>" data-tab-id="db_connect">
+                                    <span class="dashicons dashicons-database"></span>
+                                    <?php _e('DB Connect', 'swiftspeed-siberian'); ?> <!-- Renamed from Advanced Features to DB Connect -->
+                                </a>
+                            </li>
                             <li>
                                 <a href="#compatibility-tab" class="<?php echo $this->active_tab === 'compatibility' ? 'active' : ''; ?>" data-tab-id="compatibility">
                                     <span class="dashicons dashicons-admin-tools"></span>
                                     <?php _e('Compatibility', 'swiftspeed-siberian'); ?>
                                 </a>
                             </li>
+                            <!-- Added Advanced Auto Login tab -->
                             <li>
-                                <a href="#db-connect-tab" class="<?php echo $this->active_tab === 'db_connect' ? 'active' : ''; ?> <?php echo !$is_license_valid ? 'license-required' : ''; ?>" data-tab-id="db_connect">
-                                    <span class="dashicons dashicons-database"></span>
-                                    <?php _e('Advanced Features', 'swiftspeed-siberian'); ?>
+                                <a href="#advanced-autologin-tab" class="<?php echo $this->active_tab === 'advanced_autologin' ? 'active' : ''; ?> <?php echo (!$is_license_valid || !$is_db_configured) ? 'license-required' : ''; ?>" data-tab-id="advanced_autologin">
+                                    <span class="dashicons dashicons-admin-network"></span>
+                                    <?php _e('Advanced Auto Login', 'swiftspeed-siberian'); ?>
                                     <?php if (!$is_license_valid): ?>
                                         <span class="swsib-lock dashicons dashicons-lock"></span>
                                     <?php endif; ?>
@@ -282,7 +296,7 @@ class SwiftSpeed_Siberian_Admin {
                             <li>
                                 <a href="#woocommerce-tab" class="<?php echo $this->active_tab === 'woocommerce' ? 'active' : ''; ?> <?php echo (!$is_license_valid || !$is_db_configured) ? 'license-required' : ''; ?>" data-tab-id="woocommerce">
                                     <span class="dashicons dashicons-cart"></span>
-                                    <?php _e('WooCommerce', 'swiftspeed-siberian'); ?>
+                                    <?php _e('Sell With WooCoomerce', 'swiftspeed-siberian'); ?>
                                     <?php if (!$is_license_valid): ?>
                                         <span class="swsib-lock dashicons dashicons-lock"></span>
                                     <?php endif; ?>
@@ -301,6 +315,15 @@ class SwiftSpeed_Siberian_Admin {
                                 <a href="#automate-tab" class="<?php echo $this->active_tab === 'automate' ? 'active' : ''; ?> <?php echo (!$is_license_valid || !$is_db_configured) ? 'license-required' : ''; ?>" data-tab-id="automate">
                                     <span class="dashicons dashicons-controls-repeat"></span>
                                     <?php _e('Automate', 'swiftspeed-siberian'); ?>
+                                    <?php if (!$is_license_valid): ?>
+                                        <span class="swsib-lock dashicons dashicons-lock"></span>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#backup-restore-tab" class="<?php echo $this->active_tab === 'backup_restore' ? 'active' : ''; ?> <?php echo (!$is_license_valid || !$is_db_configured) ? 'license-required' : ''; ?>" data-tab-id="backup_restore">
+                                    <span class="dashicons dashicons-database-export"></span>
+                                    <?php _e('Backup & Restore', 'swiftspeed-siberian'); ?>
                                     <?php if (!$is_license_valid): ?>
                                         <span class="swsib-lock dashicons dashicons-lock"></span>
                                     <?php endif; ?>
@@ -327,22 +350,36 @@ class SwiftSpeed_Siberian_Admin {
                         <?php $this->autologin->display_settings(); ?>
                     </div>
                     
+                    <!-- DB Connect Tab (formerly Advanced Features) -->
+                    <div id="db-connect-tab" class="swsib-tab-content <?php echo $this->active_tab === 'db_connect' ? 'active' : ''; ?>" data-tab-id="db_connect">
+                        <!-- No license check needed for DB Connect tab -->
+                        <form method="post" action="options.php" id="swsib-db-connect-form" class="swsib-settings-form">
+                            <?php settings_fields('swsib_db_connect_options'); ?>
+                            <input type="hidden" name="tab_id" id="db-connect-tab-id-field" value="db_connect" />
+                            <?php $this->db_connect->display_settings(); ?>
+                            <div class="swsib-actions" id="db-connect-save-button-container">
+                                <input type="submit" name="submit" id="db-connect-save-button" class="button button-primary" value="<?php _e('Save Changes', 'swiftspeed-siberian'); ?>">
+                            </div>
+                        </form>
+                    </div>
+                    
                     <!-- Compatibility Tab -->
                     <div id="compatibility-tab" class="swsib-tab-content <?php echo $this->active_tab === 'compatibility' ? 'active' : ''; ?>" data-tab-id="compatibility">
                         <?php $this->password_sync->display_admin_settings(); ?>
                     </div>
-                    
-                    <!-- DB Connect Tab (Advanced Features) -->
-                    <div id="db-connect-tab" class="swsib-tab-content <?php echo $this->active_tab === 'db_connect' ? 'active' : ''; ?>" data-tab-id="db_connect">
+
+                    <!-- Advanced Auto Login Tab -->
+                    <div id="advanced-autologin-tab" class="swsib-tab-content <?php echo $this->active_tab === 'advanced_autologin' ? 'active' : ''; ?>" data-tab-id="advanced_autologin">
                         <?php if ($is_license_valid): ?>
-                            <form method="post" action="options.php" id="swsib-db-connect-form" class="swsib-settings-form">
-                                <?php settings_fields('swsib_db_connect_options'); ?>
-                                <input type="hidden" name="tab_id" id="db-connect-tab-id-field" value="db_connect" />
-                                <?php $this->advanced_features->display_settings(); ?>
-                                <div class="swsib-actions" id="db-connect-save-button-container">
-                                    <input type="submit" name="submit" id="db-connect-save-button" class="button button-primary" value="<?php _e('Save Changes', 'swiftspeed-siberian'); ?>">
+                            <?php if ($is_db_configured): ?>
+                                <?php $this->advanced_autologin->display_settings(); ?>
+                            <?php else: ?>
+                                <div class="swsib-notice warning">
+                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
+                                    <p><?php _e('You need to configure DB Connect before using Advanced Auto Login.', 'swiftspeed-siberian'); ?></p>
+                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
                                 </div>
-                            </form>
+                            <?php endif; ?>
                         <?php else: ?>
                             <?php swsib()->license->display_activation_form(); ?>
                         <?php endif; ?>
@@ -362,9 +399,9 @@ class SwiftSpeed_Siberian_Admin {
                                 </form>
                             <?php else: ?>
                                 <div class="swsib-notice warning">
-                                    <p><strong><?php _e('Advanced Features Required', 'swiftspeed-siberian'); ?></strong></p>
-                                    <p><?php _e('You need to configure Advanced Features before using WooCommerce integration.', 'swiftspeed-siberian'); ?></p>
-                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure Advanced Features', 'swiftspeed-siberian'); ?></a></p>
+                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
+                                    <p><?php _e('You need to configure DB Connect before using WooCommerce integration.', 'swiftspeed-siberian'); ?></p>
+                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
                                 </div>
                             <?php endif; ?>
                         <?php else: ?>
@@ -386,9 +423,9 @@ class SwiftSpeed_Siberian_Admin {
                                 </form>
                             <?php else: ?>
                                 <div class="swsib-notice warning">
-                                    <p><strong><?php _e('Advanced Features Required', 'swiftspeed-siberian'); ?></strong></p>
-                                    <p><?php _e('You need to configure Advanced Features before using Clean tools.', 'swiftspeed-siberian'); ?></p>
-                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure Advanced Features', 'swiftspeed-siberian'); ?></a></p>
+                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
+                                    <p><?php _e('You need to configure DB Connect before using Clean tools.', 'swiftspeed-siberian'); ?></p>
+                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
                                 </div>
                             <?php endif; ?>
                         <?php else: ?>
@@ -410,9 +447,33 @@ class SwiftSpeed_Siberian_Admin {
                                 </form>
                             <?php else: ?>
                                 <div class="swsib-notice warning">
-                                    <p><strong><?php _e('Advanced Features Required', 'swiftspeed-siberian'); ?></strong></p>
-                                    <p><?php _e('You need to configure Advanced Features before using Automation tools.', 'swiftspeed-siberian'); ?></p>
-                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure Advanced Features', 'swiftspeed-siberian'); ?></a></p>
+                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
+                                    <p><?php _e('You need to configure DB Connect before using Automation tools.', 'swiftspeed-siberian'); ?></p>
+                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <?php swsib()->license->display_activation_form(); ?>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Backup & Restore Tab -->
+                    <div id="backup-restore-tab" class="swsib-tab-content <?php echo $this->active_tab === 'backup_restore' ? 'active' : ''; ?>" data-tab-id="backup_restore">
+                        <?php if ($is_license_valid): ?>
+                            <?php if ($is_db_configured): ?>
+                                <form method="post" action="options.php" id="swsib-backup-restore-form" class="swsib-settings-form">
+                                    <?php settings_fields('swsib_backup_restore_options'); ?>
+                                    <input type="hidden" name="tab_id" id="backup-restore-tab-id-field" value="backup_restore" />
+                                    <?php $this->backup_restore->display_settings(); ?>
+                                    <div class="swsib-actions" id="backup-restore-save-button-container">
+                                        <input type="submit" name="submit" id="backup-restore-save-button" class="button button-primary" value="<?php _e('Save Changes', 'swiftspeed-siberian'); ?>">
+                                    </div>
+                                </form>
+                            <?php else: ?>
+                                <div class="swsib-notice warning">
+                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
+                                    <p><?php _e('You need to configure DB Connect before using Backup & Restore tools.', 'swiftspeed-siberian'); ?></p>
+                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
                                 </div>
                             <?php endif; ?>
                         <?php else: ?>

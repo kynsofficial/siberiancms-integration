@@ -42,10 +42,11 @@ class SwiftSpeed_Siberian_Public {
             return;
         }
 
-        // Check for shortcodes
+        // Check for shortcodes - add advanced login shortcode to the check
         $has_our_shortcode = (
             has_shortcode($post->post_content, 'swsib_login') ||
-            has_shortcode($post->post_content, 'swiftspeedsiberiancms')
+            has_shortcode($post->post_content, 'swiftspeedsiberiancms') ||
+            has_shortcode($post->post_content, 'swsib_advanced_login')
         );
 
         if (!$has_our_shortcode) {
@@ -129,7 +130,36 @@ class SwiftSpeed_Siberian_Public {
         $siberian_url    = $this->options['auto_login']['siberian_url']  ?? '';
         $api_user        = $this->options['auto_login']['api_user']      ?? '';
         $api_password    = $this->options['auto_login']['api_password']  ?? '';
+        
+        // Check for advanced auto login role override
         $default_role_id = $this->options['auto_login']['default_role_id'] ?? '2';
+        $sync_existing_role = false;
+        
+        // Check if this is coming from an advanced auto login button
+        if (isset($_GET['swsib_btn']) && isset($_GET['swsib_role'])) {
+            // Verify the button exists in our settings
+            $button_id = sanitize_text_field($_GET['swsib_btn']);
+            $role_id = sanitize_text_field($_GET['swsib_role']);
+            $sync_existing_role = isset($_GET['swsib_sync_role']) && $_GET['swsib_sync_role'] === '1';
+            
+            $advanced_autologin_options = isset($this->options['advanced_autologin']) ? $this->options['advanced_autologin'] : array();
+            $buttons = isset($advanced_autologin_options['buttons']) ? $advanced_autologin_options['buttons'] : array();
+            
+            if (isset($buttons[$button_id]) && $buttons[$button_id]['role_id'] == $role_id) {
+                // Use the role ID from the advanced button
+                $default_role_id = $role_id;
+                $this->log_frontend("Using role ID {$role_id} from advanced auto login button {$button_id}");
+                
+                // Check if we should sync existing role
+                if ($sync_existing_role && isset($buttons[$button_id]['sync_existing_role']) && $buttons[$button_id]['sync_existing_role']) {
+                    $this->log_frontend("Role syncing is enabled for button {$button_id}");
+                } else {
+                    $sync_existing_role = false;
+                }
+            } else {
+                $this->log_frontend("Invalid advanced auto login button ID or role: {$button_id}, {$role_id}");
+            }
+        }
 
         // Validate settings
         if (empty($siberian_url) || empty($api_user) || empty($api_password)) {
@@ -169,6 +199,34 @@ class SwiftSpeed_Siberian_Public {
                     wp_die('Error updating user in Siberian: ' . $update_result->get_error_message());
                 }
                 update_user_meta($current_user->ID, 'siberian_cms_password', $siberian_password);
+            }
+            
+            // If role sync is enabled, update the user's role
+            if ($sync_existing_role) {
+                $this->log_frontend("Syncing existing user role to {$default_role_id} for user ID {$user_exists['id']}");
+                
+                // Prepare update data for role sync
+                $update_data = array(
+                    'user_id'   => $user_exists['id'],
+                    'email'     => $user_email,
+                    'password'  => $siberian_password,
+                    'firstname' => $firstname,
+                    'lastname'  => $lastname,
+                    'role_id'   => $default_role_id
+                );
+                
+                // Update the user with the new role
+                $sync_result = $this->update_user_with_role(
+                    $siberian_url, $api_user, $api_password,
+                    $update_data
+                );
+                
+                if (is_wp_error($sync_result)) {
+                    $this->log_frontend('Failed to sync user role: ' . $sync_result->get_error_message());
+                    // We don't stop the process if role sync fails - continue with authentication
+                } else {
+                    $this->log_frontend("Successfully synced user role to {$default_role_id}");
+                }
             }
 
             // Attempt authentication
@@ -307,6 +365,41 @@ class SwiftSpeed_Siberian_Public {
                 'firstname' => $firstname,
                 'lastname'  => $lastname
             )
+        ));
+
+        if (is_wp_error($response)) {
+            return $response; 
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        if ($code !== 200) {
+            return new WP_Error('api_error', 'API returned code ' . $code);
+        }
+
+        $data = json_decode($body, true);
+        if (!$data) {
+            return new WP_Error('invalid_response', 'Invalid JSON response from Siberian');
+        }
+        if (!empty($data['error'])) {
+            return new WP_Error('api_error', $data['message'] ?? 'Unknown API error');
+        }
+
+        return $data;
+    }
+
+    /**
+     * Update user in Siberian with specified role
+     * This is a specialized version of update_user that explicitly includes role_id parameter
+     */
+    private function update_user_with_role($siberian_url, $api_user, $api_password, $user_data) {
+        $update_endpoint = $siberian_url . 'admin/api_account/update';
+        $response = wp_remote_post($update_endpoint, array(
+            'timeout' => 30,
+            'headers' => array(
+                'Authorization' => 'Basic ' . base64_encode($api_user . ':' . $api_password)
+            ),
+            'body' => $user_data
         ));
 
         if (is_wp_error($response)) {
@@ -536,7 +629,8 @@ class SwiftSpeed_Siberian_Public {
            return '<div class="swsib-error">Siberian URL is not configured. Please contact the administrator.</div>';
        }
 
-       // Default button text from plugin settings
+       // Only use default text if none provided
+       // This ensures that text explicitly passed to this function takes precedence
        if (empty($text)) {
            $text = $this->options['auto_login']['autologin_text'] ?? 'App Dashboard';
        }

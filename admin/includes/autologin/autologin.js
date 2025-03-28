@@ -10,6 +10,9 @@
         var currentBgColor = swsib_autologin_vars.button_color;
         var currentTextColor = swsib_autologin_vars.button_text_color;
         var nonce = swsib_autologin_vars.nonce;
+        var isDbConfigured = swsib_autologin_vars.is_db_configured;
+        var ajaxUrl = swsib_autologin_vars.ajax_url;
+        var advancedFeaturesUrl = swsib_autologin_vars.advanced_features_url;
         
         // Store in sessionStorage right away
         sessionStorage.setItem('swsib_button_bg_color', currentBgColor);
@@ -78,7 +81,270 @@
             }
         });
         
-        // Super aggressive function to force button color updates
+        // Toggle Siberian configuration settings visibility
+        $('#swsib_options_auto_login_enable_siberian_config').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#siberian-config-settings').slideDown();
+            } else {
+                $('#siberian-config-settings').slideUp();
+            }
+        });
+        
+        // Toggle processing screen settings visibility
+        $('#swsib_options_auto_login_auto_authenticate').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#auto-authenticate-settings').slideDown();
+            } else {
+                $('#auto-authenticate-settings').slideUp();
+            }
+        });
+        
+        // Toggle login redirect settings visibility
+        $('#swsib_options_auto_login_enable_login_redirect').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#login-redirect-settings').slideDown();
+            } else {
+                $('#login-redirect-settings').slideUp();
+            }
+        });
+        
+        // Display warning when sync existing role is changed
+        $('#swsib_options_auto_login_sync_existing_role').on('change', function() {
+            if ($(this).is(':checked')) {
+                if (!confirm('Warning: This will update the roles of existing Siberian users when they log in. This could have unintended consequences. Are you sure you want to enable this?')) {
+                    $(this).prop('checked', false);
+                }
+            }
+        });
+        
+        // Update processing text preview
+        $('#swsib_options_auto_login_processing_text').on('input change', function() {
+            var text = $(this).val() || 'Processing...';
+            $('.processing-text').text(text);
+        });
+        
+        // Update login message preview
+        $('#swsib_options_auto_login_not_logged_in_message').on('input change', function() {
+            var text = $(this).val() || 'You must be logged in to access or create an app.';
+            $('.login-message').text(text);
+        });
+        
+        // Update login button text preview
+        $('#swsib_options_auto_login_login_button_text').on('input change', function() {
+            var text = $(this).val() || 'Login';
+            $('#login-button-preview').text(text);
+        });
+        
+        // Test API connection
+        $('#test_api_connection').on('click', function(e) {
+    e.preventDefault();
+    
+    var $button = $(this);
+    // Save original text if not already stored.
+    if (!$button.data('originalText')) {
+         $button.data('originalText', $button.text());
+    }
+    var originalText = $button.data('originalText');
+    
+    // Set button state to "Testing..." and disable it.
+    $button.text('Testing...').prop('disabled', true);
+    var $result = $('#api_connection_result');
+    $result.stop(true, true).hide().html('');
+    
+    $.ajax({
+        url: swsib_autologin_vars.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'swsib_test_api',
+            nonce: swsib_autologin_vars.nonce,
+            url: $('#swsib_options_auto_login_siberian_url').val(),
+            user: $('#swsib_options_auto_login_api_user').val(),
+            password: $('#swsib_options_auto_login_api_password').val()
+        },
+        success: function(response) {
+            console.log('API test response', response);
+            var noticeClass = response.success ? 'success' : 'error';
+            var message = response.data && response.data.message ? response.data.message :
+                          (response.success ? 'API connection successful!' : 'API connection failed');
+            
+            // Show the result message and fade it out after 1 second (delay: 1000ms, fade: 100ms).
+            $result.html('<div class="swsib-notice ' + noticeClass + '"><p>' + message + '</p></div>')
+                   .show().delay(3000).fadeOut(100, function() {
+                        // Reset button text and enable button after toast fades out.
+                        $button.text(originalText).prop('disabled', false);
+                   });
+            
+            // Scroll the result message into view.
+            $('html, body').animate({
+                scrollTop: $result.offset().top - 100
+            }, 300);
+        },
+        error: function() {
+            $result.html('<div class="swsib-notice error"><p>Error occurred during test. Please try again.</p></div>')
+                   .show().delay(1000).fadeOut(100, function() {
+                        $button.text(originalText).prop('disabled', false);
+                   });
+        }
+    });
+});
+
+        
+        // Setup Default Role ID field
+        setupRoleIdField();
+        
+        // Load Siberian roles if database is configured
+        if (isDbConfigured) {
+            loadSiberianRoles();
+        }
+        
+        /**
+         * Setup the Role ID field based on DB configuration
+         */
+        function setupRoleIdField() {
+            var $roleField = $('#swsib_options_auto_login_default_role_id');
+            
+            if (!isDbConfigured) {
+                // Make the field truly read-only if DB is not configured
+                $roleField.prop('readonly', true)
+                    .val('2')
+                    .addClass('disabled-field');
+                
+                // Prevent editing by capturing keydown events
+                $roleField.on('keydown paste', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+            }
+        }
+        
+        /**
+         * Load Siberian roles via AJAX
+         */
+        function loadSiberianRoles() {
+            $('#siberian-roles-loading').show();
+            
+            $.ajax({
+                url: ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'swsib_get_siberian_roles',
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success && response.data && response.data.roles) {
+                        populateRoleDropdown(response.data.roles);
+                    } else {
+                        handleRolesError(response.data ? response.data.message : 'Failed to load roles');
+                    }
+                },
+                error: function() {
+                    handleRolesError('Error communicating with server');
+                },
+                complete: function() {
+                    $('#siberian-roles-loading').hide();
+                }
+            });
+        }
+        
+/**
+ * Populate role dropdown with fetched roles
+ */
+function populateRoleDropdown(roles) {
+    var $dropdown = $('.siberian-role-dropdown');
+    var currentValue = $dropdown.val();
+    
+    // Clear current options
+    $dropdown.empty();
+    
+    // Track if we find a match for the current value
+    var matchFound = false;
+    var defaultRoleFound = false;
+    
+    // Add options for each role
+    $.each(roles, function(index, role) {
+        // Mark if default role (ID 2) is found
+        if (role.role_id == 2) {
+            defaultRoleFound = true;
+        }
+        
+        // Prepare option text
+        var optionText = 'Role ID ' + role.role_id + ', ' + role.code + ', ' + role.label;
+        
+        // Add the "(Standard SiberianCMS signup access)" only to role ID 2
+        if (role.role_id == 2) {
+            optionText += ' (Standard SiberianCMS signup access)';
+        }
+        
+        // Create the option element
+        var $option = $('<option>', {
+            value: role.role_id,
+            text: optionText
+        });
+        
+        // Set as selected if it matches current value
+        if (role.role_id == currentValue) {
+            $option.prop('selected', true);
+            matchFound = true;
+        }
+        
+        $dropdown.append($option);
+    });
+    
+    // If no match was found and current value is not 2, select default
+    if (!matchFound && currentValue !== '2') {
+        // If we have a default role (ID 2), select it
+        if (defaultRoleFound) {
+            $dropdown.val('2');
+            console.log('Previously selected role ID ' + currentValue + ' not found. Using default (2)');
+            
+            // Add a notice if the current value is no longer available
+            if (currentValue && currentValue !== '') {
+                var warningHtml = '<div class="swsib-notice warning" style="margin-top: 10px;">' +
+                    '<p><strong>Note:</strong> Your previously selected role ID (' + currentValue + ') is no longer available. ' +
+                    'The default signup role (ID 2) has been selected.</p></div>';
+                
+                // Remove any existing notice first
+                $('.siberian-role-warning').remove();
+                
+                // Add the warning after the dropdown
+                $dropdown.after('<div class="siberian-role-warning">' + warningHtml + '</div>');
+            }
+        }
+    }
+}
+
+/**
+ * Handle errors when loading roles
+ */
+function handleRolesError(errorMessage) {
+    var $roleField = $('#swsib_options_auto_login_default_role_id');
+    
+    if ($roleField.is('select')) {
+        // It's a dropdown, clear it and add default option
+        $roleField.empty().append(
+            $('<option>', {
+                value: '2',
+                text: 'Role ID 2 (Standard SiberianCMS signup access)',
+                selected: true
+            })
+        );
+        
+        // Show error message
+        $roleField.after(
+            '<div class="swsib-notice error" style="margin-top: 5px;">' +
+            '<p>Error loading roles: ' + errorMessage + '</p>' +
+            '<p>Using default signup role (ID 2).</p>' +
+            '</div>'
+        );
+    } else {
+        // It's an input field, make sure it's set to 2
+        $roleField.val('2').prop('readonly', true).addClass('disabled-field');
+    }
+}
+        
+        /**
+         * Super aggressive function to force button color updates
+         */
         function forceButtonColorUpdate(bgColor, textColor) {
             var previewButton = $('.button-preview .swsib-button')[0];
             var loginButton = $('#login-button-preview')[0];
@@ -146,7 +412,9 @@
             document.documentElement.style.setProperty('--button-hover-color', hoverColor);
         }
         
-        // Function to adjust color brightness
+        /**
+         * Function to adjust color brightness
+         */
         function adjustColor(color, amount) {
             return '#' + color.replace(/^#/, '').replace(/../g, function(hex) {
                 var colorVal = parseInt(hex, 16);
@@ -155,109 +423,6 @@
             });
         }
         
-        // Toggle Siberian configuration settings visibility
-        $('#swsib_options_auto_login_enable_siberian_config').on('change', function() {
-            if ($(this).is(':checked')) {
-                $('#siberian-config-settings').slideDown();
-            } else {
-                $('#siberian-config-settings').slideUp();
-            }
-        });
-        
-        // Toggle processing screen settings visibility
-        $('#swsib_options_auto_login_auto_authenticate').on('change', function() {
-            if ($(this).is(':checked')) {
-                $('#auto-authenticate-settings').slideDown();
-            } else {
-                $('#auto-authenticate-settings').slideUp();
-            }
-        });
-        
-        // Toggle login redirect settings visibility
-        $('#swsib_options_auto_login_enable_login_redirect').on('change', function() {
-            if ($(this).is(':checked')) {
-                $('#login-redirect-settings').slideDown();
-            } else {
-                $('#login-redirect-settings').slideUp();
-            }
-        });
-        
-        // Update processing text preview
-        $('#swsib_options_auto_login_processing_text').on('input change', function() {
-            var text = $(this).val() || 'Processing...';
-            $('.processing-text').text(text);
-        });
-        
-        // Update login message preview
-        $('#swsib_options_auto_login_not_logged_in_message').on('input change', function() {
-            var text = $(this).val() || 'You must be logged in to access or create an app.';
-            $('.login-message').text(text);
-        });
-        
-        // Update login button text preview
-        $('#swsib_options_auto_login_login_button_text').on('input change', function() {
-            var text = $(this).val() || 'Login';
-            $('#login-button-preview').text(text);
-        });
-        
-        // Test API connection
-        $('#test_api_connection').on('click', function(e) {
-            e.preventDefault();
-            
-            var siberianUrl = $('#swsib_options_auto_login_siberian_url').val();
-            var apiUser = $('#swsib_options_auto_login_api_user').val();
-            var apiPassword = $('#swsib_options_auto_login_api_password').val();
-            
-            if (!siberianUrl) {
-                alert('Please enter Siberian CMS URL');
-                $('#swsib_options_auto_login_siberian_url').focus();
-                return;
-            }
-            
-            if (!apiUser || !apiPassword) {
-                alert('Please enter API credentials');
-                if (!apiUser) {
-                    $('#swsib_options_auto_login_api_user').focus();
-                } else {
-                    $('#swsib_options_auto_login_api_password').focus();
-                }
-                return;
-            }
-            
-            var $button = $(this);
-            var originalText = $button.text();
-            
-            $button.text('Testing...');
-            $button.prop('disabled', true);
-            
-            // AJAX request to test API connection
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'swsib_test_api',
-                    nonce: nonce,
-                    url: siberianUrl,
-                    user: apiUser,
-                    password: apiPassword
-                },
-                success: function(response) {
-                    if (response.success) {
-                        alert('API connection successful!');
-                    } else {
-                        alert('API connection failed: ' + response.data);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    alert('Error testing API connection: ' + error);
-                },
-                complete: function() {
-                    $button.text(originalText);
-                    $button.prop('disabled', false);
-                }
-            });
-        });
-        
         // Force immediate update after everything is loaded
         $(window).on('load', function() {
             setTimeout(function() {
@@ -265,6 +430,66 @@
                 var textColor = sessionStorage.getItem('swsib_button_text_color') || currentTextColor;
                 forceButtonColorUpdate(bgColor, textColor);
             }, 500);
+            
+            // Check if URL contains a section parameter for scrolling
+            var urlParams = new URLSearchParams(window.location.search);
+            var sectionTarget = urlParams.get('section');
+            
+            if (sectionTarget) {
+                // Log for debugging
+                console.log('Section target found in URL:', sectionTarget);
+                
+                // Try multiple methods to find the target section
+                var $target = $('#' + sectionTarget);
+                
+                // If not found directly, try variations or fallbacks
+                if (!$target.length) {
+                    // Try without "-section" suffix if it's there
+                    if (sectionTarget.endsWith('-section')) {
+                        var altTarget = sectionTarget.replace(/-section$/, '');
+                        $target = $('#' + altTarget);
+                        console.log('Trying alternative target:', altTarget);
+                    }
+                    
+                    // If still not found, look for headings or sections with this text
+                    if (!$target.length) {
+                        // Try to find section by heading text
+                        var targetText = sectionTarget.replace(/-/g, ' ').replace(/section$/, '').trim();
+                        console.log('Looking for heading with text:', targetText);
+                        
+                        // Find headings that contain this text
+                        var $headings = $('h3').filter(function() {
+                            return $(this).text().toLowerCase().indexOf(targetText.toLowerCase()) !== -1;
+                        });
+                        
+                        if ($headings.length) {
+                            $target = $headings.first();
+                            console.log('Found heading by text:', $target.text());
+                        }
+                    }
+                }
+                
+                // If we found a target using any method, scroll to it
+                if ($target && $target.length) {
+                    console.log('Target found, scrolling to:', $target);
+                    
+                    // Delay slightly to ensure page is fully loaded
+                    setTimeout(function() {
+                        // Scroll to the target section with animation
+                        $('html, body').animate({
+                            scrollTop: $target.offset().top - 50
+                        }, 500);
+                        
+                        // Add highlight class to draw attention
+                        $target.addClass('swsib-highlight-section');
+                        setTimeout(function() {
+                            $target.removeClass('swsib-highlight-section');
+                        }, 2000);
+                    }, 300);
+                } else {
+                    console.log('Target section not found in DOM:', sectionTarget);
+                }
+            }
         });
     });
 })(jQuery);

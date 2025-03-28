@@ -17,21 +17,26 @@ class SwiftSpeed_Siberian_Logging_Manager {
     /**
      * Available loggers
      */
-   private $available_loggers = array(
+    private $available_loggers = array(
         'auto_login' => array(
             'backend' => 'Auto Login Backend',
             'frontend' => 'Auto Login Frontend'
+        ),
+        'autologin_advanced' => array(
+            'backend' => 'Auto-Login Advanced Backend',
+            'frontend' => 'Auto Login Advanced Frontend'
         ),
         'compatibility' => array(
             'backend' => 'Compatibility Backend',
             'frontend' => 'Compatibility Frontend'
         ),
-           'License' => array(
+        'License' => array(
             'backend' => 'License Backend',
             'frontend' => 'License Frontend'
         ),
         'db_connect' => array(
-            'backend' => 'DB Connect Backend'
+            'backend' => 'DB Connect Backend',
+            'frontend' => 'DB Connect Frontend'
         ),
         'woocommerce' => array(
             'backend' => 'WooCommerce Integration Backend',
@@ -89,8 +94,36 @@ class SwiftSpeed_Siberian_Logging_Manager {
         // Register action for form submission
         add_action('admin_post_swsib_save_logging_settings', array($this, 'process_form_submission'));
         
+        // Add filter to prevent overwriting other settings
+        add_filter('pre_update_option_swsib_options', array($this, 'filter_update_options'), 10, 2);
+        
         // Clean up inconsistent log files
         $this->clean_inconsistent_log_files();
+    }
+    
+    /**
+     * Filter to properly handle saving options without overwriting other tabs
+     */
+    public function filter_update_options($new_value, $old_value) {
+        // Only apply this filter when saving logging settings
+        if (isset($_POST['option_page']) && $_POST['option_page'] === 'swsib_logging_options') {
+            if (is_array($old_value) && is_array($new_value)) {
+                // Extract only the logging settings from the new value
+                $logging_settings = isset($new_value['logging']) ? $new_value['logging'] : array();
+                
+                // Keep all other settings from the old value
+                foreach ($old_value as $key => $value) {
+                    if ($key !== 'logging') {
+                        $new_value[$key] = $value;
+                    }
+                }
+                
+                // Update only the logging settings
+                $new_value['logging'] = $logging_settings;
+            }
+        }
+        
+        return $new_value;
     }
     
     /**
@@ -173,23 +206,14 @@ class SwiftSpeed_Siberian_Logging_Manager {
             }
         }
         
-        // Update the loggers in options
+        // Update the loggers in options (only the logging part)
         $options['logging']['loggers'] = $new_loggers;
         
         // Save options
         update_option('swsib_options', $options);
         
-        // Add settings updated notice
-        add_settings_error(
-            'swsib_options',
-            'settings_updated',
-            __('Logging settings saved.', 'swiftspeed-siberian'),
-            'updated'
-        );
-        set_transient('settings_errors', get_settings_errors(), 30);
-        
-        // Redirect back to the tab
-        wp_redirect(admin_url('admin.php?page=swsib-integration&tab_id=logging&settings-updated=true'));
+        // Redirect back to the tab with a success parameter (consistent with other tabs)
+        wp_redirect(admin_url('admin.php?page=swsib-integration&tab_id=logging&logging_updated=true'));
         exit;
     }
     
@@ -220,6 +244,16 @@ class SwiftSpeed_Siberian_Logging_Manager {
             }
         }
         
+        // Check for tab-specific success message
+        if (isset($_GET['logging_updated']) && $_GET['logging_updated'] == 'true') {
+            echo '<div class="swsib-notice success"><p>' . __('Logging settings saved successfully.', 'swiftspeed-siberian') . '</p></div>';
+        }
+        
+        // Check for nonce error
+        if (isset($_GET['error']) && $_GET['error'] == 'nonce_failed') {
+            echo '<div class="swsib-notice error"><p>' . __('Security check failed. Please try again.', 'swiftspeed-siberian') . '</p></div>';
+        }
+        
         ?>
         <h2><?php _e('Logging Management', 'swiftspeed-siberian'); ?></h2>
         <p class="panel-description">
@@ -236,7 +270,8 @@ class SwiftSpeed_Siberian_Logging_Manager {
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" id="swsib-logging-form" class="swsib-settings-form">
             <?php wp_nonce_field('swsib_logging_options-options'); ?>
             <input type="hidden" name="action" value="swsib_save_logging_settings">
-            <input type="hidden" name="tab_id" id="logging-tab-id-field" value="logging" />
+            <input type="hidden" name="tab_id" id="logging-tab-id-field-unique" value="logging" />
+            <input type="hidden" name="option_page" value="swsib_logging_options" />
             
             <h3><?php _e('Available Loggers', 'swiftspeed-siberian'); ?></h3>
             <p><?php _e('Select which components to log. Each enabled logger will create a separate log file.', 'swiftspeed-siberian'); ?></p>
@@ -252,10 +287,11 @@ class SwiftSpeed_Siberian_Logging_Manager {
                             $log_file = $this->get_log_filename($logger_group, $logger_key);
                             $log_exists = file_exists($log_file);
                             $log_size = $log_exists ? size_format(filesize($log_file)) : '0 KB';
+                            $unique_field_id = 'swsib_options_logging_loggers_' . $logger_id . '_' . uniqid();
                             ?>
                             <div class="swsib-logger-item">
                                 <div class="swsib-field switch-field compact">
-                                    <label for="swsib_options_logging_loggers_<?php echo $logger_id; ?>">
+                                    <label for="<?php echo esc_attr($unique_field_id); ?>">
                                         <?php echo esc_html($logger_name); ?>
                                         <?php if ($log_exists): ?>
                                             <span class="swsib-log-size">(<?php echo $log_size; ?>)</span>
@@ -264,7 +300,7 @@ class SwiftSpeed_Siberian_Logging_Manager {
                                     <div class="toggle-container">
                                         <label class="switch small">
                                             <input type="checkbox" 
-                                                id="swsib_options_logging_loggers_<?php echo $logger_id; ?>" 
+                                                id="<?php echo esc_attr($unique_field_id); ?>" 
                                                 name="swsib_options[logging][loggers][<?php echo $logger_id; ?>]" 
                                                 value="1" 
                                                 class="logger-toggle"
@@ -583,6 +619,9 @@ class SwiftSpeed_Siberian_Logging_Manager {
             font-family: monospace;
             font-size: 13px;
             line-height: 1.4;
+            word-break: break-all; /* Force break long words */
+            overflow-wrap: break-word;
+            max-width: 100%;
         }
         
         .swsib-log-placeholder {

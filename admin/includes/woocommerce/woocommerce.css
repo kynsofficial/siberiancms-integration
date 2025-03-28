@@ -1,0 +1,420 @@
+/**
+ * WooCommerce Integration Styles - Enhanced for better user experience
+ */
+
+/* General Section Styling */
+.swsib-section {
+    background-color: #fff;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 20px 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.swsib-section h3 {
+    color: #0073aa;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 12px;
+    margin-top: 0;
+    font-size: 20px;
+}
+
+/* Field Styling */
+.swsib-field {
+    margin-bottom: 20px;
+}
+
+.swsib-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.swsib-select {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+    font-size: 14px;
+}
+
+.swsib-field-note {
+    color: #666;
+    font-style: italic;
+    margin-top: 5px;
+    font-size: 13px;
+}
+
+/* Switch Toggle */
+.switch-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.switch-field label {
+    flex: 0 0 200px;
+    font-size: 14px;
+}
+
+.toggle-container {
+    flex: 1;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 26px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: #fff;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #0073aa;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #0073aa;
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* DB Connection Test */
+.swsib-test-result {
+    margin-top: 12px;
+    padding: 12px;
+    display: none;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.swsib-test-result.success {
+    background-color: #dff0d8;
+    border: 1px solid #d0e9c6;
+    color: #3c763d;
+}
+
+.swsib-test-result.error {
+    background-color: #f2dede;
+    border: 1px solid #ebccd1;
+    color: #a94442;
+}
+
+/* Role Priority List */
+.swsib-sortable-container {
+    margin: 20px 0;
+    max-width: 600px;
+}
+
+.swsib-sortable-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background-color: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.swsib-sortable-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin: 0;
+    border-bottom: 1px solid #ddd;
+    background: #fff;
+    cursor: move;
+    font-size: 14px;
+}
+
+.swsib-sortable-item:last-child {
+    border-bottom: none;
+}
+
+.swsib-sortable-handle {
+    width: 24px;
+    height: 24px;
+    margin-right: 15px;
+    border-radius: 3px;
+    background-color: #0073aa;
+    cursor: move;
+}
+
+.swsib-sortable-item span {
+    flex: 1;
+}
+
+.swsib-sortable-placeholder {
+    border: 1px dashed #bbb;
+    background-color: #f3f3f3;
+    height: 45px;
+    margin-bottom: 5px;
+}
+
+/* Mapping Form */
+.swsib-form {
+    background-color: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.swsib-form h4 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+    font-size: 18px;
+}
+
+.swsib-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -10px 20px;
+}
+
+.swsib-form-col {
+    flex: 1;
+    min-width: 200px;
+    padding: 0 10px;
+    margin-bottom: 15px;
+}
+
+.swsib-form-col label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* Enhanced Form Actions */
+.swsib-form-actions {
+    display: flex;
+    align-items: center;
+    padding: 15px 0 5px 0;
+    border-top: 1px solid #eee;
+}
+
+.swsib-form-actions button {
+    padding: 8px 20px !important;
+    height: auto !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+}
+
+/* Messaging */
+.swsib-message {
+    margin-left: 15px;
+    padding: 10px 14px;
+    display: none;
+    border-radius: 4px;
+    vertical-align: middle;
+    font-size: 14px;
+}
+
+.swsib-message.success {
+    background-color: #dff0d8;
+    border: 1px solid #d0e9c6;
+    color: #3c763d;
+}
+
+.swsib-message.error {
+    background-color: #f2dede;
+    border: 1px solid #ebccd1;
+    color: #a94442;
+}
+
+/* Table Styling */
+.swsib-table-container {
+    margin: 25px 0;
+}
+
+.swsib-table {
+    border-collapse: collapse;
+    width: 100%;
+    background: #fff;
+    font-size: 14px;
+}
+
+.swsib-table th {
+    background-color: #f5f5f5;
+    border-bottom: 2px solid #ddd;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.swsib-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.swsib-table tr:last-child td {
+    border-bottom: none;
+}
+
+.swsib-table .no-mappings-row td {
+    padding: 20px;
+    text-align: center;
+    font-style: italic;
+    color: #666;
+}
+
+/* Disable styling for already mapped options */
+.swsib-select option[disabled] {
+    color: #999;
+    font-style: italic;
+}
+
+/* Improved Delete Button Styling */
+button.delete-mapping,
+.button-small.delete-mapping ,#allowed_origins_tbody > tr > td:nth-child(2) > button{
+    background-color: #d9534f !important;
+    border: 1px solid #d43f3a !important;
+    color: #fff !important;
+    padding: 5px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    font-size: 13px !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+    display: inline-block !important;
+}
+
+button.delete-mapping:hover,
+.button-small.delete-mapping:hover {
+    background-color: #c9302c !important;
+    border-color: #ac2925 !important;
+}
+
+/* Animation for displaying elements */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Notice Styling Enhancements */
+.swsib-notice {
+    border-left-width: 4px;
+    padding: 15px 20px;
+    margin: 15px 0 25px;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.swsib-notice.info {
+    border-left-color: #0073aa;
+    background-color: #f0f8ff;
+}
+
+.swsib-notice.warning {
+    border-left-color: #ffb900;
+    background-color: #fffaeb;
+}
+
+.swsib-notice.error {
+    border-left-color: #dc3232;
+    background-color: #fef7f7;
+}
+
+.swsib-notice.success {
+    border-left-color: #46b450;
+    background-color: #f7fcf7;
+}
+
+.swsib-notice p {
+    margin: 0.5em 0;
+}
+
+.swsib-notice p:first-child {
+    margin-top: 0;
+}
+
+.swsib-notice p:last-child {
+    margin-bottom: 0;
+}
+
+.swsib-notice a {
+    text-decoration: none;
+}
+
+/* Add Button Enhancement */
+#add_mapping_button,#add_allowed_origin {
+    background-color: #0073aa;
+    margin-top: 5px;
+    color: white;
+    border-color: #005d8c;
+    font-weight: 500;
+    padding: 8px 20px;
+    transition: all 0.2s ease;
+}
+
+#add_mapping_button:hover,#add_allowed_origin:hover {
+    background-color: #005d8c;
+}
+
+/* Responsive adjustments */
+@media (max-width: 782px) {
+    .swsib-form-row {
+        display: block;
+    }
+    
+    .swsib-form-col {
+        width: 100%;
+    }
+    
+    .swsib-select, input[type="text"], input[type="url"], textarea {
+        width: 100%;
+    }
+    
+    .switch-field {
+        display: block;
+    }
+    
+    .swsib-field label {
+        margin-bottom: 10px;
+    }
+}

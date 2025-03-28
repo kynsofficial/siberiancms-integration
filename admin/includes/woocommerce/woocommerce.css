@@ -1,0 +1,367 @@
+/**
+ * Unified SwiftSpeed Siberian Styles
+ * Applies to both Auto‑Login & WooCommerce Integration pages
+ */
+
+/* -----------------------------------
+   General Section Container
+   ----------------------------------- */
+.swsib-section {
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+#add_allowed_origin, #woocommerce-tab > div:nth-child(3) > p:nth-child(3) > a,#add_subscription_allowed_origin
+ {
+    background-color: var(--primary-color);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+/* -----------------------------------
+   Form Fields & Controls
+   ----------------------------------- */
+.swsib-field {
+    margin-bottom: 20px;
+}
+
+.swsib-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.swsib-select,
+input[type="text"],
+input[type="url"],
+textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+    font-size: 14px;
+}
+
+.swsib-field-note {
+    color: #666;
+    font-style: italic;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* -----------------------------------
+   Toggle Switch (Enable / Disable)
+   ----------------------------------- */
+.switch-field {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.switch-field label {
+    margin-right: 15px;
+    font-size: 14px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 26px;
+}
+
+.slider:before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: #fff;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #3a4b79;
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* -----------------------------------
+   Test Connection Result
+   ----------------------------------- */
+.swsib-test-result {
+    display: none;
+    margin-top: 12px;
+    padding: 10px 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.swsib-test-result.success {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+}
+
+.swsib-test-result.error {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+#api_connection_result.show-result {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* -----------------------------------
+   Sortable Role Priority List (Improved)
+   ----------------------------------- */
+.swsib-sortable-container {
+    margin: 20px 0;
+    max-width: 600px;
+}
+
+.swsib-sortable-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #f9f9f9;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.swsib-sortable-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 14px 18px;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+    cursor: move; /* for reordering */
+}
+
+.swsib-sortable-item:hover {
+    background-color: #fafafa;
+}
+
+.swsib-sortable-item:last-child {
+    border-bottom: none;
+}
+
+.swsib-sortable-handle {
+    width: 28px;
+    height: 28px;
+    margin-right: 15px;
+    background-color: #3a4b79;
+    border-radius: 4px;
+    cursor: move;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.swsib-sortable-handle:before {
+    content: "≡";
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.swsib-sortable-handle:hover {
+    background-color: #2f3c62;
+}
+
+.swsib-sortable-placeholder {
+    height: 50px;
+    margin-bottom: 5px;
+    border: 2px dashed #bbb;
+    background-color: #f7f7f7;
+    transition: background-color 0.2s ease;
+}
+
+/* When dragging, highlight the placeholder a bit more */
+.swsib-sortable-placeholder:hover {
+    background-color: #efefef;
+}
+
+/* -----------------------------------
+   Mapping Form
+   ----------------------------------- */
+.swsib-form {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.swsib-form h4 {
+    margin: 0 0 15px;
+    font-size: 18px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.swsib-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -10px 20px;
+}
+
+.swsib-form-col {
+    flex: 1;
+    min-width: 200px;
+    padding: 0 10px;
+    margin-bottom: 15px;
+}
+
+.swsib-form-actions {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+}
+
+.swsib-form-actions button {
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* -----------------------------------
+   Tables & Buttons
+   ----------------------------------- */
+.swsib-table-container {
+    margin: 25px 0;
+}
+
+.swsib-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 14px;
+}
+
+.swsib-table th {
+    background: #f5f5f5;
+    padding: 12px 15px;
+    border-bottom: 2px solid #ddd;
+    text-align: left;
+    font-weight: 600;
+}
+
+.swsib-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.swsib-table tr:last-child td {
+    border-bottom: none;
+}
+
+button.delete-mapping,
+.button-small.delete-mapping, #allowed_origins_tbody > tr > td:nth-child(2) > button,#subscription_allowed_origins_tbody > tr > td:nth-child(2) > button {
+    background-color: #dc3545 !important;
+    border: 1px solid #c12e2a !important;
+    color: #fff !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+}
+
+button.delete-mapping:hover,
+.button-small.delete-mapping:hover, #allowed_origins_tbody > tr > td:nth-child(2) > button:hover,#subscription_allowed_origins_tbody > tr > td:nth-child(2) > button:hover {
+    background-color: #c9302c !important;
+}
+
+/* -----------------------------------
+   Notices
+   ----------------------------------- */
+.swsib-notice {
+    margin: 20px 0;
+    padding: 15px 20px;
+    border-left: 4px solid;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 0 5px rgba(0,0,0,0.05);
+}
+
+.swsib-notice.info    { border-color: #3498db; background: #f0f8ff; }
+.swsib-notice.warning { border-color: #ffb900; background: #fffaeb; }
+.swsib-notice.error   { border-color: #dc3545; background: #fef7f7; }
+.swsib-notice.success { border-color: #28a745; background: #f7fcf7; }
+
+.swsib-notice p { margin: .5em 0; }
+
+/* -----------------------------------
+   Animations
+   ----------------------------------- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* -----------------------------------
+   Spinners
+   ----------------------------------- */
+.processing-spinner,
+.swsib-spin {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0,0,0,0.1);
+    border-radius: 50%;
+    border-top-color: #3498db;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* -----------------------------------
+   Responsive Tweaks
+   ----------------------------------- */
+@media (max-width: 782px) {
+    .swsib-form-row { display: block; }
+    .swsib-form-col,
+    .swsib-select,
+    input[type="text"],
+    input[type="url"],
+    textarea { width: 100%; }
+    .switch-field { display: block; }
+}

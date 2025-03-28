@@ -1,8 +1,9 @@
 /* SwiftSpeed Siberian Integration Public Styles */
+
+/* Button Styles */
 .swsib-button {
     display: inline-block;
     padding: 12px 20px;
-
     color: #fff;
     border-radius: 4px;
     text-decoration: none;
@@ -55,8 +56,45 @@ a.swsib-button:not([style*="background-color"]) {
     display: inline-block;
 }
 
-@keyframes swsib-spinner {
-    to {transform: rotate(360deg);}
+/* Button Variations */
+.swsib-button-primary {
+    background-color: #3a4b79;
+}
+
+.swsib-button-secondary {
+    background-color: #f0f0f1;
+    color: #2c3338;
+    border: 1px solid #dadce0;
+}
+
+.swsib-button-secondary:hover {
+    background-color: #e5e5e5;
+    color: #1d2327;
+    filter: none;
+}
+
+.swsib-button-success {
+    background-color: #34a853;
+}
+
+.swsib-button-outline {
+    background-color: transparent;
+    border: 2px solid #3a4b79;
+    color: #3a4b79;
+}
+
+.swsib-button-outline:hover {
+    background-color: #3a4b79;
+    color: #fff;
+    filter: none;
+}
+
+.swsib-stripe-portal-btn {
+    background-color: #635bff;
+}
+
+.swsib-stripe-portal-btn:hover {
+    background-color: #5851db;
 }
 
 /* Notification Styles */
@@ -99,77 +137,374 @@ a.swsib-button:not([style*="background-color"]) {
     font-size: 14px;
 }
 
-/* Button Variations - still supported but custom color takes precedence */
-.swsib-button-primary {
-    background-color: #3a4b79;
+/* Notice styles */
+.swsib-notice {
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    font-size: 14px;
 }
 
-.swsib-button-secondary {
-    background-color: #f0f0f1;
-    color: #2c3338;
-    border: 1px solid #dadce0;
+.swsib-notice.success {
+    background-color: #edfaef;
+    color: #0a7a35;
+    border: 1px solid #34a853;
 }
 
-.swsib-button-secondary:hover {
-    background-color: #e5e5e5;
-    color: #1d2327;
-    filter: none;
+.swsib-notice.error {
+    background-color: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #ea4335;
 }
 
-.swsib-button-success {
-    background-color: #34a853;
+.swsib-notice.info {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    border: 1px solid #4285f4;
 }
 
-.swsib-button-outline {
-    background-color: transparent;
-    border: 2px solid #3a4b79;
-    color: #3a4b79;
-}
-
-.swsib-button-outline:hover {
-    background-color: #3a4b79;
-    color: #fff;
-    filter: none;
-}
-
-
-
-/* Existing CSS will be here... */
-
-/* Processing screen styles */
-.swsib-processing-overlay {
+/* Loading Overlay - Unified Style */
+#swsib-loading-overlay,
+.swsib-loading-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.swsib-loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #635bff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: swsib-spin 2s linear infinite;
+    margin-bottom: 15px;
+}
+
+.swsib-loading-message {
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Grace period message */
+.swsib-grace-period-message {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Animation keyframes */
+@keyframes swsib-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Legacy spinner name - for backward compatibility */
+@keyframes swsib-spinner {
+    to { transform: rotate(360deg); }
+}
+
+/* Subscription Frontend Dashboard Styles */
+.swsib-frontend-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.swsib-frontend-header {
+    margin-bottom: 30px;
+}
+
+.swsib-frontend-header h2 {
+    margin-bottom: 10px;
+    font-size: 28px;
+    font-weight: 600;
+    color: #333;
+}
+
+.swsib-frontend-header p {
+    font-size: 16px;
+    color: #666;
+}
+
+.swsib-frontend-dashboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.swsib-frontend-sidebar {
+    flex: 1;
+    min-width: 250px;
+    max-width: 300px;
+}
+
+.swsib-frontend-main {
+    flex: 3;
+    min-width: 300px;
+}
+
+.swsib-frontend-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.swsib-user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.swsib-user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #3a4b79;
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999999;
+    font-size: 20px;
+    font-weight: 600;
 }
 
-.swsib-processing-content {
-    text-align: center;
+.swsib-user-details h4 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+    font-weight: 600;
 }
 
-.swsib-processing-text {
-    display: block;
-    font-size: 24px;
+.swsib-user-details p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.swsib-subscription-summary {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.swsib-summary-item {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.swsib-summary-item.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.swsib-summary-item.clickable:hover {
+    background: #f0f0f0;
+}
+
+.swsib-summary-item.active {
+    background: #e8f0fe;
+    border-left: 3px solid #4285f4;
+}
+
+.swsib-summary-item.empty .swsib-summary-value {
+    color: #aaa;
+}
+
+.swsib-summary-label {
+    font-size: 14px;
     font-weight: 500;
+}
+
+.swsib-summary-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.swsib-subscription-filter-container {
     margin-bottom: 20px;
 }
 
-.swsib-processing-spinner {
-    display: inline-block;
-    width: 50px;
-    height: 50px;
-    border: 5px solid rgba(0,0,0,0.1);
-    border-radius: 50%;
-    border-top-color: #3498db;
-    animation: swsib-spin 1s ease-in-out infinite;
+.swsib-status-filter {
+    padding: 10px 15px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    width: 100%;
+    max-width: 300px;
+    font-size: 14px;
+    color: #333;
 }
 
-@keyframes swsib-spin {
-    to { transform: rotate(360deg); }
+.swsib-subscription-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.swsib-subscription-item {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.swsib-subscription-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.swsib-subscription-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.swsib-subscription-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.swsib-plan-frequency {
+    display: block;
+    font-size: 14px;
+    font-weight: normal;
+    color: #666;
+    text-align: right;
+}
+
+.swsib-subscription-description {
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.swsib-subscription-details {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.swsib-status-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.swsib-status-active {
+    background-color: #e6f4ea;
+    color: #0a7a35;
+}
+
+.swsib-status-pending-cancellation {
+    background-color: #fef7e0;
+    color: #b06000;
+}
+
+.swsib-status-cancelled {
+    background-color: #fce8e6;
+    color: #c5221f;
+}
+
+.swsib-status-expired {
+    background-color: #f1f3f4;
+    color: #5f6368;
+}
+
+.swsib-subscription-dates {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #666;
+}
+
+.swsib-subscription-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #666;
+}
+
+.swsib-subscription-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.swsib-pending-message {
+    flex-basis: 100%;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background-color: #fef7e0;
+    color: #b06000;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.swsib-empty-subscriptions {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.swsib-empty-subscriptions p {
+    font-size: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .swsib-frontend-dashboard {
+        flex-direction: column;
+    }
+    
+    .swsib-frontend-sidebar {
+        max-width: 100%;
+    }
+    
+    .swsib-subscription-header,
+    .swsib-subscription-dates,
+    .swsib-subscription-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .swsib-subscription-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .swsib-button {
+        width: 100%;
+    }
 }

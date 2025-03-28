@@ -1,0 +1,4273 @@
+[2025-04-17 08:35:26] === START: Handling create_subscription_order ===
+[2025-04-17 08:35:26] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 08:35:26] Using PE Subscription integration handler
+[2025-04-17 08:35:26] === START: Processing Subscription Order Request ===
+[2025-04-17 08:35:26] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 08:35:26] Using PE Subscription integration handler
+[2025-04-17 08:35:26] === START: Processing Subscription Order Request ===
+[2025-04-17 08:35:26] RAW JSON PAYLOAD: action=create_subscription_order&admin_id=1&application_id=57&admin_email=ssutechnologyltd%40gmail.com&selected_subscription_id=2&csrf_token=e15d2ecd92352cea5a485a6687c8df3d
+[2025-04-17 08:35:26] POST data: Array
+(
+    [action] => create_subscription_order
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [selected_subscription_id] => 2
+    [csrf_token] => e15d2ecd92352cea5a485a6687c8df3d
+)
+
+[2025-04-17 08:35:26] Data received - admin_id: 1, app_id: 57, email: ssutechnologyltd@gmail.com, sub_id: 2
+[2025-04-17 08:35:26] SiberianCMS CSRF token: e15d2ecd92352cea5a485a6687c8df3d
+[2025-04-17 08:35:26] Creating subscription order URL for admin_id: 1, app_id: 57, email: ssutechnologyltd@gmail.com, sub_id: 2
+[2025-04-17 08:35:26] Checking plan: Siberian ID 2 => Plan Monthly Business Plan
+[2025-04-17 08:35:26] Matched subscription 2 to plan Monthly Business Plan
+[2025-04-17 08:35:26] User found: ID 2, username: ssutechnologyltd@gmail.com
+[2025-04-17 08:35:26] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800bd4e0d3fa6.59800892
+[2025-04-17 08:35:26] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800bd4e0d3fa6.59800892
+[2025-04-17 08:35:26] === END: Processing Subscription Order Request ===
+[2025-04-17 08:35:26] Processing token: swsib_pe_token_6800bd4e0d3fa6.59800892
+[2025-04-17 08:35:26] Token data retrieved: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744878926
+)
+
+[2025-04-17 08:35:26] User authenticated: 2
+[2025-04-17 08:35:26] Checkout data stored in user meta
+[2025-04-17 08:35:26] Got checkout data from transient: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744878926
+)
+
+[2025-04-17 08:35:26] Rendering checkout page for plan: Monthly Business Plan (ID: sub_plan_67fc38e26ba33)
+[2025-04-17 08:35:30] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:35:30] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:35:30] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:35:30] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:35:31] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:35:31] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:35:31] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:35:31] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:35:32] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => b9c84a7741
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 57
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 2
+            [plan_id] => sub_plan_67fc38e26ba33
+            [timestamp] => 1744878926
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 08:35:32] Checking nonce: b9c84a7741
+[2025-04-17 08:35:32] Nonce verified with checkout_nonce action
+[2025-04-17 08:35:32] Processing payment with method: paypal
+[2025-04-17 08:35:32] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744878926
+)
+
+[2025-04-17 08:35:32] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 08:35:32] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 08:35:32] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => b9c84a7741
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 57
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 2
+            [plan_id] => sub_plan_67fc38e26ba33
+            [timestamp] => 1744878926
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 08:35:32] Checking nonce: b9c84a7741
+[2025-04-17 08:35:32] Nonce verified with checkout_nonce action
+[2025-04-17 08:35:32] Processing payment with method: paypal
+[2025-04-17 08:35:32] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744878926
+)
+
+[2025-04-17 08:35:32] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 08:35:32] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 08:35:33] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:35:33] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:35:33] Starting get_success_redirect_url function
+[2025-04-17 08:35:33] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:35:33] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:35:33] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:35:33] Starting get_success_redirect_url function
+[2025-04-17 08:35:33] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:36:04] Detected successful checkout redirect. Processing...
+[2025-04-17 08:36:04] Processing checkout success redirect with session key: pp_session_6800bd5548012 and gateway: paypal
+[2025-04-17 08:36:04] No success data found for user ID: 2
+[2025-04-17 08:36:06] Still no success data found after delay
+[2025-04-17 08:36:06] Looking for checkout data in transient: swsib_paypal_checkout_pp_session_6800bd5548012
+[2025-04-17 08:36:06] Found checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744878933
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+    [tax_amount] => 0.5
+    [total_amount] => 5.5
+    [session_key] => pp_session_6800bd5548012
+    [paypal_subscription_id] => I-C79D6MG2LCL9
+)
+
+[2025-04-17 08:36:06] Processing PayPal-specific redirect logic
+[2025-04-17 08:36:06] Found PayPal subscription ID in checkout data: I-C79D6MG2LCL9
+[2025-04-17 08:36:06] No subscription found with PayPal ID: I-C79D6MG2LCL9, creating from checkout data
+[2025-04-17 08:36:06] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:36:06] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:36:06] Creating subscription with user ID: 2, plan ID: sub_plan_67fc38e26ba33, payment ID: I-C79D6MG2LCL9, method: paypal
+[2025-04-17 08:36:06] Created subscription: sub_6800bd76864b4 with payment ID: I-C79D6MG2LCL9 using paypal
+[2025-04-17 08:36:06] Created subscription with ID: sub_6800bd76864b4
+[2025-04-17 08:36:06] Activating subscription in SiberianCMS
+[2025-04-17 08:36:06] SiberianCMS subscription activation successful
+[2025-04-17 08:36:06] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 08:36:06] Processing admin role update after activation for admin ID 1
+[2025-04-17 08:36:06] Found 2 active subscriptions for admin ID 1
+[2025-04-17 08:36:06] Adding role ID: 3 from active subscription #3
+[2025-04-17 08:36:06] Adding role ID: 2 from active subscription #2
+[2025-04-17 08:36:06] Assigned roles after deduplication: 3, 2
+[2025-04-17 08:36:06] Highest priority role determined: 3
+[2025-04-17 08:36:06] No role change needed - current role: 3, highest role: 3
+[2025-04-17 08:36:06] Starting get_success_redirect_url function
+[2025-04-17 08:36:06] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:36:06] Redirecting to success page: https://swiftspeedappcreator.com/appblog/sub/?swsib_success=1&subscription_id=sub_6800bd76864b4&renewed=0
+[2025-04-17 08:36:07] Displaying post-purchase popup for subscription: sub_6800bd76864b4
+[2025-04-17 08:36:17] Activating subscription in SiberianCMS
+[2025-04-17 08:36:17] SiberianCMS subscription activation successful
+[2025-04-17 08:36:17] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 08:36:17] Processing admin role update after activation for admin ID 1
+[2025-04-17 08:36:17] Found 2 active subscriptions for admin ID 1
+[2025-04-17 08:36:17] Adding role ID: 3 from active subscription #3
+[2025-04-17 08:36:17] Adding role ID: 2 from active subscription #2
+[2025-04-17 08:36:17] Assigned roles after deduplication: 3, 2
+[2025-04-17 08:36:17] Highest priority role determined: 3
+[2025-04-17 08:36:17] No role change needed - current role: 3, highest role: 3
+[2025-04-17 08:36:43] Processing pending cancellation for subscription sub_6800bd76864b4
+[2025-04-17 08:36:43] Subscription details: {"id":"sub_6800bd76864b4","user_id":"2","plan_id":"sub_plan_67fc38e26ba33","payment_id":"I-C79D6MG2LCL9","admin_id":"1","admin_email":"ssutechnologyltd@gmail.com","application_id":"57","siberian_plan_id":"2","amount":"5.00","tax_amount":"0.50","total_amount":"5.50","currency":"USD","status":"active","start_date":"2025-04-17 08:36:06","end_date":"2025-05-17 08:36:06","billing_frequency":"monthly","payment_method":"paypal","customer_data":{"first_name":"Ssu-Technology","last_name":"Limited","email":"ssutechnologyltd@gmail.com","phone":"07441442956","address":"7, Bell Yard London","city":"London","state":"London","zip":"WC2A 2JR","country":"GB"},"app_quantity":"2","payment_status":"paid","last_payment_date":"2025-04-17 08:36:06","last_payment_error":null,"retry_count":"0","grace_period_end":null,"retry_period_end":null,"is_stripe_subscription":"0","stripe_customer_id":null,"paypal_payer_id":null,"cancellation_source":null,"created_at":"2025-04-17 08:36:06","updated_at":"2025-04-17 08:36:06"}
+[2025-04-17 08:36:43] Setting PayPal subscription to pending-cancellation locally: I-C79D6MG2LCL9
+[2025-04-17 08:36:43] Getting PayPal subscription details: I-C79D6MG2LCL9
+[2025-04-17 08:36:44] Retrieved PayPal subscription details: {"status":"ACTIVE","status_update_time":"2025-04-17T08:36:02Z","id":"I-C79D6MG2LCL9","plan_id":"P-8ND39033W3882203PNAAL2VQ","start_time":"2025-04-17T08:35:34Z","quantity":"1","shipping_amount":{"currency_code":"USD","value":"0.0"},"subscriber":{"email_address":"sb-fgpye5002531@personal.example.com","payer_id":"ZSRU5B8TF2YRN","name":{"given_name":"John","surname":"Doe"},"tenant":"PAYPAL"},"billing_info":{"outstanding_balance":{"currency_code":"USD","value":"0.0"},"cycle_executions":[{"tenure_type":"REGULAR","sequence":1,"cycles_completed":1,"cycles_remaining":0,"current_pricing_scheme_version":1,"total_cycles":0}],"last_payment":{"amount":{"currency_code":"USD","value":"5.5"},"time":"2025-04-17T08:36:02Z"},"next_billing_time":"2025-05-17T10:00:00Z","failed_payments_count":0},"create_time":"2025-04-17T08:36:01Z","update_time":"2025-04-17T08:36:02Z","custom_id":"pp_session_6800bd5548012","plan_overridden":false,"links":[{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-C79D6MG2LCL9\/cancel","rel":"cancel","method":"POST"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-C79D6MG2LCL9","rel":"edit","method":"PATCH"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-C79D6MG2LCL9","rel":"self","method":"GET"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-C79D6MG2LCL9\/suspend","rel":"suspend","method":"POST"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-C79D6MG2LCL9\/capture","rel":"capture","method":"POST"}]}
+[2025-04-17 08:36:44] Updated next billing date in database: 2025-05-17T10:00:00Z
+[2025-04-17 08:36:44] Successfully updated PayPal subscription for pending cancellation
+[2025-04-17 08:36:44] Subscription sub_6800bd76864b4 set to pending cancellation successfully
+[2025-04-17 08:36:44] Updated subscription status confirmed: pending-cancellation
+[2025-04-17 08:47:04] Missing required columns: next_billing_date. Adding them now.
+[2025-04-17 08:47:04] Added next_billing_date column to subscriptions table
+[2025-04-17 08:47:10] Resuming PayPal subscription locally: I-C79D6MG2LCL9
+[2025-04-17 08:47:10] Getting PayPal subscription details: I-C79D6MG2LCL9
+[2025-04-17 08:47:11] PayPal subscription is still active, can safely uncancel locally
+[2025-04-17 08:47:11] Subscription sub_6800bd76864b4 uncancelled successfully
+[2025-04-17 08:50:05] Rebuilding subscription table - schema version change or table missing
+[2025-04-17 08:50:05] Created subscriptions table: wp_swsib_subscriptions
+[2025-04-17 08:50:05] dbDelta result: Array
+(
+    [wp_swsib_subscriptions] => Created table wp_swsib_subscriptions
+)
+
+[2025-04-17 08:50:17] Rebuilding subscription table - schema version change or table missing
+[2025-04-17 08:50:17] Dropped subscriptions table
+[2025-04-17 08:50:17] Created subscriptions table: wp_swsib_subscriptions
+[2025-04-17 08:50:17] dbDelta result: Array
+(
+    [wp_swsib_subscriptions] => Created table wp_swsib_subscriptions
+)
+
+[2025-04-17 08:50:24] Rebuilding subscription table - schema version change or table missing
+[2025-04-17 08:50:24] Dropped subscriptions table
+[2025-04-17 08:50:24] Created subscriptions table: wp_swsib_subscriptions
+[2025-04-17 08:50:24] dbDelta result: Array
+(
+    [wp_swsib_subscriptions] => Created table wp_swsib_subscriptions
+)
+
+[2025-04-17 08:50:38] Rebuilding subscription table - schema version change or table missing
+[2025-04-17 08:50:38] Dropped subscriptions table
+[2025-04-17 08:50:38] Created subscriptions table: wp_swsib_subscriptions
+[2025-04-17 08:50:38] dbDelta result: Array
+(
+    [wp_swsib_subscriptions] => Created table wp_swsib_subscriptions
+)
+
+[2025-04-17 08:50:38] Table structure verified successfully
+[2025-04-17 08:51:32] Schema version unchanged (1.1), no need to rebuild tables
+[2025-04-17 08:51:33] Schema version unchanged (1.1), no need to rebuild tables
+[2025-04-17 08:51:34] Schema version unchanged (1.1), no need to rebuild tables
+[2025-04-17 08:52:11] Schema version unchanged (1.1), no need to rebuild tables
+[2025-04-17 08:52:25] Schema version unchanged (1.1), no need to rebuild tables
+[2025-04-17 08:53:25] Schema version unchanged (1.1), no need to rebuild tables
+[2025-04-17 08:55:09] === START: Handling create_subscription_order ===
+[2025-04-17 08:55:09] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 08:55:09] Using PE Subscription integration handler
+[2025-04-17 08:55:09] === START: Processing Subscription Order Request ===
+[2025-04-17 08:55:09] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 08:55:09] Using PE Subscription integration handler
+[2025-04-17 08:55:09] === START: Processing Subscription Order Request ===
+[2025-04-17 08:55:09] RAW JSON PAYLOAD: action=create_subscription_order&admin_id=1&application_id=57&admin_email=ssutechnologyltd%40gmail.com&selected_subscription_id=2&csrf_token=aa602e7b89918f4c563eb0ca60896d26
+[2025-04-17 08:55:09] POST data: Array
+(
+    [action] => create_subscription_order
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [selected_subscription_id] => 2
+    [csrf_token] => aa602e7b89918f4c563eb0ca60896d26
+)
+
+[2025-04-17 08:55:09] Data received - admin_id: 1, app_id: 57, email: ssutechnologyltd@gmail.com, sub_id: 2
+[2025-04-17 08:55:09] SiberianCMS CSRF token: aa602e7b89918f4c563eb0ca60896d26
+[2025-04-17 08:55:09] Creating subscription order URL for admin_id: 1, app_id: 57, email: ssutechnologyltd@gmail.com, sub_id: 2
+[2025-04-17 08:55:09] Checking plan: Siberian ID 2 => Plan Monthly Business Plan
+[2025-04-17 08:55:09] Matched subscription 2 to plan Monthly Business Plan
+[2025-04-17 08:55:09] User found: ID 2, username: ssutechnologyltd@gmail.com
+[2025-04-17 08:55:09] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800c1ed22d7f7.18976939
+[2025-04-17 08:55:09] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800c1ed22d7f7.18976939
+[2025-04-17 08:55:09] === END: Processing Subscription Order Request ===
+[2025-04-17 08:55:09] Processing token: swsib_pe_token_6800c1ed22d7f7.18976939
+[2025-04-17 08:55:09] Token data retrieved: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744880109
+)
+
+[2025-04-17 08:55:09] User authenticated: 2
+[2025-04-17 08:55:09] Checkout data stored in user meta
+[2025-04-17 08:55:09] Got checkout data from transient: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744880109
+)
+
+[2025-04-17 08:55:09] Rendering checkout page for plan: Monthly Business Plan (ID: sub_plan_67fc38e26ba33)
+[2025-04-17 08:55:12] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:55:12] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:55:12] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:55:12] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:55:16] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => d8fb2bf52a
+    [payment_method] => stripe
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 57
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 2
+            [plan_id] => sub_plan_67fc38e26ba33
+            [timestamp] => 1744880109
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 08:55:16] Checking nonce: d8fb2bf52a
+[2025-04-17 08:55:16] Nonce verified with checkout_nonce action
+[2025-04-17 08:55:16] Processing payment with method: stripe
+[2025-04-17 08:55:16] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744880109
+)
+
+[2025-04-17 08:55:16] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 08:55:16] Delegating to payment handler: SwiftSpeed_Siberian_Stripe_Handler
+[2025-04-17 08:55:16] Processing Stripe payment for plan ID: sub_plan_67fc38e26ba33
+[2025-04-17 08:55:16] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:55:16] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:55:16] Stored checkout data in transient with key: session_6800c1f433c2e
+[2025-04-17 08:55:16] Stored checkout data in user meta for user ID: 2
+[2025-04-17 08:55:16] Starting get_success_redirect_url function
+[2025-04-17 08:55:16] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:55:16] Creating Stripe checkout session with parameters: {"payment_method_types":["card"],"billing_address_collection":"required","line_items":[{"price_data":{"unit_amount":500,"currency":"usd","product_data":{"name":"Monthly Business Plan","description":"This is a starter plans for app creators"},"recurring":{"interval":"month","interval_count":1}},"quantity":1},{"price_data":{"unit_amount":50,"currency":"usd","product_data":{"name":"Tax for Monthly Business Plan","description":"Applicable tax"},"recurring":{"interval":"month","interval_count":1}},"quantity":1}],"mode":"subscription","success_url":"https:\/\/swiftspeedappcreator.com\/appblog\/sub\/?swsib_checkout_success=1&session_key=session_6800c1f433c2e","cancel_url":"https:\/\/swiftspeedappcreator.com\/appblog\/native-test-checkout\/?swsib_token=swsib_pe_token_6800c1ed22d7f7.18976939&swsib_checkout_cancel=1&session_key=session_6800c1f433c2e","metadata":{"plan_id":"sub_plan_67fc38e26ba33","user_id":2,"admin_id":"1","application_id":"57","siberian_sub_id":"2","session_key":"session_6800c1f433c2e"},"subscription_data":{"metadata":{"plan_id":"sub_plan_67fc38e26ba33","user_id":2,"admin_id":"1","application_id":"57","siberian_sub_id":"2","session_key":"session_6800c1f433c2e"}},"customer_email":"ssutechnologyltd@gmail.com"}
+[2025-04-17 08:55:16] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => d8fb2bf52a
+    [payment_method] => stripe
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 57
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 2
+            [plan_id] => sub_plan_67fc38e26ba33
+            [timestamp] => 1744880109
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 08:55:16] Checking nonce: d8fb2bf52a
+[2025-04-17 08:55:16] Nonce verified with checkout_nonce action
+[2025-04-17 08:55:16] Processing payment with method: stripe
+[2025-04-17 08:55:16] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 57
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744880109
+)
+
+[2025-04-17 08:55:16] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 08:55:16] Delegating to payment handler: SwiftSpeed_Siberian_Stripe_Handler
+[2025-04-17 08:55:16] Processing Stripe payment for plan ID: sub_plan_67fc38e26ba33
+[2025-04-17 08:55:16] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 08:55:16] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:55:16] Stored checkout data in transient with key: session_6800c1f4409a0
+[2025-04-17 08:55:16] Stored checkout data in user meta for user ID: 2
+[2025-04-17 08:55:16] Starting get_success_redirect_url function
+[2025-04-17 08:55:16] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:55:16] Creating Stripe checkout session with parameters: {"payment_method_types":["card"],"billing_address_collection":"required","line_items":[{"price_data":{"unit_amount":500,"currency":"usd","product_data":{"name":"Monthly Business Plan","description":"This is a starter plans for app creators"},"recurring":{"interval":"month","interval_count":1}},"quantity":1},{"price_data":{"unit_amount":50,"currency":"usd","product_data":{"name":"Tax for Monthly Business Plan","description":"Applicable tax"},"recurring":{"interval":"month","interval_count":1}},"quantity":1}],"mode":"subscription","success_url":"https:\/\/swiftspeedappcreator.com\/appblog\/sub\/?swsib_checkout_success=1&session_key=session_6800c1f4409a0","cancel_url":"https:\/\/swiftspeedappcreator.com\/appblog\/native-test-checkout\/?swsib_token=swsib_pe_token_6800c1ed22d7f7.18976939&swsib_checkout_cancel=1&session_key=session_6800c1f4409a0","metadata":{"plan_id":"sub_plan_67fc38e26ba33","user_id":2,"admin_id":"1","application_id":"57","siberian_sub_id":"2","session_key":"session_6800c1f4409a0"},"subscription_data":{"metadata":{"plan_id":"sub_plan_67fc38e26ba33","user_id":2,"admin_id":"1","application_id":"57","siberian_sub_id":"2","session_key":"session_6800c1f4409a0"}},"customer_email":"ssutechnologyltd@gmail.com"}
+[2025-04-17 08:55:16] Stripe checkout session created successfully: cs_test_b1eBTdwrndHp4hy3isGGSin5rMNyMMtvmvZpk3DUsbHI6pR2hVsTFTItl7
+[2025-04-17 08:55:16] Stripe checkout session created successfully: cs_test_b1R8sqVBWO9ttKWCua2LHwKTsCQPfFDGjGwMEugQNEVM2mcxxqhyaKxkaK
+[2025-04-17 08:55:41] Received webhook data: {
+  "id": "evt_3REoEPHneLIYoTsI0wow7nV4",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880139,
+  "data": {
+    "object": {
+      "id": "ch_3REoEPHneLIYoTsI0auNxqNC",
+      "object": "charge",
+      "amount": 550,
+      "amount_captured": 550,
+      "amount_refunded": 0,
+      "amount_updates": [
+
+      ],
+      "application": null,
+      "application_fee": null,
+      "application_fee_amount": null,
+      "balance_transaction": "txn_3REoEPHneLIYoTsI0eW9wGwM",
+      "billing_details": {
+        "address": {
+          "city": "London",
+          "country": "GB",
+          "line1": "7, Bell Yard London",
+          "line2": null,
+          "postal_code": "WC2A 2JR",
+          "state": null
+        },
+        "email": "ssutechnologyltd@gmail.com",
+        "name": "Akinola Abdulakeem",
+        "phone": null,
+        "tax_id": null
+      },
+      "calculated_statement_descriptor": "SWIFTSPEEDAPP",
+      "captured": true,
+      "created": 1744880138,
+      "currency": "usd",
+      "customer": "cus_S96R9xoIJMW9p9",
+      "description": "Subscription creation",
+      "destination": null,
+      "dispute": null,
+      "disputed": false,
+      "failure_balance_transaction": null,
+      "failure_code": null,
+      "failure_message": null,
+      "fraud_details": {
+      },
+      "invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+      "livemode": false,
+      "metadata": {
+      },
+      "on_behalf_of": null,
+      "order": null,
+      "outcome": {
+        "advice_code": null,
+        "network_advice_code": null,
+        "network_decline_code": null,
+        "network_status": "approved_by_network",
+        "reason": null,
+        "risk_level": "normal",
+        "risk_score": 18,
+        "seller_message": "Payment complete.",
+        "type": "authorized"
+      },
+      "paid": true,
+      "payment_intent": "pi_3REoEPHneLIYoTsI0naumrqE",
+      "payment_method": "pm_1REoEOHneLIYoTsI75aI6Ygw",
+      "payment_method_details": {
+        "card": {
+          "amount_authorized": 550,
+          "authorization_code": null,
+          "brand": "visa",
+          "checks": {
+            "address_line1_check": "pass",
+            "address_postal_code_check": "pass",
+            "cvc_check": "pass"
+          },
+          "country": "US",
+          "exp_month": 4,
+          "exp_year": 2028,
+          "extended_authorization": {
+            "status": "disabled"
+          },
+          "fingerprint": "SMsFX14kNreLDKuE",
+          "funding": "credit",
+          "incremental_authorization": {
+            "status": "unavailable"
+          },
+          "installments": null,
+          "last4": "4242",
+          "mandate": null,
+          "multicapture": {
+            "status": "unavailable"
+          },
+          "network": "visa",
+          "network_token": {
+            "used": false
+          },
+          "network_transaction_id": "837711570884952",
+          "overcapture": {
+            "maximum_amount_capturable": 550,
+            "status": "unavailable"
+          },
+          "regulated_status": "unregulated",
+          "three_d_secure": null,
+          "wallet": null
+        },
+        "type": "card"
+      },
+      "radar_options": {
+      },
+      "receipt_email": null,
+      "receipt_number": null,
+      "receipt_url": "https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xSUhCbDFIbmVMSVlvVHNJKIyEg8AGMgZp9VaqqYk6LBbmLGAntV4Uo5hiYcDdh9CIJpfY9tKZA3iG7kSNFMEgDDQt5MyIDeJRX0Ab?s=ap",
+      "refunded": false,
+      "refunds": {
+        "object": "list",
+        "data": [
+
+        ],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/charges/ch_3REoEPHneLIYoTsI0auNxqNC/refunds"
+      },
+      "review": null,
+      "shipping": null,
+      "source": null,
+      "source_transfer": null,
+      "statement_descriptor": null,
+      "statement_descriptor_suffix": null,
+      "status": "succeeded",
+      "transfer_data": null,
+      "transfer_group": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 2,
+  "request": {
+    "id": null,
+    "idempotency_key": "019ad6ea-bdb0-45f0-8b4b-6aa68cc00d3c"
+  },
+  "type": "charge.succeeded"
+}
+[2025-04-17 08:55:41] Verified webhook signature: t=1744880140,v1=d218aada1d83769141a6bd421cc33fca5aa0ea4d69fb896e7c5e48c2a20de5c5,v0=4941e8cc52e0dcb049f35ce73c4b760655ce5508216ac7e7594054537b6afd32
+[2025-04-17 08:55:41] Processing webhook event: charge.succeeded
+[2025-04-17 08:55:41] Received webhook data: {
+  "id": "evt_1REoESHneLIYoTsIX8bcOT6K",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880140,
+  "data": {
+    "object": {
+      "id": "cs_test_b1R8sqVBWO9ttKWCua2LHwKTsCQPfFDGjGwMEugQNEVM2mcxxqhyaKxkaK",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 550,
+      "amount_total": 550,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800c1ed22d7f7.18976939\u0026swsib_checkout_cancel=1\u0026session_key=session_6800c1f4409a0",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744880116,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": "cus_S96R9xoIJMW9p9",
+      "customer_creation": "always",
+      "customer_details": {
+        "address": {
+          "city": "London",
+          "country": "GB",
+          "line1": "7, Bell Yard London",
+          "line2": null,
+          "postal_code": "WC2A 2JR",
+          "state": null
+        },
+        "email": "ssutechnologyltd@gmail.com",
+        "name": "Akinola Abdulakeem",
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": [
+
+        ]
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744966516,
+      "invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "admin_id": "1",
+        "session_key": "session_6800c1f4409a0",
+        "siberian_sub_id": "2",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "user_id": "2",
+        "application_id": "57"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "paid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "complete",
+      "submit_type": null,
+      "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_6800c1f4409a0",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.completed"
+}
+[2025-04-17 08:55:41] Verified webhook signature: t=1744880140,v1=63edc8aa0bde713df9e27dadd7dbcae88e23dc395d686b2e8e6285eb4d8c0858,v0=7ee9eee21d8ac9e1433365df0ad27d02bd26c7535f79a02323a8d458d8685ae7
+[2025-04-17 08:55:41] Processing webhook event: checkout.session.completed
+[2025-04-17 08:55:41] Stripe webhook received: checkout.session.completed
+[2025-04-17 08:55:41] Processing completed checkout session: {"id":"cs_test_b1R8sqVBWO9ttKWCua2LHwKTsCQPfFDGjGwMEugQNEVM2mcxxqhyaKxkaK","object":"checkout.session","adaptive_pricing":null,"after_expiration":null,"allow_promotion_codes":null,"amount_subtotal":550,"amount_total":550,"automatic_tax":{"enabled":false,"liability":null,"status":null},"billing_address_collection":"required","cancel_url":"https:\/\/swiftspeedappcreator.com\/appblog\/native-test-checkout\/?swsib_token=swsib_pe_token_6800c1ed22d7f7.18976939&swsib_checkout_cancel=1&session_key=session_6800c1f4409a0","client_reference_id":null,"client_secret":null,"collected_information":{"shipping_details":null},"consent":null,"consent_collection":null,"created":1744880116,"currency":"usd","currency_conversion":null,"custom_fields":[],"custom_text":{"after_submit":null,"shipping_address":null,"submit":null,"terms_of_service_acceptance":null},"customer":"cus_S96R9xoIJMW9p9","customer_creation":"always","customer_details":{"address":{"city":"London","country":"GB","line1":"7, Bell Yard London","line2":null,"postal_code":"WC2A 2JR","state":null},"email":"ssutechnologyltd@gmail.com","name":"Akinola Abdulakeem","phone":null,"tax_exempt":"none","tax_ids":[]},"customer_email":"ssutechnologyltd@gmail.com","discounts":[],"expires_at":1744966516,"invoice":"in_1REoEPHneLIYoTsI7ymdncTt","invoice_creation":null,"livemode":false,"locale":null,"metadata":{"admin_id":"1","session_key":"session_6800c1f4409a0","siberian_sub_id":"2","plan_id":"sub_plan_67fc38e26ba33","user_id":"2","application_id":"57"},"mode":"subscription","payment_intent":null,"payment_link":null,"payment_method_collection":"always","payment_method_configuration_details":null,"payment_method_options":{"card":{"request_three_d_secure":"automatic"}},"payment_method_types":["card"],"payment_status":"paid","permissions":null,"phone_number_collection":{"enabled":false},"recovered_from":null,"saved_payment_method_options":{"allow_redisplay_filters":["always"],"payment_method_remove":null,"payment_method_save":null},"setup_intent":null,"shipping":null,"shipping_address_collection":null,"shipping_options":[],"shipping_rate":null,"status":"complete","submit_type":null,"subscription":"sub_1REoEPHneLIYoTsINwxkNoAz","success_url":"https:\/\/swiftspeedappcreator.com\/appblog\/sub\/?swsib_checkout_success=1&session_key=session_6800c1f4409a0","total_details":{"amount_discount":0,"amount_shipping":0,"amount_tax":0},"ui_mode":"hosted","url":null,"wallet_options":null}
+[2025-04-17 08:55:41] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: ALL
+[2025-04-17 08:55:41] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 08:55:41] Creating subscription with user ID: 2, plan ID: sub_plan_67fc38e26ba33, payment ID: sub_1REoEPHneLIYoTsINwxkNoAz, method: stripe
+[2025-04-17 08:55:41] Created subscription: sub_6800c20d6dcd1 with payment ID: sub_1REoEPHneLIYoTsINwxkNoAz using stripe
+[2025-04-17 08:55:41] Successfully created subscription record with ID: sub_6800c20d6dcd1
+[2025-04-17 08:55:41] Added Stripe customer ID to subscription: cus_S96R9xoIJMW9p9
+[2025-04-17 08:55:41] Activating subscription in SiberianCMS
+[2025-04-17 08:55:41] SiberianCMS subscription activation successful
+[2025-04-17 08:55:41] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 08:55:41] Processing admin role update after activation for admin ID 1
+[2025-04-17 08:55:41] Found 1 active subscriptions for admin ID 1
+[2025-04-17 08:55:41] Adding role ID: 2 from active subscription #2
+[2025-04-17 08:55:41] Assigned roles after deduplication: 2
+[2025-04-17 08:55:41] Highest priority role determined: 2
+[2025-04-17 08:55:41] Admin role update to highest priority role 2 result: Success
+[2025-04-17 08:55:41] Successfully activated subscription in SiberianCMS
+[2025-04-17 08:55:41] Subscription processing completed successfully
+[2025-04-17 08:55:41] Received webhook data: {
+  "id": "evt_1REoETHneLIYoTsIwl00f2gn",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880140,
+  "data": {
+    "object": {
+      "id": "sub_1REoEPHneLIYoTsINwxkNoAz",
+      "object": "subscription",
+      "application": null,
+      "application_fee_percent": null,
+      "automatic_tax": {
+        "disabled_reason": null,
+        "enabled": false,
+        "liability": null
+      },
+      "billing_cycle_anchor": 1744880137,
+      "billing_cycle_anchor_config": null,
+      "billing_thresholds": null,
+      "cancel_at": null,
+      "cancel_at_period_end": false,
+      "canceled_at": null,
+      "cancellation_details": {
+        "comment": null,
+        "feedback": null,
+        "reason": null
+      },
+      "collection_method": "charge_automatically",
+      "created": 1744880137,
+      "currency": "usd",
+      "current_period_end": 1747472137,
+      "current_period_start": 1744880137,
+      "customer": "cus_S96R9xoIJMW9p9",
+      "days_until_due": null,
+      "default_payment_method": "pm_1REoEOHneLIYoTsI75aI6Ygw",
+      "default_source": null,
+      "default_tax_rates": [
+
+      ],
+      "description": null,
+      "discount": null,
+      "discounts": [
+
+      ],
+      "ended_at": null,
+      "invoice_settings": {
+        "account_tax_ids": null,
+        "issuer": {
+          "type": "self"
+        }
+      },
+      "items": {
+        "object": "list",
+        "data": [
+          {
+            "id": "si_S96RR6pPMAacT4",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 500,
+              "amount_decimal": "500",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 500,
+              "unit_amount_decimal": "500"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          },
+          {
+            "id": "si_S96Rac7nPALfqx",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 50,
+              "amount_decimal": "50",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 50,
+              "unit_amount_decimal": "50"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          }
+        ],
+        "has_more": false,
+        "total_count": 2,
+        "url": "/v1/subscription_items?subscription=sub_1REoEPHneLIYoTsINwxkNoAz"
+      },
+      "latest_invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+      "livemode": false,
+      "metadata": {
+        "session_key": "session_6800c1f4409a0",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "siberian_sub_id": "2",
+        "user_id": "2",
+        "admin_id": "1",
+        "application_id": "57"
+      },
+      "next_pending_invoice_item_invoice": null,
+      "on_behalf_of": null,
+      "pause_collection": null,
+      "payment_settings": {
+        "payment_method_options": {
+          "acss_debit": null,
+          "bancontact": null,
+          "card": {
+            "network": null,
+            "request_three_d_secure": "automatic"
+          },
+          "customer_balance": null,
+          "konbini": null,
+          "sepa_debit": null,
+          "us_bank_account": null
+        },
+        "payment_method_types": [
+          "card"
+        ],
+        "save_default_payment_method": "off"
+      },
+      "pending_invoice_item_interval": null,
+      "pending_setup_intent": null,
+      "pending_update": null,
+      "plan": null,
+      "quantity": null,
+      "schedule": null,
+      "start_date": 1744880137,
+      "status": "active",
+      "test_clock": null,
+      "transfer_data": null,
+      "trial_end": null,
+      "trial_settings": {
+        "end_behavior": {
+          "missing_payment_method": "create_invoice"
+        }
+      },
+      "trial_start": null
+    },
+    "previous_attributes": {
+      "default_payment_method": null,
+      "status": "incomplete"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": "019ad6ea-bdb0-45f0-8b4b-6aa68cc00d3c"
+  },
+  "type": "customer.subscription.updated"
+}
+[2025-04-17 08:55:41] Verified webhook signature: t=1744880141,v1=eda589b6e7c0ced1f113ab994cd06482a4644678d4ec8ba05b6e7d114fa51fb6,v0=2233a2d23541e4fa1f327e7b802a4b35a6d7c0d82e9835acfb85ea7e9b78968a
+[2025-04-17 08:55:41] Processing webhook event: customer.subscription.updated
+[2025-04-17 08:55:41] Stripe webhook received: customer.subscription.updated
+[2025-04-17 08:55:41] Processing Stripe subscription update: {"id":"sub_1REoEPHneLIYoTsINwxkNoAz","object":"subscription","application":null,"application_fee_percent":null,"automatic_tax":{"disabled_reason":null,"enabled":false,"liability":null},"billing_cycle_anchor":1744880137,"billing_cycle_anchor_config":null,"billing_thresholds":null,"cancel_at":null,"cancel_at_period_end":false,"canceled_at":null,"cancellation_details":{"comment":null,"feedback":null,"reason":null},"collection_method":"charge_automatically","created":1744880137,"currency":"usd","current_period_end":1747472137,"current_period_start":1744880137,"customer":"cus_S96R9xoIJMW9p9","days_until_due":null,"default_payment_method":"pm_1REoEOHneLIYoTsI75aI6Ygw","default_source":null,"default_tax_rates":[],"description":null,"discount":null,"discounts":[],"ended_at":null,"invoice_settings":{"account_tax_ids":null,"issuer":{"type":"self"}},"items":{"object":"list","data":[{"id":"si_S96RR6pPMAacT4","object":"subscription_item","billing_thresholds":null,"created":1744880137,"current_period_end":1747472137,"current_period_start":1744880137,"discounts":[],"metadata":[],"plan":{"id":"price_1REoE4HneLIYoTsItg6NL0jZ","object":"plan","active":false,"aggregate_usage":null,"amount":500,"amount_decimal":"500","billing_scheme":"per_unit","created":1744880116,"currency":"usd","interval":"month","interval_count":1,"livemode":false,"metadata":[],"meter":null,"nickname":null,"product":"prod_S7xIrUYsLgzpdr","tiers_mode":null,"transform_usage":null,"trial_period_days":null,"usage_type":"licensed"},"price":{"id":"price_1REoE4HneLIYoTsItg6NL0jZ","object":"price","active":false,"billing_scheme":"per_unit","created":1744880116,"currency":"usd","custom_unit_amount":null,"livemode":false,"lookup_key":null,"metadata":[],"nickname":null,"product":"prod_S7xIrUYsLgzpdr","recurring":{"aggregate_usage":null,"interval":"month","interval_count":1,"meter":null,"trial_period_days":null,"usage_type":"licensed"},"tax_behavior":"unspecified","tiers_mode":null,"transform_quantity":null,"type":"recurring","unit_amount":500,"unit_amount_decimal":"500"},"quantity":1,"subscription":"sub_1REoEPHneLIYoTsINwxkNoAz","tax_rates":[]},{"id":"si_S96Rac7nPALfqx","object":"subscription_item","billing_thresholds":null,"created":1744880137,"current_period_end":1747472137,"current_period_start":1744880137,"discounts":[],"metadata":[],"plan":{"id":"price_1REoE4HneLIYoTsIpeTwftNx","object":"plan","active":false,"aggregate_usage":null,"amount":50,"amount_decimal":"50","billing_scheme":"per_unit","created":1744880116,"currency":"usd","interval":"month","interval_count":1,"livemode":false,"metadata":[],"meter":null,"nickname":null,"product":"prod_S7xIRkurPozpit","tiers_mode":null,"transform_usage":null,"trial_period_days":null,"usage_type":"licensed"},"price":{"id":"price_1REoE4HneLIYoTsIpeTwftNx","object":"price","active":false,"billing_scheme":"per_unit","created":1744880116,"currency":"usd","custom_unit_amount":null,"livemode":false,"lookup_key":null,"metadata":[],"nickname":null,"product":"prod_S7xIRkurPozpit","recurring":{"aggregate_usage":null,"interval":"month","interval_count":1,"meter":null,"trial_period_days":null,"usage_type":"licensed"},"tax_behavior":"unspecified","tiers_mode":null,"transform_quantity":null,"type":"recurring","unit_amount":50,"unit_amount_decimal":"50"},"quantity":1,"subscription":"sub_1REoEPHneLIYoTsINwxkNoAz","tax_rates":[]}],"has_more":false,"total_count":2,"url":"\/v1\/subscription_items?subscription=sub_1REoEPHneLIYoTsINwxkNoAz"},"latest_invoice":"in_1REoEPHneLIYoTsI7ymdncTt","livemode":false,"metadata":{"session_key":"session_6800c1f4409a0","plan_id":"sub_plan_67fc38e26ba33","siberian_sub_id":"2","user_id":"2","admin_id":"1","application_id":"57"},"next_pending_invoice_item_invoice":null,"on_behalf_of":null,"pause_collection":null,"payment_settings":{"payment_method_options":{"acss_debit":null,"bancontact":null,"card":{"network":null,"request_three_d_secure":"automatic"},"customer_balance":null,"konbini":null,"sepa_debit":null,"us_bank_account":null},"payment_method_types":["card"],"save_default_payment_method":"off"},"pending_invoice_item_interval":null,"pending_setup_intent":null,"pending_update":null,"plan":null,"quantity":null,"schedule":null,"start_date":1744880137,"status":"active","test_clock":null,"transfer_data":null,"trial_end":null,"trial_settings":{"end_behavior":{"missing_payment_method":"create_invoice"}},"trial_start":null}
+[2025-04-17 08:55:41] Found matching subscription ID: sub_6800c20d6dcd1 with status: active
+[2025-04-17 08:55:41] No status update needed for subscription sub_6800c20d6dcd1
+[2025-04-17 08:55:42] Received webhook data: {
+  "id": "evt_1REoETHneLIYoTsIwVOHhUSm",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880138,
+  "data": {
+    "object": {
+      "id": "in_1REoEPHneLIYoTsI7ymdncTt",
+      "object": "invoice",
+      "account_country": "GB",
+      "account_name": "Swiftspeed",
+      "account_tax_ids": null,
+      "amount_due": 550,
+      "amount_overpaid": 0,
+      "amount_paid": 0,
+      "amount_remaining": 550,
+      "amount_shipping": 0,
+      "application": null,
+      "application_fee_amount": null,
+      "attempt_count": 0,
+      "attempted": false,
+      "auto_advance": false,
+      "automatic_tax": {
+        "disabled_reason": null,
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "automatically_finalizes_at": null,
+      "billing_reason": "subscription_create",
+      "charge": null,
+      "collection_method": "charge_automatically",
+      "created": 1744880137,
+      "currency": "usd",
+      "custom_fields": null,
+      "customer": "cus_S96R9xoIJMW9p9",
+      "customer_address": {
+        "city": "London",
+        "country": "GB",
+        "line1": "7, Bell Yard London",
+        "line2": null,
+        "postal_code": "WC2A 2JR",
+        "state": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "customer_name": "Akinola Abdulakeem",
+      "customer_phone": null,
+      "customer_shipping": null,
+      "customer_tax_exempt": "none",
+      "customer_tax_ids": [
+
+      ],
+      "default_payment_method": null,
+      "default_source": null,
+      "default_tax_rates": [
+
+      ],
+      "description": null,
+      "discount": null,
+      "discounts": [
+
+      ],
+      "due_date": null,
+      "effective_at": 1744880137,
+      "ending_balance": 0,
+      "footer": null,
+      "from_invoice": null,
+      "hosted_invoice_url": "https://invoice.stripe.com/i/acct_1IHBl1HneLIYoTsI/test_YWNjdF8xSUhCbDFIbmVMSVlvVHNJLF9TOTZSeEx3anI4amdIZ3J4dXRQT3d2WkpQRTNEN01vLDEzNTQyMDk0MQ02003s4xwwjB?s=ap",
+      "invoice_pdf": "https://pay.stripe.com/invoice/acct_1IHBl1HneLIYoTsI/test_YWNjdF8xSUhCbDFIbmVMSVlvVHNJLF9TOTZSeEx3anI4amdIZ3J4dXRQT3d2WkpQRTNEN01vLDEzNTQyMDk0MQ02003s4xwwjB/pdf?s=ap",
+      "issuer": {
+        "type": "self"
+      },
+      "last_finalization_error": null,
+      "latest_revision": null,
+      "lines": {
+        "object": "list",
+        "data": [
+          {
+            "id": "il_1REoEPHneLIYoTsIu4byJklj",
+            "object": "line_item",
+            "amount": 500,
+            "amount_excluding_tax": 500,
+            "currency": "usd",
+            "description": "1 × Monthly Business Plan (at $5.00 / month)",
+            "discount_amounts": [
+
+            ],
+            "discountable": true,
+            "discounts": [
+
+            ],
+            "invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+            "livemode": false,
+            "metadata": {
+              "session_key": "session_6800c1f4409a0",
+              "plan_id": "sub_plan_67fc38e26ba33",
+              "siberian_sub_id": "2",
+              "user_id": "2",
+              "admin_id": "1",
+              "application_id": "57"
+            },
+            "parent": {
+              "invoice_item_details": null,
+              "subscription_item_details": {
+                "invoice_item": null,
+                "proration": false,
+                "proration_details": {
+                  "credited_items": null
+                },
+                "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+                "subscription_item": "si_S96RR6pPMAacT4"
+              },
+              "type": "subscription_item_details"
+            },
+            "period": {
+              "end": 1747472137,
+              "start": 1744880137
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 500,
+              "amount_decimal": "500",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "pretax_credit_amounts": [
+
+            ],
+            "price": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 500,
+              "unit_amount_decimal": "500"
+            },
+            "pricing": {
+              "price_details": {
+                "price": "price_1REoE4HneLIYoTsItg6NL0jZ",
+                "product": "prod_S7xIrUYsLgzpdr"
+              },
+              "type": "price_details",
+              "unit_amount_decimal": "500"
+            },
+            "proration": false,
+            "proration_details": {
+              "credited_items": null
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "subscription_item": "si_S96RR6pPMAacT4",
+            "tax_amounts": [
+
+            ],
+            "tax_rates": [
+
+            ],
+            "taxes": [
+
+            ],
+            "type": "subscription",
+            "unit_amount_excluding_tax": "500"
+          },
+          {
+            "id": "il_1REoEPHneLIYoTsIJnrKEANC",
+            "object": "line_item",
+            "amount": 50,
+            "amount_excluding_tax": 50,
+            "currency": "usd",
+            "description": "1 × Tax for Monthly Business Plan (at $0.50 / month)",
+            "discount_amounts": [
+
+            ],
+            "discountable": true,
+            "discounts": [
+
+            ],
+            "invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+            "livemode": false,
+            "metadata": {
+              "session_key": "session_6800c1f4409a0",
+              "plan_id": "sub_plan_67fc38e26ba33",
+              "siberian_sub_id": "2",
+              "user_id": "2",
+              "admin_id": "1",
+              "application_id": "57"
+            },
+            "parent": {
+              "invoice_item_details": null,
+              "subscription_item_details": {
+                "invoice_item": null,
+                "proration": false,
+                "proration_details": {
+                  "credited_items": null
+                },
+                "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+                "subscription_item": "si_S96Rac7nPALfqx"
+              },
+              "type": "subscription_item_details"
+            },
+            "period": {
+              "end": 1747472137,
+              "start": 1744880137
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 50,
+              "amount_decimal": "50",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "pretax_credit_amounts": [
+
+            ],
+            "price": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 50,
+              "unit_amount_decimal": "50"
+            },
+            "pricing": {
+              "price_details": {
+                "price": "price_1REoE4HneLIYoTsIpeTwftNx",
+                "product": "prod_S7xIRkurPozpit"
+              },
+              "type": "price_details",
+              "unit_amount_decimal": "50"
+            },
+            "proration": false,
+            "proration_details": {
+              "credited_items": null
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "subscription_item": "si_S96Rac7nPALfqx",
+            "tax_amounts": [
+
+            ],
+            "tax_rates": [
+
+            ],
+            "taxes": [
+
+            ],
+            "type": "subscription",
+            "unit_amount_excluding_tax": "50"
+          }
+        ],
+        "has_more": false,
+        "total_count": 2,
+        "url": "/v1/invoices/in_1REoEPHneLIYoTsI7ymdncTt/lines"
+      },
+      "livemode": false,
+      "metadata": {
+      },
+      "next_payment_attempt": null,
+      "number": "A1F475C5-0154",
+      "on_behalf_of": null,
+      "paid": false,
+      "paid_out_of_band": false,
+      "parent": {
+        "quote_details": null,
+        "subscription_details": {
+          "metadata": {
+            "session_key": "session_6800c1f4409a0",
+            "plan_id": "sub_plan_67fc38e26ba33",
+            "siberian_sub_id": "2",
+            "user_id": "2",
+            "admin_id": "1",
+            "application_id": "57"
+          },
+          "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz"
+        },
+        "type": "subscription_details"
+      },
+      "payment_intent": "pi_3REoEPHneLIYoTsI0naumrqE",
+      "payment_settings": {
+        "default_mandate": null,
+        "payment_method_options": {
+          "acss_debit": null,
+          "bancontact": null,
+          "card": {
+            "request_three_d_secure": "automatic"
+          },
+          "customer_balance": null,
+          "konbini": null,
+          "sepa_debit": null,
+          "us_bank_account": null
+        },
+        "payment_method_types": [
+          "card"
+        ]
+      },
+      "period_end": 1744880137,
+      "period_start": 1744880137,
+      "post_payment_credit_notes_amount": 0,
+      "pre_payment_credit_notes_amount": 0,
+      "quote": null,
+      "receipt_number": null,
+      "rendering": null,
+      "rendering_options": null,
+      "shipping_cost": null,
+      "shipping_details": null,
+      "starting_balance": 0,
+      "statement_descriptor": null,
+      "status": "open",
+      "status_transitions": {
+        "finalized_at": 1744880137,
+        "marked_uncollectible_at": null,
+        "paid_at": null,
+        "voided_at": null
+      },
+      "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+      "subscription_details": {
+        "metadata": {
+          "session_key": "session_6800c1f4409a0",
+          "plan_id": "sub_plan_67fc38e26ba33",
+          "siberian_sub_id": "2",
+          "user_id": "2",
+          "admin_id": "1",
+          "application_id": "57"
+        }
+      },
+      "subtotal": 550,
+      "subtotal_excluding_tax": 550,
+      "tax": null,
+      "test_clock": null,
+      "total": 550,
+      "total_discount_amounts": [
+
+      ],
+      "total_excluding_tax": 550,
+      "total_pretax_credit_amounts": [
+
+      ],
+      "total_tax_amounts": [
+
+      ],
+      "total_taxes": [
+
+      ],
+      "transfer_data": null,
+      "webhooks_delivered_at": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": "019ad6ea-bdb0-45f0-8b4b-6aa68cc00d3c"
+  },
+  "type": "invoice.created"
+}
+[2025-04-17 08:55:42] Verified webhook signature: t=1744880141,v1=df1d01fc0e81e36a8291fc6ef0acfd8f65346aa8bf2eaa4ef42eeaa0322b628f,v0=500bef437d313e1084b6d220c9054359fcc81b10b9a8d5098191e7fa57cce319
+[2025-04-17 08:55:42] Processing webhook event: invoice.created
+[2025-04-17 08:55:42] Received webhook data: {
+  "id": "evt_1REoETHneLIYoTsIdDoHkwze",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880138,
+  "data": {
+    "object": {
+      "id": "sub_1REoEPHneLIYoTsINwxkNoAz",
+      "object": "subscription",
+      "application": null,
+      "application_fee_percent": null,
+      "automatic_tax": {
+        "disabled_reason": null,
+        "enabled": false,
+        "liability": null
+      },
+      "billing_cycle_anchor": 1744880137,
+      "billing_cycle_anchor_config": null,
+      "billing_thresholds": null,
+      "cancel_at": null,
+      "cancel_at_period_end": false,
+      "canceled_at": null,
+      "cancellation_details": {
+        "comment": null,
+        "feedback": null,
+        "reason": null
+      },
+      "collection_method": "charge_automatically",
+      "created": 1744880137,
+      "currency": "usd",
+      "current_period_end": 1747472137,
+      "current_period_start": 1744880137,
+      "customer": "cus_S96R9xoIJMW9p9",
+      "days_until_due": null,
+      "default_payment_method": null,
+      "default_source": null,
+      "default_tax_rates": [
+
+      ],
+      "description": null,
+      "discount": null,
+      "discounts": [
+
+      ],
+      "ended_at": null,
+      "invoice_settings": {
+        "account_tax_ids": null,
+        "issuer": {
+          "type": "self"
+        }
+      },
+      "items": {
+        "object": "list",
+        "data": [
+          {
+            "id": "si_S96RR6pPMAacT4",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 500,
+              "amount_decimal": "500",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 500,
+              "unit_amount_decimal": "500"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          },
+          {
+            "id": "si_S96Rac7nPALfqx",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 50,
+              "amount_decimal": "50",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 50,
+              "unit_amount_decimal": "50"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          }
+        ],
+        "has_more": false,
+        "total_count": 2,
+        "url": "/v1/subscription_items?subscription=sub_1REoEPHneLIYoTsINwxkNoAz"
+      },
+      "latest_invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+      "livemode": false,
+      "metadata": {
+        "session_key": "session_6800c1f4409a0",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "siberian_sub_id": "2",
+        "user_id": "2",
+        "admin_id": "1",
+        "application_id": "57"
+      },
+      "next_pending_invoice_item_invoice": null,
+      "on_behalf_of": null,
+      "pause_collection": null,
+      "payment_settings": {
+        "payment_method_options": {
+          "acss_debit": null,
+          "bancontact": null,
+          "card": {
+            "network": null,
+            "request_three_d_secure": "automatic"
+          },
+          "customer_balance": null,
+          "konbini": null,
+          "sepa_debit": null,
+          "us_bank_account": null
+        },
+        "payment_method_types": [
+          "card"
+        ],
+        "save_default_payment_method": "off"
+      },
+      "pending_invoice_item_interval": null,
+      "pending_setup_intent": null,
+      "pending_update": null,
+      "plan": null,
+      "quantity": null,
+      "schedule": null,
+      "start_date": 1744880137,
+      "status": "incomplete",
+      "test_clock": null,
+      "transfer_data": null,
+      "trial_end": null,
+      "trial_settings": {
+        "end_behavior": {
+          "missing_payment_method": "create_invoice"
+        }
+      },
+      "trial_start": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": "019ad6ea-bdb0-45f0-8b4b-6aa68cc00d3c"
+  },
+  "type": "customer.subscription.created"
+}
+[2025-04-17 08:55:42] Verified webhook signature: t=1744880142,v1=103955e6a282e4080f6ef0fb8d9629d2ac76fa4019f121d5c75af5faec0a2521,v0=285a10ff24c998dbf67931f16c75bff78c2aeded2355c7817ff1e9b5634cc395
+[2025-04-17 08:55:42] Processing webhook event: customer.subscription.created
+[2025-04-17 08:55:43] Detected successful checkout redirect. Processing...
+[2025-04-17 08:55:43] Processing checkout success redirect with session key: session_6800c1f4409a0 and gateway: stripe
+[2025-04-17 08:55:43] Starting get_success_redirect_url function
+[2025-04-17 08:55:43] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:55:43] Redirecting to success page: https://swiftspeedappcreator.com/appblog/sub/?swsib_success=1&subscription_id=sub_6800c20d6dcd1&renewed=0
+[2025-04-17 08:55:44] Displaying post-purchase popup for subscription: sub_6800c20d6dcd1
+[2025-04-17 08:55:53] Getting payment portal for subscription ID: sub_6800c20d6dcd1
+[2025-04-17 08:55:53] Creating portal session for customer ID: cus_S96R9xoIJMW9p9
+[2025-04-17 08:55:53] Starting get_success_redirect_url function
+[2025-04-17 08:55:53] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:55:53] Successfully created Stripe customer portal URL: https://billing.stripe.com/p/session/test_YWNjdF8xSUhCbDFIbmVMSVlvVHNJLF9TOTZSblVKZWlwZzAza29JN09FOUpJbE0xclk0UFd10100J0mQ2jKY
+[2025-04-17 08:55:54] Received webhook data: {
+  "id": "evt_1REoEfHneLIYoTsIZpBf4byg",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880153,
+  "data": {
+    "object": {
+      "id": "bps_1REoEfHneLIYoTsIuURCnbsn",
+      "object": "billing_portal.session",
+      "configuration": "bpc_1RD4ikHneLIYoTsIy5GK49rq",
+      "created": 1744880153,
+      "customer": "cus_S96R9xoIJMW9p9",
+      "flow": null,
+      "livemode": false,
+      "locale": null,
+      "on_behalf_of": null,
+      "return_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_stripe_portal_return=1",
+      "url": "https://billing.stripe.com/p/session/test_YWNjdF8xSUhCbDFIbmVMSVlvVHNJLF9TOTZSblVKZWlwZzAza29JN09FOUpJbE0xclk0UFd10100J0mQ2jKY"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_Fry4B7Hqj3IwjD",
+    "idempotency_key": "5fe1f9c1-4c4e-458e-b35e-99ed78c9c6f9"
+  },
+  "type": "billing_portal.session.created"
+}
+[2025-04-17 08:55:54] Verified webhook signature: t=1744880153,v1=626f2641462d396e804bfe1c756f076b9351fc28ce78a7ecb1ca22e0a9b7c3bb,v0=a716b2d636e0ecd7a2a8d9b51440b4bf168433b8373623936c3b155487245e0d
+[2025-04-17 08:55:54] Processing webhook event: billing_portal.session.created
+[2025-04-17 08:56:17] Processing pending cancellation for subscription sub_6800c20d6dcd1
+[2025-04-17 08:56:17] Subscription details: {"id":"sub_6800c20d6dcd1","user_id":"2","plan_id":"sub_plan_67fc38e26ba33","payment_id":"sub_1REoEPHneLIYoTsINwxkNoAz","admin_id":"1","admin_email":"ssutechnologyltd@gmail.com","application_id":"57","siberian_plan_id":"2","amount":"5.00","tax_amount":"0.50","total_amount":"5.50","currency":"USD","status":"active","start_date":"2025-04-17 08:55:41","end_date":"2025-05-17 08:55:41","next_billing_date":null,"billing_frequency":"monthly","payment_method":"stripe","customer_data":{"email":"ssutechnologyltd@gmail.com"},"app_quantity":"2","payment_status":"paid","last_payment_date":"2025-04-17 08:55:41","last_payment_error":null,"retry_count":"0","grace_period_end":null,"retry_period_end":null,"is_stripe_subscription":"1","stripe_customer_id":"cus_S96R9xoIJMW9p9","paypal_payer_id":null,"cancellation_source":null,"created_at":"2025-04-17 08:55:41","updated_at":"2025-04-17 08:55:41"}
+[2025-04-17 08:56:17] Setting Stripe subscription to cancel at period end: sub_1REoEPHneLIYoTsINwxkNoAz
+[2025-04-17 08:56:18] Successfully set Stripe subscription to cancel at period end: sub_1REoEPHneLIYoTsINwxkNoAz
+[2025-04-17 08:56:18] Successfully updated Stripe subscription to cancel at period end
+[2025-04-17 08:56:18] Subscription sub_6800c20d6dcd1 set to pending cancellation successfully
+[2025-04-17 08:56:18] Updated subscription status confirmed: pending-cancellation
+[2025-04-17 08:56:18] Received webhook data: {
+  "id": "evt_1REoF4HneLIYoTsIoFX6NfFR",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880177,
+  "data": {
+    "object": {
+      "id": "sub_1REoEPHneLIYoTsINwxkNoAz",
+      "object": "subscription",
+      "application": null,
+      "application_fee_percent": null,
+      "automatic_tax": {
+        "disabled_reason": null,
+        "enabled": false,
+        "liability": null
+      },
+      "billing_cycle_anchor": 1744880137,
+      "billing_cycle_anchor_config": null,
+      "billing_thresholds": null,
+      "cancel_at": 1747472137,
+      "cancel_at_period_end": true,
+      "canceled_at": 1744880177,
+      "cancellation_details": {
+        "comment": null,
+        "feedback": null,
+        "reason": "cancellation_requested"
+      },
+      "collection_method": "charge_automatically",
+      "created": 1744880137,
+      "currency": "usd",
+      "current_period_end": 1747472137,
+      "current_period_start": 1744880137,
+      "customer": "cus_S96R9xoIJMW9p9",
+      "days_until_due": null,
+      "default_payment_method": "pm_1REoEOHneLIYoTsI75aI6Ygw",
+      "default_source": null,
+      "default_tax_rates": [
+
+      ],
+      "description": null,
+      "discount": null,
+      "discounts": [
+
+      ],
+      "ended_at": null,
+      "invoice_settings": {
+        "account_tax_ids": null,
+        "issuer": {
+          "type": "self"
+        }
+      },
+      "items": {
+        "object": "list",
+        "data": [
+          {
+            "id": "si_S96RR6pPMAacT4",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 500,
+              "amount_decimal": "500",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 500,
+              "unit_amount_decimal": "500"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          },
+          {
+            "id": "si_S96Rac7nPALfqx",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 50,
+              "amount_decimal": "50",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 50,
+              "unit_amount_decimal": "50"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          }
+        ],
+        "has_more": false,
+        "total_count": 2,
+        "url": "/v1/subscription_items?subscription=sub_1REoEPHneLIYoTsINwxkNoAz"
+      },
+      "latest_invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+      "livemode": false,
+      "metadata": {
+        "session_key": "session_6800c1f4409a0",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "siberian_sub_id": "2",
+        "user_id": "2",
+        "admin_id": "1",
+        "application_id": "57"
+      },
+      "next_pending_invoice_item_invoice": null,
+      "on_behalf_of": null,
+      "pause_collection": null,
+      "payment_settings": {
+        "payment_method_options": {
+          "acss_debit": null,
+          "bancontact": null,
+          "card": {
+            "network": null,
+            "request_three_d_secure": "automatic"
+          },
+          "customer_balance": null,
+          "konbini": null,
+          "sepa_debit": null,
+          "us_bank_account": null
+        },
+        "payment_method_types": [
+          "card"
+        ],
+        "save_default_payment_method": "off"
+      },
+      "pending_invoice_item_interval": null,
+      "pending_setup_intent": null,
+      "pending_update": null,
+      "plan": null,
+      "quantity": null,
+      "schedule": null,
+      "start_date": 1744880137,
+      "status": "active",
+      "test_clock": null,
+      "transfer_data": null,
+      "trial_end": null,
+      "trial_settings": {
+        "end_behavior": {
+          "missing_payment_method": "create_invoice"
+        }
+      },
+      "trial_start": null
+    },
+    "previous_attributes": {
+      "cancel_at": null,
+      "cancel_at_period_end": false,
+      "canceled_at": null,
+      "cancellation_details": {
+        "reason": null
+      }
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_ZdkJex4Jee2v59",
+    "idempotency_key": "a269716b-5c15-4fce-b516-20448da670f2"
+  },
+  "type": "customer.subscription.updated"
+}
+[2025-04-17 08:56:18] Verified webhook signature: t=1744880178,v1=100fcd37bf580c9e972ef42e803c08fda229a5cdf134b4dbb309418aa2854055,v0=1e9ef4e4025a5218bdcc3e3a6534de258fe7af6de90189bf385f3599601230f1
+[2025-04-17 08:56:18] Processing webhook event: customer.subscription.updated
+[2025-04-17 08:56:18] Stripe webhook received: customer.subscription.updated
+[2025-04-17 08:56:18] Processing Stripe subscription update: {"id":"sub_1REoEPHneLIYoTsINwxkNoAz","object":"subscription","application":null,"application_fee_percent":null,"automatic_tax":{"disabled_reason":null,"enabled":false,"liability":null},"billing_cycle_anchor":1744880137,"billing_cycle_anchor_config":null,"billing_thresholds":null,"cancel_at":1747472137,"cancel_at_period_end":true,"canceled_at":1744880177,"cancellation_details":{"comment":null,"feedback":null,"reason":"cancellation_requested"},"collection_method":"charge_automatically","created":1744880137,"currency":"usd","current_period_end":1747472137,"current_period_start":1744880137,"customer":"cus_S96R9xoIJMW9p9","days_until_due":null,"default_payment_method":"pm_1REoEOHneLIYoTsI75aI6Ygw","default_source":null,"default_tax_rates":[],"description":null,"discount":null,"discounts":[],"ended_at":null,"invoice_settings":{"account_tax_ids":null,"issuer":{"type":"self"}},"items":{"object":"list","data":[{"id":"si_S96RR6pPMAacT4","object":"subscription_item","billing_thresholds":null,"created":1744880137,"current_period_end":1747472137,"current_period_start":1744880137,"discounts":[],"metadata":[],"plan":{"id":"price_1REoE4HneLIYoTsItg6NL0jZ","object":"plan","active":false,"aggregate_usage":null,"amount":500,"amount_decimal":"500","billing_scheme":"per_unit","created":1744880116,"currency":"usd","interval":"month","interval_count":1,"livemode":false,"metadata":[],"meter":null,"nickname":null,"product":"prod_S7xIrUYsLgzpdr","tiers_mode":null,"transform_usage":null,"trial_period_days":null,"usage_type":"licensed"},"price":{"id":"price_1REoE4HneLIYoTsItg6NL0jZ","object":"price","active":false,"billing_scheme":"per_unit","created":1744880116,"currency":"usd","custom_unit_amount":null,"livemode":false,"lookup_key":null,"metadata":[],"nickname":null,"product":"prod_S7xIrUYsLgzpdr","recurring":{"aggregate_usage":null,"interval":"month","interval_count":1,"meter":null,"trial_period_days":null,"usage_type":"licensed"},"tax_behavior":"unspecified","tiers_mode":null,"transform_quantity":null,"type":"recurring","unit_amount":500,"unit_amount_decimal":"500"},"quantity":1,"subscription":"sub_1REoEPHneLIYoTsINwxkNoAz","tax_rates":[]},{"id":"si_S96Rac7nPALfqx","object":"subscription_item","billing_thresholds":null,"created":1744880137,"current_period_end":1747472137,"current_period_start":1744880137,"discounts":[],"metadata":[],"plan":{"id":"price_1REoE4HneLIYoTsIpeTwftNx","object":"plan","active":false,"aggregate_usage":null,"amount":50,"amount_decimal":"50","billing_scheme":"per_unit","created":1744880116,"currency":"usd","interval":"month","interval_count":1,"livemode":false,"metadata":[],"meter":null,"nickname":null,"product":"prod_S7xIRkurPozpit","tiers_mode":null,"transform_usage":null,"trial_period_days":null,"usage_type":"licensed"},"price":{"id":"price_1REoE4HneLIYoTsIpeTwftNx","object":"price","active":false,"billing_scheme":"per_unit","created":1744880116,"currency":"usd","custom_unit_amount":null,"livemode":false,"lookup_key":null,"metadata":[],"nickname":null,"product":"prod_S7xIRkurPozpit","recurring":{"aggregate_usage":null,"interval":"month","interval_count":1,"meter":null,"trial_period_days":null,"usage_type":"licensed"},"tax_behavior":"unspecified","tiers_mode":null,"transform_quantity":null,"type":"recurring","unit_amount":50,"unit_amount_decimal":"50"},"quantity":1,"subscription":"sub_1REoEPHneLIYoTsINwxkNoAz","tax_rates":[]}],"has_more":false,"total_count":2,"url":"\/v1\/subscription_items?subscription=sub_1REoEPHneLIYoTsINwxkNoAz"},"latest_invoice":"in_1REoEPHneLIYoTsI7ymdncTt","livemode":false,"metadata":{"session_key":"session_6800c1f4409a0","plan_id":"sub_plan_67fc38e26ba33","siberian_sub_id":"2","user_id":"2","admin_id":"1","application_id":"57"},"next_pending_invoice_item_invoice":null,"on_behalf_of":null,"pause_collection":null,"payment_settings":{"payment_method_options":{"acss_debit":null,"bancontact":null,"card":{"network":null,"request_three_d_secure":"automatic"},"customer_balance":null,"konbini":null,"sepa_debit":null,"us_bank_account":null},"payment_method_types":["card"],"save_default_payment_method":"off"},"pending_invoice_item_interval":null,"pending_setup_intent":null,"pending_update":null,"plan":null,"quantity":null,"schedule":null,"start_date":1744880137,"status":"active","test_clock":null,"transfer_data":null,"trial_end":null,"trial_settings":{"end_behavior":{"missing_payment_method":"create_invoice"}},"trial_start":null}
+[2025-04-17 08:56:18] Found matching subscription ID: sub_6800c20d6dcd1 with status: pending-cancellation
+[2025-04-17 08:56:18] No status update needed for subscription sub_6800c20d6dcd1
+[2025-04-17 08:56:27] Resetting Stripe subscription cancel_at_period_end flag: sub_1REoEPHneLIYoTsINwxkNoAz
+[2025-04-17 08:56:28] Successfully uncancelled Stripe subscription: sub_1REoEPHneLIYoTsINwxkNoAz
+[2025-04-17 08:56:28] Subscription sub_6800c20d6dcd1 uncancelled successfully
+[2025-04-17 08:56:28] Received webhook data: {
+  "id": "evt_1REoFEHneLIYoTsIvgunswTv",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744880188,
+  "data": {
+    "object": {
+      "id": "sub_1REoEPHneLIYoTsINwxkNoAz",
+      "object": "subscription",
+      "application": null,
+      "application_fee_percent": null,
+      "automatic_tax": {
+        "disabled_reason": null,
+        "enabled": false,
+        "liability": null
+      },
+      "billing_cycle_anchor": 1744880137,
+      "billing_cycle_anchor_config": null,
+      "billing_thresholds": null,
+      "cancel_at": null,
+      "cancel_at_period_end": false,
+      "canceled_at": null,
+      "cancellation_details": {
+        "comment": null,
+        "feedback": null,
+        "reason": null
+      },
+      "collection_method": "charge_automatically",
+      "created": 1744880137,
+      "currency": "usd",
+      "current_period_end": 1747472137,
+      "current_period_start": 1744880137,
+      "customer": "cus_S96R9xoIJMW9p9",
+      "days_until_due": null,
+      "default_payment_method": "pm_1REoEOHneLIYoTsI75aI6Ygw",
+      "default_source": null,
+      "default_tax_rates": [
+
+      ],
+      "description": null,
+      "discount": null,
+      "discounts": [
+
+      ],
+      "ended_at": null,
+      "invoice_settings": {
+        "account_tax_ids": null,
+        "issuer": {
+          "type": "self"
+        }
+      },
+      "items": {
+        "object": "list",
+        "data": [
+          {
+            "id": "si_S96RR6pPMAacT4",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 500,
+              "amount_decimal": "500",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsItg6NL0jZ",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIrUYsLgzpdr",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 500,
+              "unit_amount_decimal": "500"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          },
+          {
+            "id": "si_S96Rac7nPALfqx",
+            "object": "subscription_item",
+            "billing_thresholds": null,
+            "created": 1744880137,
+            "current_period_end": 1747472137,
+            "current_period_start": 1744880137,
+            "discounts": [
+
+            ],
+            "metadata": {
+            },
+            "plan": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "plan",
+              "active": false,
+              "aggregate_usage": null,
+              "amount": 50,
+              "amount_decimal": "50",
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "meter": null,
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "price_1REoE4HneLIYoTsIpeTwftNx",
+              "object": "price",
+              "active": false,
+              "billing_scheme": "per_unit",
+              "created": 1744880116,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": null,
+              "product": "prod_S7xIRkurPozpit",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "meter": null,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 50,
+              "unit_amount_decimal": "50"
+            },
+            "quantity": 1,
+            "subscription": "sub_1REoEPHneLIYoTsINwxkNoAz",
+            "tax_rates": [
+
+            ]
+          }
+        ],
+        "has_more": false,
+        "total_count": 2,
+        "url": "/v1/subscription_items?subscription=sub_1REoEPHneLIYoTsINwxkNoAz"
+      },
+      "latest_invoice": "in_1REoEPHneLIYoTsI7ymdncTt",
+      "livemode": false,
+      "metadata": {
+        "session_key": "session_6800c1f4409a0",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "siberian_sub_id": "2",
+        "user_id": "2",
+        "admin_id": "1",
+        "application_id": "57"
+      },
+      "next_pending_invoice_item_invoice": null,
+      "on_behalf_of": null,
+      "pause_collection": null,
+      "payment_settings": {
+        "payment_method_options": {
+          "acss_debit": null,
+          "bancontact": null,
+          "card": {
+            "network": null,
+            "request_three_d_secure": "automatic"
+          },
+          "customer_balance": null,
+          "konbini": null,
+          "sepa_debit": null,
+          "us_bank_account": null
+        },
+        "payment_method_types": [
+          "card"
+        ],
+        "save_default_payment_method": "off"
+      },
+      "pending_invoice_item_interval": null,
+      "pending_setup_intent": null,
+      "pending_update": null,
+      "plan": null,
+      "quantity": null,
+      "schedule": null,
+      "start_date": 1744880137,
+      "status": "active",
+      "test_clock": null,
+      "transfer_data": null,
+      "trial_end": null,
+      "trial_settings": {
+        "end_behavior": {
+          "missing_payment_method": "create_invoice"
+        }
+      },
+      "trial_start": null
+    },
+    "previous_attributes": {
+      "cancel_at": 1747472137,
+      "cancel_at_period_end": true,
+      "canceled_at": 1744880177,
+      "cancellation_details": {
+        "reason": "cancellation_requested"
+      }
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_BVfiIrf1iwWfhY",
+    "idempotency_key": "8a4fd5eb-078e-43f8-b42b-a1b7d7c21c35"
+  },
+  "type": "customer.subscription.updated"
+}
+[2025-04-17 08:56:28] Verified webhook signature: t=1744880188,v1=0e4c4e17fbd09ce9725352e31da3a7a2c29eff4f4cd45d118327aca2adbe8800,v0=d4a30f37081792246d5889059eea6697aeb0c8dfd1916d53807db16c62f49205
+[2025-04-17 08:56:28] Processing webhook event: customer.subscription.updated
+[2025-04-17 08:56:28] Stripe webhook received: customer.subscription.updated
+[2025-04-17 08:56:28] Processing Stripe subscription update: {"id":"sub_1REoEPHneLIYoTsINwxkNoAz","object":"subscription","application":null,"application_fee_percent":null,"automatic_tax":{"disabled_reason":null,"enabled":false,"liability":null},"billing_cycle_anchor":1744880137,"billing_cycle_anchor_config":null,"billing_thresholds":null,"cancel_at":null,"cancel_at_period_end":false,"canceled_at":null,"cancellation_details":{"comment":null,"feedback":null,"reason":null},"collection_method":"charge_automatically","created":1744880137,"currency":"usd","current_period_end":1747472137,"current_period_start":1744880137,"customer":"cus_S96R9xoIJMW9p9","days_until_due":null,"default_payment_method":"pm_1REoEOHneLIYoTsI75aI6Ygw","default_source":null,"default_tax_rates":[],"description":null,"discount":null,"discounts":[],"ended_at":null,"invoice_settings":{"account_tax_ids":null,"issuer":{"type":"self"}},"items":{"object":"list","data":[{"id":"si_S96RR6pPMAacT4","object":"subscription_item","billing_thresholds":null,"created":1744880137,"current_period_end":1747472137,"current_period_start":1744880137,"discounts":[],"metadata":[],"plan":{"id":"price_1REoE4HneLIYoTsItg6NL0jZ","object":"plan","active":false,"aggregate_usage":null,"amount":500,"amount_decimal":"500","billing_scheme":"per_unit","created":1744880116,"currency":"usd","interval":"month","interval_count":1,"livemode":false,"metadata":[],"meter":null,"nickname":null,"product":"prod_S7xIrUYsLgzpdr","tiers_mode":null,"transform_usage":null,"trial_period_days":null,"usage_type":"licensed"},"price":{"id":"price_1REoE4HneLIYoTsItg6NL0jZ","object":"price","active":false,"billing_scheme":"per_unit","created":1744880116,"currency":"usd","custom_unit_amount":null,"livemode":false,"lookup_key":null,"metadata":[],"nickname":null,"product":"prod_S7xIrUYsLgzpdr","recurring":{"aggregate_usage":null,"interval":"month","interval_count":1,"meter":null,"trial_period_days":null,"usage_type":"licensed"},"tax_behavior":"unspecified","tiers_mode":null,"transform_quantity":null,"type":"recurring","unit_amount":500,"unit_amount_decimal":"500"},"quantity":1,"subscription":"sub_1REoEPHneLIYoTsINwxkNoAz","tax_rates":[]},{"id":"si_S96Rac7nPALfqx","object":"subscription_item","billing_thresholds":null,"created":1744880137,"current_period_end":1747472137,"current_period_start":1744880137,"discounts":[],"metadata":[],"plan":{"id":"price_1REoE4HneLIYoTsIpeTwftNx","object":"plan","active":false,"aggregate_usage":null,"amount":50,"amount_decimal":"50","billing_scheme":"per_unit","created":1744880116,"currency":"usd","interval":"month","interval_count":1,"livemode":false,"metadata":[],"meter":null,"nickname":null,"product":"prod_S7xIRkurPozpit","tiers_mode":null,"transform_usage":null,"trial_period_days":null,"usage_type":"licensed"},"price":{"id":"price_1REoE4HneLIYoTsIpeTwftNx","object":"price","active":false,"billing_scheme":"per_unit","created":1744880116,"currency":"usd","custom_unit_amount":null,"livemode":false,"lookup_key":null,"metadata":[],"nickname":null,"product":"prod_S7xIRkurPozpit","recurring":{"aggregate_usage":null,"interval":"month","interval_count":1,"meter":null,"trial_period_days":null,"usage_type":"licensed"},"tax_behavior":"unspecified","tiers_mode":null,"transform_quantity":null,"type":"recurring","unit_amount":50,"unit_amount_decimal":"50"},"quantity":1,"subscription":"sub_1REoEPHneLIYoTsINwxkNoAz","tax_rates":[]}],"has_more":false,"total_count":2,"url":"\/v1\/subscription_items?subscription=sub_1REoEPHneLIYoTsINwxkNoAz"},"latest_invoice":"in_1REoEPHneLIYoTsI7ymdncTt","livemode":false,"metadata":{"session_key":"session_6800c1f4409a0","plan_id":"sub_plan_67fc38e26ba33","siberian_sub_id":"2","user_id":"2","admin_id":"1","application_id":"57"},"next_pending_invoice_item_invoice":null,"on_behalf_of":null,"pause_collection":null,"payment_settings":{"payment_method_options":{"acss_debit":null,"bancontact":null,"card":{"network":null,"request_three_d_secure":"automatic"},"customer_balance":null,"konbini":null,"sepa_debit":null,"us_bank_account":null},"payment_method_types":["card"],"save_default_payment_method":"off"},"pending_invoice_item_interval":null,"pending_setup_intent":null,"pending_update":null,"plan":null,"quantity":null,"schedule":null,"start_date":1744880137,"status":"active","test_clock":null,"transfer_data":null,"trial_end":null,"trial_settings":{"end_behavior":{"missing_payment_method":"create_invoice"}},"trial_start":null}
+[2025-04-17 08:56:28] Found matching subscription ID: sub_6800c20d6dcd1 with status: active
+[2025-04-17 08:56:28] No status update needed for subscription sub_6800c20d6dcd1
+[2025-04-17 08:57:00] === START: Handling create_subscription_order ===
+[2025-04-17 08:57:00] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 08:57:00] Using PE Subscription integration handler
+[2025-04-17 08:57:00] === START: Processing Subscription Order Request ===
+[2025-04-17 08:57:00] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 08:57:00] Using PE Subscription integration handler
+[2025-04-17 08:57:00] === START: Processing Subscription Order Request ===
+[2025-04-17 08:57:00] RAW JSON PAYLOAD: action=create_subscription_order&admin_id=1&application_id=53&admin_email=ssutechnologyltd%40gmail.com&selected_subscription_id=3&csrf_token=5966abdde2ee6a04bde1f29136ae78fc
+[2025-04-17 08:57:00] POST data: Array
+(
+    [action] => create_subscription_order
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [selected_subscription_id] => 3
+    [csrf_token] => 5966abdde2ee6a04bde1f29136ae78fc
+)
+
+[2025-04-17 08:57:00] Data received - admin_id: 1, app_id: 53, email: ssutechnologyltd@gmail.com, sub_id: 3
+[2025-04-17 08:57:00] SiberianCMS CSRF token: 5966abdde2ee6a04bde1f29136ae78fc
+[2025-04-17 08:57:00] Creating subscription order URL for admin_id: 1, app_id: 53, email: ssutechnologyltd@gmail.com, sub_id: 3
+[2025-04-17 08:57:00] Checking plan: Siberian ID 2 => Plan Monthly Business Plan
+[2025-04-17 08:57:00] Checking plan: Siberian ID 3 => Plan Yearly Business Plan
+[2025-04-17 08:57:00] Matched subscription 3 to plan Yearly Business Plan
+[2025-04-17 08:57:00] User found: ID 2, username: ssutechnologyltd@gmail.com
+[2025-04-17 08:57:00] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800c25cb714b7.64760268
+[2025-04-17 08:57:00] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800c25cb714b7.64760268
+[2025-04-17 08:57:00] === END: Processing Subscription Order Request ===
+[2025-04-17 08:57:01] Processing token: swsib_pe_token_6800c25cb714b7.64760268
+[2025-04-17 08:57:01] Token data retrieved: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744880220
+)
+
+[2025-04-17 08:57:01] User authenticated: 2
+[2025-04-17 08:57:01] Checkout data stored in user meta
+[2025-04-17 08:57:01] Got checkout data from transient: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744880220
+)
+
+[2025-04-17 08:57:01] Rendering checkout page for plan: Yearly Business Plan (ID: sub_plan_67fc3935a0a19)
+[2025-04-17 08:57:05] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 08:57:05] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 08:57:05] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 08:57:05] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 08:57:06] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 08:57:06] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 08:57:06] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 08:57:06] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 08:57:07] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => b370060f29
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 53
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 3
+            [plan_id] => sub_plan_67fc3935a0a19
+            [timestamp] => 1744880220
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 08:57:07] Checking nonce: b370060f29
+[2025-04-17 08:57:07] Nonce verified with checkout_nonce action
+[2025-04-17 08:57:07] Processing payment with method: paypal
+[2025-04-17 08:57:07] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744880220
+)
+
+[2025-04-17 08:57:07] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 08:57:07] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 08:57:07] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => b370060f29
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 53
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 3
+            [plan_id] => sub_plan_67fc3935a0a19
+            [timestamp] => 1744880220
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 08:57:07] Checking nonce: b370060f29
+[2025-04-17 08:57:07] Nonce verified with checkout_nonce action
+[2025-04-17 08:57:07] Processing payment with method: paypal
+[2025-04-17 08:57:07] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744880220
+)
+
+[2025-04-17 08:57:07] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 08:57:07] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 08:57:07] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 08:57:07] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 08:57:07] Starting get_success_redirect_url function
+[2025-04-17 08:57:07] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:57:08] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 08:57:08] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 08:57:08] Starting get_success_redirect_url function
+[2025-04-17 08:57:08] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:57:39] Detected successful checkout redirect. Processing...
+[2025-04-17 08:57:39] Processing checkout success redirect with session key: pp_session_6800c26460a9a and gateway: paypal
+[2025-04-17 08:57:39] No success data found for user ID: 2
+[2025-04-17 08:57:41] Still no success data found after delay
+[2025-04-17 08:57:41] Looking for checkout data in transient: swsib_paypal_checkout_pp_session_6800c26460a9a
+[2025-04-17 08:57:41] Found checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744880228
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+    [tax_amount] => 7.9
+    [total_amount] => 86.9
+    [session_key] => pp_session_6800c26460a9a
+    [paypal_subscription_id] => I-MUPWYVUM69Y8
+)
+
+[2025-04-17 08:57:41] Processing PayPal-specific redirect logic
+[2025-04-17 08:57:41] Found PayPal subscription ID in checkout data: I-MUPWYVUM69Y8
+[2025-04-17 08:57:41] No subscription found with PayPal ID: I-MUPWYVUM69Y8, creating from checkout data
+[2025-04-17 08:57:41] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 08:57:41] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 08:57:41] Creating subscription with user ID: 2, plan ID: sub_plan_67fc3935a0a19, payment ID: I-MUPWYVUM69Y8, method: paypal
+[2025-04-17 08:57:41] Created subscription: sub_6800c28530473 with payment ID: I-MUPWYVUM69Y8 using paypal
+[2025-04-17 08:57:41] Created subscription with ID: sub_6800c28530473
+[2025-04-17 08:57:41] Activating subscription in SiberianCMS
+[2025-04-17 08:57:41] SiberianCMS subscription activation successful
+[2025-04-17 08:57:41] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 08:57:41] Processing admin role update after activation for admin ID 1
+[2025-04-17 08:57:41] Found 2 active subscriptions for admin ID 1
+[2025-04-17 08:57:41] Adding role ID: 2 from active subscription #2
+[2025-04-17 08:57:41] Adding role ID: 3 from active subscription #3
+[2025-04-17 08:57:41] Assigned roles after deduplication: 2, 3
+[2025-04-17 08:57:41] Highest priority role determined: 3
+[2025-04-17 08:57:41] Admin role update to highest priority role 3 result: Success
+[2025-04-17 08:57:41] Starting get_success_redirect_url function
+[2025-04-17 08:57:41] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 08:57:41] Redirecting to success page: https://swiftspeedappcreator.com/appblog/sub/?swsib_success=1&subscription_id=sub_6800c28530473&renewed=0
+[2025-04-17 08:57:41] Displaying post-purchase popup for subscription: sub_6800c28530473
+[2025-04-17 08:57:57] Activating subscription in SiberianCMS
+[2025-04-17 08:57:57] SiberianCMS subscription activation successful
+[2025-04-17 08:57:57] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 08:57:57] Processing admin role update after activation for admin ID 1
+[2025-04-17 08:57:57] Found 2 active subscriptions for admin ID 1
+[2025-04-17 08:57:57] Adding role ID: 2 from active subscription #2
+[2025-04-17 08:57:57] Adding role ID: 3 from active subscription #3
+[2025-04-17 08:57:57] Assigned roles after deduplication: 2, 3
+[2025-04-17 08:57:57] Highest priority role determined: 3
+[2025-04-17 08:57:57] No role change needed - current role: 3, highest role: 3
+[2025-04-17 08:57:59] Processing pending cancellation for subscription sub_6800c28530473
+[2025-04-17 08:57:59] Subscription details: {"id":"sub_6800c28530473","user_id":"2","plan_id":"sub_plan_67fc3935a0a19","payment_id":"I-MUPWYVUM69Y8","admin_id":"1","admin_email":"ssutechnologyltd@gmail.com","application_id":"53","siberian_plan_id":"3","amount":"79.00","tax_amount":"7.90","total_amount":"86.90","currency":"EUR","status":"active","start_date":"2025-04-17 08:57:41","end_date":"2026-04-17 08:57:41","next_billing_date":null,"billing_frequency":"annually","payment_method":"paypal","customer_data":{"first_name":"Ssu-Technology","last_name":"Limited","email":"ssutechnologyltd@gmail.com","phone":"07441442956","address":"7, Bell Yard London","city":"London","state":"London","zip":"WC2A 2JR","country":"GB"},"app_quantity":"3","payment_status":"paid","last_payment_date":"2025-04-17 08:57:41","last_payment_error":null,"retry_count":"0","grace_period_end":null,"retry_period_end":null,"is_stripe_subscription":"0","stripe_customer_id":null,"paypal_payer_id":null,"cancellation_source":null,"created_at":"2025-04-17 08:57:41","updated_at":"2025-04-17 08:57:41"}
+[2025-04-17 08:57:59] Setting PayPal subscription to pending-cancellation locally: I-MUPWYVUM69Y8
+[2025-04-17 08:57:59] Getting PayPal subscription details: I-MUPWYVUM69Y8
+[2025-04-17 08:58:00] Retrieved PayPal subscription details: {"status":"ACTIVE","status_update_time":"2025-04-17T08:57:37Z","id":"I-MUPWYVUM69Y8","plan_id":"P-47L58423U1485031CNAAMEZI","start_time":"2025-04-17T08:57:10Z","quantity":"1","shipping_amount":{"currency_code":"EUR","value":"0.0"},"subscriber":{"email_address":"sb-fgpye5002531@personal.example.com","payer_id":"ZSRU5B8TF2YRN","name":{"given_name":"John","surname":"Doe"},"tenant":"PAYPAL"},"billing_info":{"outstanding_balance":{"currency_code":"EUR","value":"0.0"},"cycle_executions":[{"tenure_type":"REGULAR","sequence":1,"cycles_completed":1,"cycles_remaining":0,"current_pricing_scheme_version":1,"total_cycles":0}],"last_payment":{"amount":{"currency_code":"EUR","value":"86.9"},"time":"2025-04-17T08:57:37Z"},"next_billing_time":"2026-04-17T10:00:00Z","failed_payments_count":0},"create_time":"2025-04-17T08:57:36Z","update_time":"2025-04-17T08:57:37Z","custom_id":"pp_session_6800c26460a9a","plan_overridden":false,"links":[{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-MUPWYVUM69Y8\/cancel","rel":"cancel","method":"POST"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-MUPWYVUM69Y8","rel":"edit","method":"PATCH"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-MUPWYVUM69Y8","rel":"self","method":"GET"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-MUPWYVUM69Y8\/suspend","rel":"suspend","method":"POST"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-MUPWYVUM69Y8\/capture","rel":"capture","method":"POST"}]}
+[2025-04-17 08:58:00] Updated next billing date in database: 2026-04-17T10:00:00Z
+[2025-04-17 08:58:00] Successfully updated PayPal subscription for pending cancellation
+[2025-04-17 08:58:00] Subscription sub_6800c28530473 set to pending cancellation successfully
+[2025-04-17 08:58:00] Updated subscription status confirmed: pending-cancellation
+[2025-04-17 09:00:16] Updating SiberianCMS subscription - Action: cancel
+[2025-04-17 09:00:16] SiberianCMS subscription deletion result: Success
+[2025-04-17 09:00:16] Processing admin role update after cancellation for admin ID 1
+[2025-04-17 09:00:16] Found 1 active subscriptions for admin ID 1
+[2025-04-17 09:00:16] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:00:16] Assigned roles after deduplication: 2
+[2025-04-17 09:00:16] Highest priority role determined: 2
+[2025-04-17 09:00:16] Admin role update to highest priority role 2 result: Success
+[2025-04-17 09:00:16] Event: PayPal subscription cancelled: I-MUPWYVUM69Y8
+[2025-04-17 09:13:52] No checkout data found for checkout page
+[2025-04-17 09:29:55] === START: Handling create_subscription_order ===
+[2025-04-17 09:29:55] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 09:29:55] Using PE Subscription integration handler
+[2025-04-17 09:29:55] === START: Processing Subscription Order Request ===
+[2025-04-17 09:29:55] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 09:29:55] Using PE Subscription integration handler
+[2025-04-17 09:29:55] === START: Processing Subscription Order Request ===
+[2025-04-17 09:29:55] RAW JSON PAYLOAD: action=create_subscription_order&admin_id=1&application_id=53&admin_email=ssutechnologyltd%40gmail.com&selected_subscription_id=2&csrf_token=c8326ec76ab05353d1c09daad3822015
+[2025-04-17 09:29:55] POST data: Array
+(
+    [action] => create_subscription_order
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [selected_subscription_id] => 2
+    [csrf_token] => c8326ec76ab05353d1c09daad3822015
+)
+
+[2025-04-17 09:29:55] Data received - admin_id: 1, app_id: 53, email: ssutechnologyltd@gmail.com, sub_id: 2
+[2025-04-17 09:29:55] SiberianCMS CSRF token: c8326ec76ab05353d1c09daad3822015
+[2025-04-17 09:29:55] Creating subscription order URL for admin_id: 1, app_id: 53, email: ssutechnologyltd@gmail.com, sub_id: 2
+[2025-04-17 09:29:55] Checking plan: Siberian ID 2 => Plan Monthly Business Plan
+[2025-04-17 09:29:55] Matched subscription 2 to plan Monthly Business Plan
+[2025-04-17 09:29:55] User found: ID 2, username: ssutechnologyltd@gmail.com
+[2025-04-17 09:29:55] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800ca133fa584.56932694
+[2025-04-17 09:29:55] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800ca133fa584.56932694
+[2025-04-17 09:29:55] === END: Processing Subscription Order Request ===
+[2025-04-17 09:29:56] Processing token: swsib_pe_token_6800ca133fa584.56932694
+[2025-04-17 09:29:56] Token data retrieved: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744882195
+)
+
+[2025-04-17 09:29:56] User authenticated: 2
+[2025-04-17 09:29:56] Checkout data stored in user meta
+[2025-04-17 09:29:56] Got checkout data from transient: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744882195
+)
+
+[2025-04-17 09:29:56] Rendering checkout page for plan: Monthly Business Plan (ID: sub_plan_67fc38e26ba33)
+[2025-04-17 09:29:59] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 09:29:59] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 09:29:59] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 09:29:59] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 09:30:02] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 09:30:02] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 09:30:02] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 09:30:02] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 09:30:02] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => fd0fa6c989
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 53
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 2
+            [plan_id] => sub_plan_67fc38e26ba33
+            [timestamp] => 1744882195
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 09:30:02] Checking nonce: fd0fa6c989
+[2025-04-17 09:30:02] Nonce verified with checkout_nonce action
+[2025-04-17 09:30:02] Processing payment with method: paypal
+[2025-04-17 09:30:02] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744882195
+)
+
+[2025-04-17 09:30:02] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 09:30:02] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 09:30:02] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => fd0fa6c989
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 53
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 2
+            [plan_id] => sub_plan_67fc38e26ba33
+            [timestamp] => 1744882195
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 09:30:02] Checking nonce: fd0fa6c989
+[2025-04-17 09:30:02] Nonce verified with checkout_nonce action
+[2025-04-17 09:30:02] Processing payment with method: paypal
+[2025-04-17 09:30:02] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744882195
+)
+
+[2025-04-17 09:30:02] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 09:30:02] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 09:30:03] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 09:30:03] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 09:30:03] Starting get_success_redirect_url function
+[2025-04-17 09:30:03] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:30:03] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 09:30:03] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 09:30:03] Starting get_success_redirect_url function
+[2025-04-17 09:30:03] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:30:38] Detected successful checkout redirect. Processing...
+[2025-04-17 09:30:38] Processing checkout success redirect with session key: pp_session_6800ca1b91b58 and gateway: paypal
+[2025-04-17 09:30:38] No success data found for user ID: 2
+[2025-04-17 09:30:40] Still no success data found after delay
+[2025-04-17 09:30:40] Looking for checkout data in transient: swsib_paypal_checkout_pp_session_6800ca1b91b58
+[2025-04-17 09:30:40] Found checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 2
+    [plan_id] => sub_plan_67fc38e26ba33
+    [timestamp] => 1744882203
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+    [tax_amount] => 0.5
+    [total_amount] => 5.5
+    [session_key] => pp_session_6800ca1b91b58
+    [paypal_subscription_id] => I-BRST9YNVY724
+)
+
+[2025-04-17 09:30:40] Processing PayPal-specific redirect logic
+[2025-04-17 09:30:40] Found PayPal subscription ID in checkout data: I-BRST9YNVY724
+[2025-04-17 09:30:40] No subscription found with PayPal ID: I-BRST9YNVY724, creating from checkout data
+[2025-04-17 09:30:40] Calculating tax for plan ID: sub_plan_67fc38e26ba33, country: GB
+[2025-04-17 09:30:40] Applied tax rule: VAT, Rate: 10%, Amount: 0.5
+[2025-04-17 09:30:40] Creating subscription with user ID: 2, plan ID: sub_plan_67fc38e26ba33, payment ID: I-BRST9YNVY724, method: paypal
+[2025-04-17 09:30:40] Created subscription: sub_6800ca40b3d23 with payment ID: I-BRST9YNVY724 using paypal
+[2025-04-17 09:30:40] Created subscription with ID: sub_6800ca40b3d23
+[2025-04-17 09:30:40] Activating subscription in SiberianCMS
+[2025-04-17 09:30:40] SiberianCMS subscription activation successful
+[2025-04-17 09:30:40] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 09:30:40] Processing admin role update after activation for admin ID 1
+[2025-04-17 09:30:40] Found 2 active subscriptions for admin ID 1
+[2025-04-17 09:30:40] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:30:40] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:30:40] Assigned roles after deduplication: 2
+[2025-04-17 09:30:40] Highest priority role determined: 2
+[2025-04-17 09:30:40] No role change needed - current role: 2, highest role: 2
+[2025-04-17 09:30:40] Starting get_success_redirect_url function
+[2025-04-17 09:30:40] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:30:40] Redirecting to success page: https://swiftspeedappcreator.com/appblog/sub/?swsib_success=1&subscription_id=sub_6800ca40b3d23&renewed=0
+[2025-04-17 09:30:41] Displaying post-purchase popup for subscription: sub_6800ca40b3d23
+[2025-04-17 09:30:47] Activating subscription in SiberianCMS
+[2025-04-17 09:30:47] SiberianCMS subscription activation successful
+[2025-04-17 09:30:47] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 09:30:47] Processing admin role update after activation for admin ID 1
+[2025-04-17 09:30:47] Found 2 active subscriptions for admin ID 1
+[2025-04-17 09:30:47] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:30:47] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:30:47] Assigned roles after deduplication: 2
+[2025-04-17 09:30:47] Highest priority role determined: 2
+[2025-04-17 09:30:47] No role change needed - current role: 2, highest role: 2
+[2025-04-17 09:31:36] Updating SiberianCMS subscription - Action: cancel
+[2025-04-17 09:31:36] SiberianCMS subscription deletion result: Success
+[2025-04-17 09:31:36] Processing admin role update after cancellation for admin ID 1
+[2025-04-17 09:31:36] Found 1 active subscriptions for admin ID 1
+[2025-04-17 09:31:36] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:31:36] Assigned roles after deduplication: 2
+[2025-04-17 09:31:36] Highest priority role determined: 2
+[2025-04-17 09:31:36] No role change needed - current role: 2, highest role: 2
+[2025-04-17 09:31:36] Event: PayPal subscription cancelled: I-BRST9YNVY724
+[2025-04-17 09:38:41] === START: Handling create_subscription_order ===
+[2025-04-17 09:38:41] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 09:38:41] Using PE Subscription integration handler
+[2025-04-17 09:38:41] === START: Processing Subscription Order Request ===
+[2025-04-17 09:38:41] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 09:38:41] Using PE Subscription integration handler
+[2025-04-17 09:38:41] === START: Processing Subscription Order Request ===
+[2025-04-17 09:38:41] RAW JSON PAYLOAD: action=create_subscription_order&admin_id=1&application_id=53&admin_email=ssutechnologyltd%40gmail.com&selected_subscription_id=3&csrf_token=fefe1c7d436975ee78eb2053920aa1a8
+[2025-04-17 09:38:41] POST data: Array
+(
+    [action] => create_subscription_order
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [selected_subscription_id] => 3
+    [csrf_token] => fefe1c7d436975ee78eb2053920aa1a8
+)
+
+[2025-04-17 09:38:41] Data received - admin_id: 1, app_id: 53, email: ssutechnologyltd@gmail.com, sub_id: 3
+[2025-04-17 09:38:41] SiberianCMS CSRF token: fefe1c7d436975ee78eb2053920aa1a8
+[2025-04-17 09:38:41] Creating subscription order URL for admin_id: 1, app_id: 53, email: ssutechnologyltd@gmail.com, sub_id: 3
+[2025-04-17 09:38:41] Checking plan: Siberian ID 2 => Plan Monthly Business Plan
+[2025-04-17 09:38:41] Checking plan: Siberian ID 3 => Plan Yearly Business Plan
+[2025-04-17 09:38:41] Matched subscription 3 to plan Yearly Business Plan
+[2025-04-17 09:38:41] User found: ID 2, username: ssutechnologyltd@gmail.com
+[2025-04-17 09:38:41] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800cc2122d225.31087605
+[2025-04-17 09:38:41] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800cc2122d225.31087605
+[2025-04-17 09:38:41] === END: Processing Subscription Order Request ===
+[2025-04-17 09:38:41] Processing token: swsib_pe_token_6800cc2122d225.31087605
+[2025-04-17 09:38:41] Token data retrieved: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744882721
+)
+
+[2025-04-17 09:38:41] User authenticated: 2
+[2025-04-17 09:38:41] Checkout data stored in user meta
+[2025-04-17 09:38:41] Got checkout data from transient: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744882721
+)
+
+[2025-04-17 09:38:41] Rendering checkout page for plan: Yearly Business Plan (ID: sub_plan_67fc3935a0a19)
+[2025-04-17 09:38:46] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 09:38:46] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 09:38:46] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 09:38:46] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 09:38:48] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 09:38:48] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 09:38:48] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 09:38:48] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 09:38:48] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => dc3a4929f3
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 53
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 3
+            [plan_id] => sub_plan_67fc3935a0a19
+            [timestamp] => 1744882721
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 09:38:48] Checking nonce: dc3a4929f3
+[2025-04-17 09:38:48] Nonce verified with checkout_nonce action
+[2025-04-17 09:38:48] Processing payment with method: paypal
+[2025-04-17 09:38:48] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744882721
+)
+
+[2025-04-17 09:38:48] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 09:38:48] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 09:38:48] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => dc3a4929f3
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 53
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 3
+            [plan_id] => sub_plan_67fc3935a0a19
+            [timestamp] => 1744882721
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 09:38:48] Checking nonce: dc3a4929f3
+[2025-04-17 09:38:48] Nonce verified with checkout_nonce action
+[2025-04-17 09:38:48] Processing payment with method: paypal
+[2025-04-17 09:38:48] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744882721
+)
+
+[2025-04-17 09:38:48] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 09:38:48] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 09:38:49] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 09:38:49] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 09:38:49] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 09:38:49] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 09:38:49] Starting get_success_redirect_url function
+[2025-04-17 09:38:49] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:38:49] Starting get_success_redirect_url function
+[2025-04-17 09:38:49] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:39:15] Detected successful checkout redirect. Processing...
+[2025-04-17 09:39:15] Processing checkout success redirect with session key: pp_session_6800cc293ebdf and gateway: paypal
+[2025-04-17 09:39:15] No success data found for user ID: 2
+[2025-04-17 09:39:17] Still no success data found after delay
+[2025-04-17 09:39:17] Looking for checkout data in transient: swsib_paypal_checkout_pp_session_6800cc293ebdf
+[2025-04-17 09:39:17] Found checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 53
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 3
+    [plan_id] => sub_plan_67fc3935a0a19
+    [timestamp] => 1744882729
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+    [tax_amount] => 7.9
+    [total_amount] => 86.9
+    [session_key] => pp_session_6800cc293ebdf
+    [paypal_subscription_id] => I-7GDL0B9XKDDN
+)
+
+[2025-04-17 09:39:17] Processing PayPal-specific redirect logic
+[2025-04-17 09:39:17] Found PayPal subscription ID in checkout data: I-7GDL0B9XKDDN
+[2025-04-17 09:39:17] No subscription found with PayPal ID: I-7GDL0B9XKDDN, creating from checkout data
+[2025-04-17 09:39:17] Calculating tax for plan ID: sub_plan_67fc3935a0a19, country: GB
+[2025-04-17 09:39:17] Applied tax rule: VAT, Rate: 10%, Amount: 7.9
+[2025-04-17 09:39:17] Creating subscription with user ID: 2, plan ID: sub_plan_67fc3935a0a19, payment ID: I-7GDL0B9XKDDN, method: paypal
+[2025-04-17 09:39:17] Created subscription: sub_6800cc45a6dda with payment ID: I-7GDL0B9XKDDN using paypal
+[2025-04-17 09:39:17] Created subscription with ID: sub_6800cc45a6dda
+[2025-04-17 09:39:17] Activating subscription in SiberianCMS
+[2025-04-17 09:39:17] SiberianCMS subscription activation successful
+[2025-04-17 09:39:17] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 09:39:17] Processing admin role update after activation for admin ID 1
+[2025-04-17 09:39:17] Found 2 active subscriptions for admin ID 1
+[2025-04-17 09:39:17] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:39:17] Adding role ID: 3 from active subscription #3
+[2025-04-17 09:39:17] Assigned roles after deduplication: 2, 3
+[2025-04-17 09:39:17] Highest priority role determined: 3
+[2025-04-17 09:39:17] Admin role update to highest priority role 3 result: Success
+[2025-04-17 09:39:17] Starting get_success_redirect_url function
+[2025-04-17 09:39:17] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:39:17] Redirecting to success page: https://swiftspeedappcreator.com/appblog/sub/?swsib_success=1&subscription_id=sub_6800cc45a6dda&renewed=0
+[2025-04-17 09:39:18] Displaying post-purchase popup for subscription: sub_6800cc45a6dda
+[2025-04-17 09:39:26] Activating subscription in SiberianCMS
+[2025-04-17 09:39:26] SiberianCMS subscription activation successful
+[2025-04-17 09:39:26] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 09:39:26] Processing admin role update after activation for admin ID 1
+[2025-04-17 09:39:26] Found 2 active subscriptions for admin ID 1
+[2025-04-17 09:39:26] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:39:26] Adding role ID: 3 from active subscription #3
+[2025-04-17 09:39:26] Assigned roles after deduplication: 2, 3
+[2025-04-17 09:39:26] Highest priority role determined: 3
+[2025-04-17 09:39:26] No role change needed - current role: 3, highest role: 3
+[2025-04-17 09:39:29] Processing pending cancellation for subscription sub_6800cc45a6dda
+[2025-04-17 09:39:29] Subscription details: {"id":"sub_6800cc45a6dda","user_id":"2","plan_id":"sub_plan_67fc3935a0a19","payment_id":"I-7GDL0B9XKDDN","admin_id":"1","admin_email":"ssutechnologyltd@gmail.com","application_id":"53","siberian_plan_id":"3","amount":"79.00","tax_amount":"7.90","total_amount":"86.90","currency":"EUR","status":"active","start_date":"2025-04-17 09:39:17","end_date":"2026-04-17 09:39:17","next_billing_date":null,"billing_frequency":"annually","payment_method":"paypal","customer_data":{"first_name":"Ssu-Technology","last_name":"Limited","email":"ssutechnologyltd@gmail.com","phone":"07441442956","address":"7, Bell Yard London","city":"London","state":"London","zip":"WC2A 2JR","country":"GB"},"app_quantity":"3","payment_status":"paid","last_payment_date":"2025-04-17 09:39:17","last_payment_error":null,"retry_count":"0","grace_period_end":null,"retry_period_end":null,"is_stripe_subscription":"0","stripe_customer_id":null,"paypal_payer_id":null,"cancellation_source":null,"created_at":"2025-04-17 09:39:17","updated_at":"2025-04-17 09:39:17"}
+[2025-04-17 09:39:29] Setting PayPal subscription to pending-cancellation locally: I-7GDL0B9XKDDN
+[2025-04-17 09:39:29] Getting PayPal subscription details: I-7GDL0B9XKDDN
+[2025-04-17 09:39:31] Retrieved PayPal subscription details: {"status":"ACTIVE","status_update_time":"2025-04-17T09:39:13Z","id":"I-7GDL0B9XKDDN","plan_id":"P-4NJ98007H5206382JNAAMYKQ","start_time":"2025-04-17T09:38:51Z","quantity":"1","shipping_amount":{"currency_code":"EUR","value":"0.0"},"subscriber":{"email_address":"sb-fgpye5002531@personal.example.com","payer_id":"ZSRU5B8TF2YRN","name":{"given_name":"John","surname":"Doe"},"tenant":"PAYPAL"},"billing_info":{"outstanding_balance":{"currency_code":"EUR","value":"0.0"},"cycle_executions":[{"tenure_type":"REGULAR","sequence":1,"cycles_completed":1,"cycles_remaining":0,"current_pricing_scheme_version":1,"total_cycles":0}],"last_payment":{"amount":{"currency_code":"EUR","value":"86.9"},"time":"2025-04-17T09:39:13Z"},"next_billing_time":"2026-04-17T10:00:00Z","failed_payments_count":0},"create_time":"2025-04-17T09:39:12Z","update_time":"2025-04-17T09:39:13Z","custom_id":"pp_session_6800cc293ebdf","plan_overridden":false,"links":[{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-7GDL0B9XKDDN\/cancel","rel":"cancel","method":"POST"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-7GDL0B9XKDDN","rel":"edit","method":"PATCH"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-7GDL0B9XKDDN","rel":"self","method":"GET"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-7GDL0B9XKDDN\/suspend","rel":"suspend","method":"POST"},{"href":"https:\/\/api.sandbox.paypal.com\/v1\/billing\/subscriptions\/I-7GDL0B9XKDDN\/capture","rel":"capture","method":"POST"}]}
+[2025-04-17 09:39:31] Storing next billing date in database: 2026-04-17T10:00:00Z
+[2025-04-17 09:39:31] Successfully updated PayPal subscription for pending cancellation
+[2025-04-17 09:39:31] Subscription sub_6800cc45a6dda set to pending cancellation successfully
+[2025-04-17 09:39:31] Updated subscription status confirmed: pending-cancellation
+[2025-04-17 09:39:39] Attempting to resume PayPal subscription: I-7GDL0B9XKDDN
+[2025-04-17 09:39:39] Getting PayPal subscription details: I-7GDL0B9XKDDN
+[2025-04-17 09:39:41] PayPal subscription is still active, can safely uncancel locally
+[2025-04-17 09:39:41] Subscription sub_6800cc45a6dda uncancelled successfully
+[2025-04-17 09:44:31] === START: Handling create_subscription_order ===
+[2025-04-17 09:44:31] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 09:44:31] Using PE Subscription integration handler
+[2025-04-17 09:44:31] === START: Processing Subscription Order Request ===
+[2025-04-17 09:44:31] Integration status check - WooCommerce: disabled, PE Subscription: enabled
+[2025-04-17 09:44:31] Using PE Subscription integration handler
+[2025-04-17 09:44:31] === START: Processing Subscription Order Request ===
+[2025-04-17 09:44:31] RAW JSON PAYLOAD: action=create_subscription_order&admin_id=1&application_id=56&admin_email=ssutechnologyltd%40gmail.com&selected_subscription_id=4&csrf_token=ed5e9d48bb387b4acd97184b72e17b46
+[2025-04-17 09:44:31] POST data: Array
+(
+    [action] => create_subscription_order
+    [admin_id] => 1
+    [application_id] => 56
+    [admin_email] => ssutechnologyltd@gmail.com
+    [selected_subscription_id] => 4
+    [csrf_token] => ed5e9d48bb387b4acd97184b72e17b46
+)
+
+[2025-04-17 09:44:31] Data received - admin_id: 1, app_id: 56, email: ssutechnologyltd@gmail.com, sub_id: 4
+[2025-04-17 09:44:31] SiberianCMS CSRF token: ed5e9d48bb387b4acd97184b72e17b46
+[2025-04-17 09:44:31] Creating subscription order URL for admin_id: 1, app_id: 56, email: ssutechnologyltd@gmail.com, sub_id: 4
+[2025-04-17 09:44:31] Checking plan: Siberian ID 2 => Plan Monthly Business Plan
+[2025-04-17 09:44:31] Checking plan: Siberian ID 3 => Plan Yearly Business Plan
+[2025-04-17 09:44:31] Checking plan: Siberian ID 4 => Plan WhiteLabel Plan
+[2025-04-17 09:44:31] Matched subscription 4 to plan WhiteLabel Plan
+[2025-04-17 09:44:31] User found: ID 2, username: ssutechnologyltd@gmail.com
+[2025-04-17 09:44:31] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800cd7f9d5512.90798322
+[2025-04-17 09:44:31] Returning checkout URL: https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_6800cd7f9d5512.90798322
+[2025-04-17 09:44:31] === END: Processing Subscription Order Request ===
+[2025-04-17 09:44:32] Processing token: swsib_pe_token_6800cd7f9d5512.90798322
+[2025-04-17 09:44:32] Token data retrieved: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 56
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 4
+    [plan_id] => sub_plan_67fc397575f56
+    [timestamp] => 1744883071
+)
+
+[2025-04-17 09:44:32] User authenticated: 2
+[2025-04-17 09:44:32] Checkout data stored in user meta
+[2025-04-17 09:44:32] Got checkout data from transient: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 56
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 4
+    [plan_id] => sub_plan_67fc397575f56
+    [timestamp] => 1744883071
+)
+
+[2025-04-17 09:44:32] Rendering checkout page for plan: WhiteLabel Plan (ID: sub_plan_67fc397575f56)
+[2025-04-17 09:44:36] Calculating tax for plan ID: sub_plan_67fc397575f56, country: GB
+[2025-04-17 09:44:36] Applied tax rule: VAT, Rate: 10%, Amount: 9.9
+[2025-04-17 09:44:36] Calculating tax for plan ID: sub_plan_67fc397575f56, country: GB
+[2025-04-17 09:44:36] Applied tax rule: VAT, Rate: 10%, Amount: 9.9
+[2025-04-17 09:44:38] Calculating tax for plan ID: sub_plan_67fc397575f56, country: GB
+[2025-04-17 09:44:38] Applied tax rule: VAT, Rate: 10%, Amount: 9.9
+[2025-04-17 09:44:38] Calculating tax for plan ID: sub_plan_67fc397575f56, country: GB
+[2025-04-17 09:44:38] Applied tax rule: VAT, Rate: 10%, Amount: 9.9
+[2025-04-17 09:44:39] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => 43e4fb2d57
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 56
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 4
+            [plan_id] => sub_plan_67fc397575f56
+            [timestamp] => 1744883071
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 09:44:39] Checking nonce: 43e4fb2d57
+[2025-04-17 09:44:39] Nonce verified with checkout_nonce action
+[2025-04-17 09:44:39] Processing payment with method: paypal
+[2025-04-17 09:44:39] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 56
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 4
+    [plan_id] => sub_plan_67fc397575f56
+    [timestamp] => 1744883071
+)
+
+[2025-04-17 09:44:39] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 09:44:39] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 09:44:39] Payment processing request received: Array
+(
+    [action] => swsib_process_payment
+    [nonce] => 43e4fb2d57
+    [payment_method] => paypal
+    [checkout_data] => Array
+        (
+            [user_id] => 2
+            [admin_id] => 1
+            [application_id] => 56
+            [admin_email] => ssutechnologyltd@gmail.com
+            [siberian_sub_id] => 4
+            [plan_id] => sub_plan_67fc397575f56
+            [timestamp] => 1744883071
+        )
+
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+)
+
+[2025-04-17 09:44:39] Checking nonce: 43e4fb2d57
+[2025-04-17 09:44:39] Nonce verified with checkout_nonce action
+[2025-04-17 09:44:39] Processing payment with method: paypal
+[2025-04-17 09:44:39] Checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 56
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 4
+    [plan_id] => sub_plan_67fc397575f56
+    [timestamp] => 1744883071
+)
+
+[2025-04-17 09:44:39] Customer data: Array
+(
+    [first_name] => Ssu-Technology
+    [last_name] => Limited
+    [email] => ssutechnologyltd@gmail.com
+    [phone] => 07441442956
+    [address] => 7, Bell Yard London
+    [city] => London
+    [state] => London
+    [zip] => WC2A 2JR
+    [country] => GB
+)
+
+[2025-04-17 09:44:39] Delegating to payment handler: SwiftSpeed_Siberian_PayPal_Handler
+[2025-04-17 09:44:39] Calculating tax for plan ID: sub_plan_67fc397575f56, country: GB
+[2025-04-17 09:44:39] Applied tax rule: VAT, Rate: 10%, Amount: 9.9
+[2025-04-17 09:44:39] Starting get_success_redirect_url function
+[2025-04-17 09:44:39] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:44:39] Calculating tax for plan ID: sub_plan_67fc397575f56, country: GB
+[2025-04-17 09:44:39] Applied tax rule: VAT, Rate: 10%, Amount: 9.9
+[2025-04-17 09:44:39] Starting get_success_redirect_url function
+[2025-04-17 09:44:39] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:45:07] Detected successful checkout redirect. Processing...
+[2025-04-17 09:45:07] Processing checkout success redirect with session key: pp_session_6800cd879d46c and gateway: paypal
+[2025-04-17 09:45:07] No success data found for user ID: 2
+[2025-04-17 09:45:09] Still no success data found after delay
+[2025-04-17 09:45:09] Looking for checkout data in transient: swsib_paypal_checkout_pp_session_6800cd879d46c
+[2025-04-17 09:45:09] Found checkout data: Array
+(
+    [user_id] => 2
+    [admin_id] => 1
+    [application_id] => 56
+    [admin_email] => ssutechnologyltd@gmail.com
+    [siberian_sub_id] => 4
+    [plan_id] => sub_plan_67fc397575f56
+    [timestamp] => 1744883079
+    [customer_data] => Array
+        (
+            [first_name] => Ssu-Technology
+            [last_name] => Limited
+            [email] => ssutechnologyltd@gmail.com
+            [phone] => 07441442956
+            [address] => 7, Bell Yard London
+            [city] => London
+            [state] => London
+            [zip] => WC2A 2JR
+            [country] => GB
+        )
+
+    [tax_amount] => 9.9
+    [total_amount] => 108.9
+    [session_key] => pp_session_6800cd879d46c
+    [paypal_subscription_id] => I-H2LCM4AR8EU4
+)
+
+[2025-04-17 09:45:09] Processing PayPal-specific redirect logic
+[2025-04-17 09:45:09] Found PayPal subscription ID in checkout data: I-H2LCM4AR8EU4
+[2025-04-17 09:45:09] No subscription found with PayPal ID: I-H2LCM4AR8EU4, creating from checkout data
+[2025-04-17 09:45:09] Calculating tax for plan ID: sub_plan_67fc397575f56, country: GB
+[2025-04-17 09:45:09] Applied tax rule: VAT, Rate: 10%, Amount: 9.9
+[2025-04-17 09:45:09] Creating subscription with user ID: 2, plan ID: sub_plan_67fc397575f56, payment ID: I-H2LCM4AR8EU4, method: paypal
+[2025-04-17 09:45:09] Created subscription: sub_6800cda5554c0 with payment ID: I-H2LCM4AR8EU4 using paypal
+[2025-04-17 09:45:09] Created subscription with ID: sub_6800cda5554c0
+[2025-04-17 09:45:09] Activating subscription in SiberianCMS
+[2025-04-17 09:45:09] SiberianCMS subscription activation successful
+[2025-04-17 09:45:09] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 09:45:09] Processing admin role update after activation for admin ID 1
+[2025-04-17 09:45:09] Found 3 active subscriptions for admin ID 1
+[2025-04-17 09:45:09] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:45:09] Adding role ID: 3 from active subscription #3
+[2025-04-17 09:45:09] Adding role ID: 4 from active subscription #4
+[2025-04-17 09:45:09] Assigned roles after deduplication: 2, 3, 4
+[2025-04-17 09:45:09] Highest priority role determined: 4
+[2025-04-17 09:45:09] Admin role update to highest priority role 4 result: Success
+[2025-04-17 09:45:09] Starting get_success_redirect_url function
+[2025-04-17 09:45:09] Using stored subscription URL from options: https://swiftspeedappcreator.com/appblog/sub/
+[2025-04-17 09:45:09] Redirecting to success page: https://swiftspeedappcreator.com/appblog/sub/?swsib_success=1&subscription_id=sub_6800cda5554c0&renewed=0
+[2025-04-17 09:45:10] Displaying post-purchase popup for subscription: sub_6800cda5554c0
+[2025-04-17 09:45:16] Event: PayPal payment completed for subscription: I-H2LCM4AR8EU4
+[2025-04-17 09:45:17] Activating subscription in SiberianCMS
+[2025-04-17 09:45:17] SiberianCMS subscription activation successful
+[2025-04-17 09:45:17] Updating SiberianCMS subscription - Action: activate
+[2025-04-17 09:45:17] Processing admin role update after activation for admin ID 1
+[2025-04-17 09:45:17] Found 3 active subscriptions for admin ID 1
+[2025-04-17 09:45:17] Adding role ID: 2 from active subscription #2
+[2025-04-17 09:45:17] Adding role ID: 3 from active subscription #3
+[2025-04-17 09:45:17] Adding role ID: 4 from active subscription #4
+[2025-04-17 09:45:17] Assigned roles after deduplication: 2, 3, 4
+[2025-04-17 09:45:17] Highest priority role determined: 4
+[2025-04-17 09:45:17] No role change needed - current role: 4, highest role: 4
+[2025-04-17 09:47:42] Bulk deleted 2 subscriptions
+[2025-04-17 10:20:00] Received webhook data: {
+  "id": "evt_1REpY4HneLIYoTsIdAK6HPh8",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744885200,
+  "data": {
+    "object": {
+      "id": "cs_test_b1AeRHGjVMDkbKHGjPQgl0GSDiPqZKUOs87X7wYCcIpa7IKxBhTbNkDBu0",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 10890,
+      "amount_total": 10890,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_67ff8448eac295.90824979\u0026swsib_checkout_cancel=1\u0026session_key=session_67ff84509ad11",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744798801,
+      "currency": "gbp",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": null,
+      "customer_creation": "always",
+      "customer_details": {
+        "address": null,
+        "email": "ssutechnologyltd@gmail.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744885200,
+      "invoice": null,
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "session_key": "session_67ff84509ad11",
+        "plan_id": "sub_plan_67fc397575f56",
+        "user_id": "2",
+        "admin_id": "1",
+        "siberian_sub_id": "4",
+        "application_id": "57"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "unpaid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "expired",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_67ff84509ad11",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.expired"
+}
+[2025-04-17 10:20:00] Verified webhook signature: t=1744885200,v1=328992063b074f753466b5b90d7268f380b4ff1fccff570f34896fa0a3361c38,v0=8823521962ad1980e8a16daca5d6a668ea0add7207961d179cf78b1f40669bc0
+[2025-04-17 10:20:00] Processing webhook event: checkout.session.expired
+[2025-04-17 10:21:26] No checkout data found for checkout page
+[2025-04-17 10:21:26] No checkout data found for checkout page
+[2025-04-17 10:21:27] No checkout data found for checkout page
+[2025-04-17 10:34:01] Received webhook data: {
+  "id": "evt_1REplcHneLIYoTsI6IjlAcCt",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744886040,
+  "data": {
+    "object": {
+      "id": "cs_test_b1OMn9v5QTgwRm6b06NlC7ZdKOKSLfaIuqppBkUwXijRZmSjpJIaqYNg8G",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 550,
+      "amount_total": 550,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_67ff8777425583.45780646\u0026swsib_checkout_cancel=1\u0026session_key=session_67ff879800a53",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744799640,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": null,
+      "customer_creation": "always",
+      "customer_details": {
+        "address": null,
+        "email": "ssutechnologyltd@gmail.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744886040,
+      "invoice": null,
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "session_key": "session_67ff879800a53",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "siberian_sub_id": "2",
+        "user_id": "2",
+        "admin_id": "1",
+        "application_id": "57"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "unpaid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "expired",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_67ff879800a53",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.expired"
+}
+[2025-04-17 10:34:01] Verified webhook signature: t=1744886040,v1=7b0b91efd9b24736e035238db35bd26700fdf3779f8cb7b5b888d8b3a018725f,v0=1b546735d21c4bea2e2198df852afc0e5496bef3dfb0d0e5c6c1dd893e00ed14
+[2025-04-17 10:34:01] Processing webhook event: checkout.session.expired
+[2025-04-17 10:36:08] Received webhook data: {
+  "id": "evt_1REpngHneLIYoTsI4bLAzeDn",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744886168,
+  "data": {
+    "object": {
+      "id": "cs_test_b1Q1uCi8Q8ol70i5se4wpBPNvQSqLeMj2Q35ElFCOGmQuMJwRceWLPx2A3",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 550,
+      "amount_total": 550,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_67ff8810c467c1.62132308\u0026swsib_checkout_cancel=1\u0026session_key=session_67ff8818ad65f",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744799769,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": null,
+      "customer_creation": "always",
+      "customer_details": {
+        "address": null,
+        "email": "ssutechnologyltd@gmail.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744886168,
+      "invoice": null,
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "admin_id": "1",
+        "session_key": "session_67ff8818ad65f",
+        "user_id": "2",
+        "siberian_sub_id": "2",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "application_id": "57"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "unpaid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "expired",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_67ff8818ad65f",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.expired"
+}
+[2025-04-17 10:36:08] Verified webhook signature: t=1744886168,v1=78283b498a57cb3abecbebd8983af1f07b492b9770651f6aa53025e3873dcd5a,v0=24c2fe7c37eec8052805dc911b4d84e32cba3d53b982c815b122e26e217bf66c
+[2025-04-17 10:36:08] Processing webhook event: checkout.session.expired
+[2025-04-17 10:42:24] Received webhook data: {
+  "id": "evt_1REptkHneLIYoTsIXDFUeJhl",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744886544,
+  "data": {
+    "object": {
+      "id": "cs_test_b10sxCYRWMVjvs5c6Qy4oeRZYNU6khpL06fpzu27nytk9nNGrorBpbYxf2",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 550,
+      "amount_total": 550,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_67ff89899beeb1.37230343\u0026swsib_checkout_cancel=1\u0026session_key=session_67ff8990b4ae3",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744800145,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": null,
+      "customer_creation": "always",
+      "customer_details": {
+        "address": null,
+        "email": "ssutechnologyltd@gmail.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744886544,
+      "invoice": null,
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "admin_id": "1",
+        "user_id": "2",
+        "siberian_sub_id": "2",
+        "session_key": "session_67ff8990b4ae3",
+        "application_id": "56"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "unpaid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "expired",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_67ff8990b4ae3",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.expired"
+}
+[2025-04-17 10:42:24] Verified webhook signature: t=1744886544,v1=7031c4ac598af371ecb776077977d386cdddcc9544ff455e2206d76a2d9acbd4,v0=caf940cbf1ae11711022638f1cadf38207b4fadb00a46334e7085dfa47de89c7
+[2025-04-17 10:42:24] Processing webhook event: checkout.session.expired
+[2025-04-17 10:47:44] Received webhook data: {
+  "id": "evt_1REpyuHneLIYoTsI7oDNQotn",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744886864,
+  "data": {
+    "object": {
+      "id": "cs_test_b1CwLs5SjtKMcR591OYBGhJYs06KbMqMYNvAbyOXBvHAZX1ZGlDjds1iMF",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 550,
+      "amount_total": 550,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_67ff8ac8ae4072.44997854\u0026swsib_checkout_cancel=1\u0026session_key=session_67ff8ad04fcbe",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744800464,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": null,
+      "customer_creation": "always",
+      "customer_details": {
+        "address": null,
+        "email": "ssutechnologyltd@gmail.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744886864,
+      "invoice": null,
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "admin_id": "1",
+        "user_id": "2",
+        "siberian_sub_id": "2",
+        "session_key": "session_67ff8ad04fcbe",
+        "application_id": "56"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "unpaid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "expired",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_67ff8ad04fcbe",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.expired"
+}
+[2025-04-17 10:47:44] Verified webhook signature: t=1744886864,v1=dbf1f739d9001a13b3e518875b2829f0eee0177330ce4d26c56e6db673ed4ad0,v0=268590243e0bab487875a09b0276383587b38eca6e8a47ed9cdac187c68991c9
+[2025-04-17 10:47:44] Processing webhook event: checkout.session.expired
+[2025-04-17 10:48:31] Received webhook data: {
+  "id": "evt_1REpzeHneLIYoTsI18QNj4G8",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744886910,
+  "data": {
+    "object": {
+      "id": "cs_test_b1ucC7RrJgRitx2G1zYt5pF1lFgaIow8CveEtXtiQREAGu5yB9Whc2pb8j",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 550,
+      "amount_total": 550,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_67ff8af7587e17.82915836\u0026swsib_checkout_cancel=1\u0026session_key=session_67ff8afe7f1f7",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744800510,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": null,
+      "customer_creation": "always",
+      "customer_details": {
+        "address": null,
+        "email": "ssutechnologyltd@gmail.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744886910,
+      "invoice": null,
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "session_key": "session_67ff8afe7f1f7",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "siberian_sub_id": "2",
+        "user_id": "2",
+        "admin_id": "1",
+        "application_id": "57"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "unpaid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "expired",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_67ff8afe7f1f7",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.expired"
+}
+[2025-04-17 10:48:31] Verified webhook signature: t=1744886910,v1=05c1b01cb5cae8b1b1eccc46e87308fcf72884fff7f7ce56deaac58d64f6ea41,v0=7a6ef773d551f0ad6324a4d0c73dfdfb7d5f8da4a863ac63c07326e41f90c246
+[2025-04-17 10:48:31] Processing webhook event: checkout.session.expired
+[2025-04-17 11:17:54] Received webhook data: {
+  "id": "evt_1REqS5HneLIYoTsIUXrYheAT",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1744888673,
+  "data": {
+    "object": {
+      "id": "cs_test_b1gPqwTZOr1P6y8sHl5ut6yWkimf3AvIVopRhrnIZy20P1rnrETlr0yr1J",
+      "object": "checkout.session",
+      "adaptive_pricing": null,
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 550,
+      "amount_total": 550,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "status": null
+      },
+      "billing_address_collection": "required",
+      "cancel_url": "https://swiftspeedappcreator.com/appblog/native-test-checkout/?swsib_token=swsib_pe_token_67ff91da2b2799.82622530\u0026swsib_checkout_cancel=1\u0026session_key=session_67ff91e144ff5",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1744802273,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [
+
+      ],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": null,
+      "customer_creation": "always",
+      "customer_details": {
+        "address": null,
+        "email": "ssutechnologyltd@gmail.com",
+        "name": null,
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": null
+      },
+      "customer_email": "ssutechnologyltd@gmail.com",
+      "discounts": [
+
+      ],
+      "expires_at": 1744888673,
+      "invoice": null,
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "admin_id": "1",
+        "session_key": "session_67ff91e144ff5",
+        "user_id": "2",
+        "siberian_sub_id": "2",
+        "plan_id": "sub_plan_67fc38e26ba33",
+        "application_id": "56"
+      },
+      "mode": "subscription",
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "unpaid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": null,
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping": null,
+      "shipping_address_collection": null,
+      "shipping_options": [
+
+      ],
+      "shipping_rate": null,
+      "status": "expired",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://swiftspeedappcreator.com/appblog/sub/?swsib_checkout_success=1\u0026session_key=session_67ff91e144ff5",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.expired"
+}
+[2025-04-17 11:17:54] Verified webhook signature: t=1744888673,v1=6c93637b3ddec9ad0fa2de7e37e12d5a084800716793d1baa7094ce27458385d,v0=73252b90dd3c51b347ac04eb93d1e98835716a9887d965b14cb51279faa90c17
+[2025-04-17 11:17:54] Processing webhook event: checkout.session.expired

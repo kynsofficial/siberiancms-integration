@@ -1,7 +1,6 @@
 /**
  * SwiftSpeed Siberian Integration - Auto Login Styles
  */
-
 /* Processing Screen preview styles */
 .processing-preview, .login-redirect-preview {
     margin-top: 15px;
@@ -33,8 +32,50 @@
     border-top-color: #3498db;
     animation: spin 1s ease-in-out infinite;
 }
+
+/* Updated Loading Overlay - Identical to the one in frontend shortcode */
+#swsib-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.swsib-loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #635bff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 2s linear infinite;
+    margin-bottom: 15px;
+}
+
+.swsib-loading-message {
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Add animation for spinning loading icon */
+.swsib-spin {
+    animation: swsib-spin 2s linear infinite;
+}
+@keyframes swsib-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 .swsib-section-header {
     margin-top: 30px;
@@ -45,7 +86,6 @@
 .swsib-section-header h3 {
     margin: 0;
 }
-
 /* Login redirect preview styles */
 #login-redirect-preview-container {
     width: auto;
@@ -69,7 +109,6 @@
     max-width: 100%;
     overflow: hidden;
 }
-
 /* Shortcode info styles */
 .shortcode-info {
     margin-top: 20px;
@@ -102,4 +141,82 @@
     width: 100px;
     font-weight: 600;
     margin-right: 15px;
+}
+
+/* Test Connection Results */
+#api_connection_result {
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+#api_connection_result .swsib-notice {
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 4px;
+}
+
+#api_connection_result .swsib-notice.success {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+}
+
+#api_connection_result .swsib-notice.error {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+/* Animation for the results container */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#api_connection_result.show-result {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Dropdown styles */
+.siberian-role-dropdown {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+/* Disabled field styles */
+.disabled-field {
+    background-color: #f0f0f0 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+    border-color: #ddd !important;
+    color: #777 !important;
+}
+
+/* Make test API connection result appear properly */
+.swsib-field + .swsib-field {
+    margin-top: 15px;
+}
+
+.swsib-field button + #api_connection_result {
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+/* Section highlighting effect */
+.swsib-highlight-section {
+    animation: highlightSection 2s ease-out;
+}
+
+@keyframes highlightSection {
+    0% {
+        background-color: rgba(255, 248, 229, 0.8);
+    }
+    100% {
+        background-color: transparent;
+    }
 }

@@ -35,6 +35,9 @@ public function login_shortcode($atts) {
     // Check if auto-authenticate is enabled
     $auto_authenticate = isset($options['auto_login']['auto_authenticate']) ? $options['auto_login']['auto_authenticate'] : false;
     
+    // Get role sync setting
+    $sync_existing_role = isset($options['auto_login']['sync_existing_role']) ? $options['auto_login']['sync_existing_role'] : false;
+    
     // Get processing screen settings if auto-authenticate is enabled
     if ($auto_authenticate) {
         $processing_text = isset($options['auto_login']['processing_text']) ? $options['auto_login']['processing_text'] : 'Processing...';
@@ -51,7 +54,11 @@ public function login_shortcode($atts) {
             $html = $this->generate_processing_screen($processing_text, $processing_bg_color, $processing_text_color);
             
             // Add JavaScript to initiate authentication
-            $auth_url = add_query_arg('swsib_auth', '1', home_url('/'));
+            $auth_url = add_query_arg(array(
+                'swsib_auth' => '1',
+                'swsib_sync_role' => $sync_existing_role ? '1' : '0'
+            ), home_url('/'));
+            
             $html .= '<script type="text/javascript">
                 jQuery(document).ready(function($) {
                     // Redirect to authentication URL after a slight delay
@@ -95,14 +102,25 @@ public function login_shortcode($atts) {
     $this->log_message('Generating login button with text: ' . ($atts['text'] ? $atts['text'] : 'default') . 
                       ', background color: ' . $color . ', and text color: ' . $text_color);
     
-    // Generate and return button HTML
-    return $public->generate_autologin_button(
+    // Generate button HTML
+    $button_html = $public->generate_autologin_button(
         $atts['text'],
         $class,
         $atts['redirect'],
         $color,
         $text_color
     );
+    
+    // Add the sync_role parameter to the URL if sync_existing_role is enabled
+    if ($sync_existing_role) {
+        $button_html = str_replace(
+            'swsib_auth=1', 
+            'swsib_auth=1&swsib_sync_role=1', 
+            $button_html
+        );
+    }
+    
+    return $button_html;
 }
 
     /**

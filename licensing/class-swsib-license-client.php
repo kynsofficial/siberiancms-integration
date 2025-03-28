@@ -71,6 +71,54 @@ class SwiftSpeed_Siberian_License_Client {
         
         // Cleanup on plugin deactivation
         register_deactivation_hook(SWSIB_PLUGIN_BASENAME, array($this, 'deactivation_cleanup'));
+        
+        // Add license refresh on tab navigation to premium tabs
+        add_action('admin_footer', array($this, 'add_license_refresh_script'));
+    }
+    
+    /**
+     * Add script to refresh license when navigating to premium tabs
+     */
+    public function add_license_refresh_script() {
+        // Only add script on plugin admin page
+        $screen = get_current_screen();
+        if (!$screen || strpos($screen->id, 'swsib-integration') === false) {
+            return;
+        }
+        ?>
+        <script>
+        jQuery(document).ready(function($) {
+            // Define premium tabs
+            var premiumTabs = ['woocommerce', 'clean', 'automate', 'advanced_autologin', 'backup_restore'];
+            
+            // Listen for tab changes
+            $('.swsib-tabs a').on('click', function() {
+                var tabId = $(this).data('tab-id');
+                
+                // If navigating to a premium tab, refresh license status
+                if (premiumTabs.includes(tabId)) {
+                    // Make AJAX call to refresh license
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'swsib_refresh_license',
+                            nonce: '<?php echo wp_create_nonce('swsib-refresh-license'); ?>'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Instead of reloading the page, if the license is invalid, switch to the License tab
+                                if (!response.data.is_valid) {
+                                    $('.swsib-tabs a[href="#license-tab"]').trigger('click');
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+        </script>
+        <?php
     }
     
     /* -------------------------------------------------------------------------
@@ -228,8 +276,20 @@ class SwiftSpeed_Siberian_License_Client {
         if (empty($license_key)) {
             $this->license_status       = false;
             $this->is_activated_on_site = false;
-            $this->set_license_notice(__('License not found.', 'swiftspeed-siberian'));
+            
+            // Don't set a license notice on initial plugin activation
+            // Only set "License not found" when the license had been activated before
+            $had_license_before = get_option('swsib_had_license_before', false);
+            if ($had_license_before) {
+                $this->set_license_notice(__('License not found.', 'swiftspeed-siberian'));
+            }
+            
             return false;
+        }
+        
+        // Set flag to indicate we had a license before
+        if (!get_option('swsib_had_license_before', false)) {
+            update_option('swsib_had_license_before', true);
         }
         
         // If not forcing a fresh call, try cached result
@@ -237,7 +297,7 @@ class SwiftSpeed_Siberian_License_Client {
             $cached_status    = get_transient('swsib_license_check');
             $cached_activated = get_transient('swsib_license_activated');
             if ($cached_status !== false && $cached_activated !== false) {
-                // Check if it’s now expired
+                // Check if it's now expired
                 if (!empty($cached_status['details']['expires'])) {
                     $exp = strtotime($cached_status['details']['expires']);
                     if ($exp && $exp <= time()) {
@@ -262,12 +322,12 @@ class SwiftSpeed_Siberian_License_Client {
         $validation = $this->validate_license($license_key, $this->get_instance_id());
         
         if (!empty($validation['success'])) {
-            // Possibly valid license, or valid but not “activated” for this domain
+            // Possibly valid license, or valid but not "activated" for this domain
             $is_valid         = !empty($validation['valid']);
             $this->license_status = $is_valid;
             
             $activated = true;
-            // If we have an error saying “instance is not activated,” 
+            // If we have an error saying "instance is not activated," 
             // that means the license is valid but not for this domain
             if (!$is_valid && !empty($validation['error']) &&
                 strpos($validation['error'], 'instance is not activated') !== false
@@ -346,7 +406,7 @@ class SwiftSpeed_Siberian_License_Client {
         ));
         
         if (is_wp_error($response)) {
-            // This is a “backend” error, as it’s from the server’s perspective
+            // This is a "backend" error, as it's from the server's perspective
             $this->log_backend('License validation WP Error: ' . $response->get_error_message());
             return array(
                 'success' => false,
@@ -531,7 +591,7 @@ class SwiftSpeed_Siberian_License_Client {
     }
     
     /**
-     * Handle license activation from user’s form
+     * Handle license activation from user's form
      */
     private function handle_license_activation() {
         $license_key = isset($_POST['license_key']) 
@@ -559,6 +619,9 @@ class SwiftSpeed_Siberian_License_Client {
         // If success, store license key
         $this->options['license_key'] = $license_key;
         update_option('swsib_options', $this->options);
+        
+        // Set flag to indicate we had a license before
+        update_option('swsib_had_license_before', true);
         
         // Clear out cached status
         delete_transient('swsib_license_check');
@@ -610,6 +673,25 @@ class SwiftSpeed_Siberian_License_Client {
             'updated'
         );
     }
+
+    /**
+     * AJAX callback for refreshing license
+     */
+    public function ajax_refresh_license() {
+        check_ajax_referer('swsib-refresh-license', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permission denied'));
+            return;
+        }
+        
+        $is_valid = $this->is_valid(true);
+        
+        wp_send_json_success(array(
+            'is_valid' => $is_valid,
+            'message' => $is_valid ? 'License is valid' : 'License is invalid'
+        ));
+    }
     
     /* -------------------------------------------------------------------------
         DISPLAY METHODS FOR ADMIN UI
@@ -621,6 +703,7 @@ class SwiftSpeed_Siberian_License_Client {
     public function display_activation_form() {
         $license_key = $this->get_license_key();
         $has_license = !empty($license_key);
+        $form_id = 'swsib-license-form-' . uniqid(); // Generate unique ID for the form
         ?>
         <div class="swsib-license-form">
             <div class="swsib-notice warning">
@@ -631,16 +714,16 @@ class SwiftSpeed_Siberian_License_Client {
             
             <?php $this->display_license_notice(); ?>
             
-            <form method="post" action="">
-                <?php wp_nonce_field('swsib_license_action', 'swsib_license_nonce'); ?>
+            <form method="post" action="" id="<?php echo esc_attr($form_id); ?>">
+                <?php wp_nonce_field('swsib_license_action', 'swsib_license_nonce_' . uniqid()); ?>
                 <input type="hidden" name="swsib_license_action" value="activate">
                 
                 <div class="swsib-field">
-                    <label for="license_key"><?php _e('License Key', 'swiftspeed-siberian'); ?></label>
+                    <label for="license_key_<?php echo esc_attr($form_id); ?>"><?php _e('License Key', 'swiftspeed-siberian'); ?></label>
                     <input 
                         type="text" 
                         name="license_key" 
-                        id="license_key"
+                        id="license_key_<?php echo esc_attr($form_id); ?>" 
                         value="<?php echo esc_attr($license_key); ?>" 
                         class="regular-text" 
                         required
@@ -682,7 +765,7 @@ class SwiftSpeed_Siberian_License_Client {
     }
     
     /**
-     * Display the admin notice if it’s set
+     * Display the admin notice if it's set
      */
     public function display_license_notice() {
         static $shown = false;
@@ -721,6 +804,7 @@ class SwiftSpeed_Siberian_License_Client {
     public function display_license_info() {
         $license_key     = $this->get_license_key();
         $license_details = $this->get_license_details();
+        $form_id = 'swsib-license-info-' . uniqid(); // Generate unique ID for the form
         
         // Re-check states
         $is_valid     = $this->is_valid();
@@ -777,8 +861,8 @@ class SwiftSpeed_Siberian_License_Client {
                         <?php _e('Refresh License Status', 'swiftspeed-siberian'); ?>
                     </a>
                     
-                    <form method="post" action="" style="display: inline;">
-                        <?php wp_nonce_field('swsib_license_action', 'swsib_license_nonce'); ?>
+                    <form method="post" action="" id="<?php echo esc_attr($form_id); ?>">
+                        <?php wp_nonce_field('swsib_license_action', 'swsib_license_nonce_' . uniqid()); ?>
                         
                         <?php if ($is_activated): ?>
                             <input type="hidden" name="swsib_license_action" value="deactivate">
@@ -828,3 +912,8 @@ class SwiftSpeed_Siberian_License_Client {
 function swsib_license() {
     return SwiftSpeed_Siberian_License_Client::instance();
 }
+
+// Add AJAX handler for license refresh
+add_action('wp_ajax_swsib_refresh_license', function() {
+    swsib_license()->ajax_refresh_license();
+});

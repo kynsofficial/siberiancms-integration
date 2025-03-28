@@ -1,0 +1,705 @@
+/**
+ * PE Subscriptions - Frontend Styles
+ * Consolidated and enhanced to support both Stripe and PayPal
+ */
+
+/* Main Container */
+.swsib-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    color: #333;
+}
+
+/* Section Styling */
+.swsib-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+    padding: 25px;
+}
+
+/* Checkout Page Styling */
+.swsib-checkout {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.swsib-checkout-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.swsib-checkout-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    color: #3a4b79;
+}
+.swsib-checkout-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+}
+.swsib-plan-details {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+.swsib-plan-name {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 15px;
+    color: #3a4b79;
+}
+.swsib-plan-description {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #555;
+    margin: 0;
+}
+
+/* Form Styling */
+.swsib-checkout-form {
+    position: relative;
+}
+.swsib-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -10px 20px;
+}
+.swsib-form-column {
+    flex: 1;
+    padding: 0 10px;
+    min-width: 200px;
+}
+.swsib-field {
+    margin-bottom: 20px;
+}
+.swsib-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+.swsib-field input[type="text"],
+.swsib-field input[type="email"],
+.swsib-field input[type="tel"],
+.swsib-field select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+    line-height: 1.4;
+}
+.swsib-field input[type="text"]:focus,
+.swsib-field input[type="email"]:focus,
+.swsib-field input[type="tel"]:focus,
+.swsib-field select:focus {
+    border-color: #3a4b79;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(58, 75, 121, 0.1);
+}
+.swsib-field .required {
+    color: #dc3545;
+    margin-left: 2px;
+}
+
+/* Order Summary Styling */
+.swsib-order-summary {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 20px;
+}
+.swsib-order-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.swsib-order-table td {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+.swsib-order-table tr:last-child td {
+    border-bottom: none;
+}
+.swsib-amount {
+    text-align: right;
+    font-weight: 500;
+}
+.swsib-total-row {
+    font-size: 18px;
+    color: #3a4b79;
+}
+.swsib-total-row td {
+    padding-top: 15px;
+}
+
+/* Buttons */
+.swsib-button {
+    display: inline-block;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    background-color: #3a4b79;
+    color: #fff;
+    margin: 5px 0;
+}
+.swsib-button:hover {
+    background-color: #2c3a5c;
+    color: #fff;
+    text-decoration: none;
+}
+.swsib-button.secondary {
+    background-color: #f2f2f2;
+    color: #333;
+}
+.swsib-button.secondary:hover {
+    background-color: #e6e6e6;
+    color: #333;
+    text-decoration: none;
+}
+.swsib-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+.swsib-button-container {
+    margin-top: 20px;
+    text-align: center;
+}
+.swsib-secure-wrapper {
+    margin-top: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+.swsib-secure-icon {
+    width: 25px;
+    height: 25px;
+    object-fit: contain;
+}
+.swsib-secure-text {
+    font-size: 13px;
+    color: #555;
+}
+
+/* Loading Spinner */
+.swsib-loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: swsib-spin 1s ease-in-out infinite;
+    vertical-align: middle;
+}
+@keyframes swsib-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Manage Subscriptions Page - Dashboard UI */
+.swsib-frontend-container {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    color: #333;
+    max-width: 1080px;
+    margin: 0 auto;
+}
+.swsib-frontend-header {
+    margin-bottom: 30px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+.swsib-frontend-header h2 {
+    font-size: 24px;
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
+.swsib-frontend-dashboard {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -15px;
+}
+.swsib-frontend-sidebar {
+    width: 30%;
+    min-width: 250px;
+    padding: 0 15px;
+    margin-bottom: 30px;
+}
+.swsib-frontend-main {
+    width: 70%;
+    padding: 0 15px;
+    margin-bottom: 30px;
+}
+.swsib-frontend-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 15px;
+    margin-bottom: 25px;
+}
+.swsib-frontend-card h3 {
+    margin-top: 0;
+    font-size: 18px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    color: #333;
+}
+.swsib-user-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.swsib-user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #6c757d;
+    margin-right: 15px;
+}
+.swsib-user-details h4 {
+    margin: 0 0 5px;
+    font-size: 16px;
+}
+.swsib-user-details p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Subscription List and Dashboard */
+.swsib-subscription-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.swsib-summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+.swsib-summary-item:last-child {
+    border-bottom: none;
+}
+.swsib-summary-value {
+    font-weight: 600;
+    font-size: 18px;
+}
+
+/* Make summary items clickable */
+.swsib-summary-item.clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    padding: 8px 6px;
+    border-radius: 4px;
+}
+.swsib-summary-item.clickable:hover {
+    background-color: #f5f5f5;
+}
+.swsib-summary-item.clickable.active {
+    background-color: #e9f0f8;
+}
+
+/* Sidebar Filter Container and Status Filter */
+.swsib-subscription-filter-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+.swsib-status-filter {
+    width: auto;
+    max-width: 200px;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Subscription List Styles */
+.swsib-subscription-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.swsib-subscription-item {
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    transition: box-shadow 0.2s ease;
+    background: #fff;
+}
+.swsib-subscription-item:hover {
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+.swsib-subscription-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+.swsib-subscription-title {
+    font-weight: 600;
+    font-size: 18px;
+    color: #333;
+}
+.swsib-subscription-price {
+    font-weight: 600;
+    font-size: 18px;
+    color: #28a745;
+    text-align: right;
+}
+.swsib-plan-frequency {
+    font-size: 14px;
+    font-weight: normal;
+    color: #666;
+    display: block;
+    margin-top: 2px;
+}
+.swsib-subscription-description {
+    margin: 0 0 15px;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.swsib-status-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+.swsib-status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+.swsib-status-pending-cancellation {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.swsib-status-cancelled {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.swsib-status-expired {
+    background-color: #e9ecef;
+    color: #495057;
+}
+.swsib-subscription-dates {
+    display: flex;
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 14px;
+}
+.swsib-subscription-dates div {
+    margin-right: 30px;
+}
+.swsib-subscription-meta {
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.swsib-subscription-actions {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+
+/* Payment Method Icons - Fixed positioning */
+.swsib-payment-method {
+    box-shadow: inset 0px 0px 3px 0px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.swsib-payment-method strong {
+    margin-right: 5px;
+}
+
+.swsib-payment-method-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-left: 5px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: middle;
+}
+
+.swsib-payment-method,.swsib-app-quantity{
+    margin-left: 5px;
+    display: flex;
+    align-items: center;
+}
+
+.swsib-payment-method-stripe {
+    background-image: url('../backend/payments/stripe/stripe.png');
+}
+
+.swsib-payment-method-paypal {
+    background-image: url('../backend/payments/paypal/paypal.png');
+}
+
+/* Alternate approach for browsers that don't support :contains */
+.swsib-payment-method-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    margin: 0 8px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: middle;
+}
+.swsib-payment-method-stripe {
+    background-image: url('../backend/payments/stripe/stripe.png');
+}
+.swsib-payment-method-paypal {
+    background-image: url('../backend/payments/paypal/paypal.png');
+}
+
+/* Button Styling for Different Actions */
+.swsib-cancel-btn {
+    background-color: #ff4d4d;
+}
+.swsib-cancel-btn:hover {
+    background-color: #e60000;
+}
+.swsib-stripe-portal-btn {
+    background-color: #635bff;
+}
+.swsib-stripe-portal-btn:hover {
+    background-color: #5851db;
+}
+.swsib-uncancel-btn {
+    background-color: #00cc66;
+}
+.swsib-uncancel-btn:hover {
+    background-color: #00994d;
+}
+.swsib-renew-btn {
+    background-color: #ff9900;
+}
+.swsib-renew-btn:hover {
+    background-color: #cc7a00;
+}
+.swsib-pending-message {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 10px 15px;
+    margin: 10px 0;
+    color: #856404;
+    font-weight: 500;
+}
+.swsib-grace-period-message {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-weight: 500;
+}
+.swsib-empty-subscriptions {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+.swsib-empty-subscriptions p {
+    margin: 0;
+    font-size: 16px;
+}
+
+/* Success Popup */
+.swsib-success-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    z-index: 10000;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+}
+.swsib-success-popup h3 {
+    margin-top: 0;
+    color: #28a745;
+    font-size: 24px;
+    font-weight: 600;
+}
+.swsib-success-popup p {
+    margin-bottom: 20px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+.swsib-success-popup-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+.swsib-success-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+}
+
+/* Messages and Notices */
+#swsib-message-container {
+    margin-bottom: 20px;
+}
+.swsib-notice {
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+}
+.swsib-notice p {
+    margin: 0 0 10px;
+}
+.swsib-notice p:last-child {
+    margin-bottom: 0;
+}
+.swsib-notice.success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+.swsib-notice.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+.swsib-notice.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+.swsib-notice.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+/* Loading overlay for Stripe portal redirects */
+#swsib-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.swsib-loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #635bff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 2s linear infinite;
+    margin-bottom: 15px;
+}
+.swsib-loading-message {
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .swsib-frontend-sidebar,
+    .swsib-frontend-main {
+        width: 100%;
+    }
+    
+    .swsib-section {
+        padding: 20px 15px;
+    }
+    
+    .swsib-checkout-title {
+        font-size: 24px;
+    }
+    
+    .swsib-plan-name {
+        font-size: 18px;
+    }
+    
+    .swsib-form-column {
+        flex: 1 1 100%;
+    }
+
+    .swsib-subscription-header {
+        flex-direction: column;
+    }
+    
+    .swsib-subscription-price {
+        margin-top: 10px;
+        text-align: left;
+    }
+    
+    .swsib-subscription-dates {
+        flex-direction: column;
+    }
+    
+    .swsib-subscription-dates div {
+        margin-bottom: 8px;
+    }
+    
+    .swsib-subscription-actions {
+        flex-direction: column;
+    }
+    
+    .swsib-button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .swsib-success-popup {
+        width: 95%;
+        padding: 20px;
+    }
+}

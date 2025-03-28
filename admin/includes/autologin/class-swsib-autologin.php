@@ -22,6 +22,9 @@ class SwiftSpeed_Siberian_Autologin {
         // Register AJAX handlers for testing API connection
         add_action('wp_ajax_swsib_test_api', array($this, 'ajax_test_api'));
         
+        // Register AJAX handler for fetching Siberian roles
+        add_action('wp_ajax_swsib_get_siberian_roles', array($this, 'ajax_get_siberian_roles'));
+        
         // Register action for form submission
         add_action('admin_post_swsib_save_autologin_settings', array($this, 'process_form_submission'));
         
@@ -74,7 +77,14 @@ class SwiftSpeed_Siberian_Autologin {
             array(
                 'button_color' => $button_color,
                 'button_text_color' => $button_text_color,
-                'nonce' => wp_create_nonce('swsib-nonce')
+                'nonce' => wp_create_nonce('swsib-nonce'),
+                'testing_text' => __('Testing...', 'swiftspeed-siberian'),
+                'test_button_text' => __('Test API Connection', 'swiftspeed-siberian'),
+                'fill_required_fields' => __('Please fill in all required fields', 'swiftspeed-siberian'),
+                'error_occurred' => __('Error occurred during test. Please try again.', 'swiftspeed-siberian'),
+                'is_db_configured' => swsib()->is_db_configured(),
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'advanced_features_url' => admin_url('admin.php?page=swsib-integration&tab_id=db_connect')
             )
         );
     }
@@ -111,7 +121,11 @@ class SwiftSpeed_Siberian_Autologin {
         }
         
         // Store the form data for logging
-        $this->log_message("Form data: " . print_r($_POST['swsib_options']['auto_login'], true));
+        if (isset($_POST['swsib_options']['auto_login'])) {
+            $this->log_message("Form data: " . print_r($_POST['swsib_options']['auto_login'], true));
+        } else {
+            $this->log_message("WARNING: No form data found in POST");
+        }
         
         // Process each field
         $auto_login = $_POST['swsib_options']['auto_login'];
@@ -126,12 +140,33 @@ class SwiftSpeed_Siberian_Autologin {
         }
         
         // Text fields
-        $text_fields = array('autologin_text', 'notification_text', 'api_user', 'default_role_id', 'processing_text', 'login_button_text', 'not_logged_in_message', 'login_notification_text');
+        $text_fields = array('autologin_text', 'notification_text', 'api_user', 'processing_text', 'login_button_text', 'not_logged_in_message', 'login_notification_text');
         foreach ($text_fields as $field) {
             if (isset($auto_login[$field])) {
                 $options['auto_login'][$field] = sanitize_text_field($auto_login[$field]);
                 $this->log_message("Updated $field to: " . $options['auto_login'][$field]);
             }
+        }
+        
+        // DEBUG: Check if default_role_id exists in the $_POST
+        if (isset($_POST['swsib_options']['auto_login']['default_role_id'])) {
+            $this->log_message("DEBUG: default_role_id in POST: " . $_POST['swsib_options']['auto_login']['default_role_id'] . " (Type: " . gettype($_POST['swsib_options']['auto_login']['default_role_id']) . ")");
+        } else {
+            $this->log_message("DEBUG: default_role_id NOT FOUND in POST");
+        }
+        
+        // Process default_role_id separately and log extensively
+        if (isset($auto_login['default_role_id'])) {
+            // Get previous value for comparison
+            $previous_value = isset($options['auto_login']['default_role_id']) ? $options['auto_login']['default_role_id'] : '2';
+            $this->log_message("DEBUG: Previous default_role_id: " . $previous_value . " (Type: " . gettype($previous_value) . ")");
+            
+            // Store value exactly as submitted - no sanitization
+            $options['auto_login']['default_role_id'] = $auto_login['default_role_id'];
+            
+            $this->log_message("DEBUG: Updated default_role_id to: " . $options['auto_login']['default_role_id'] . " (Type: " . gettype($options['auto_login']['default_role_id']) . ")");
+        } else {
+            $this->log_message("DEBUG: default_role_id not set in form data");
         }
         
         // Color fields
@@ -150,7 +185,7 @@ class SwiftSpeed_Siberian_Autologin {
         }
         
         // Checkbox fields
-        $checkbox_fields = array('keep_data_on_uninstall', 'auto_authenticate', 'enable_login_redirect', 'enable_siberian_config');
+        $checkbox_fields = array('keep_data_on_uninstall', 'auto_authenticate', 'enable_login_redirect', 'enable_siberian_config', 'sync_existing_role');
         foreach ($checkbox_fields as $field) {
             $options['auto_login'][$field] = isset($auto_login[$field]);
             $this->log_message("Updated $field to: " . ($options['auto_login'][$field] ? 'true' : 'false'));
@@ -169,9 +204,17 @@ class SwiftSpeed_Siberian_Autologin {
             }
         }
         
-        // Save options
-        update_option('swsib_options', $options);
-        $this->log_message("Saved options to database");
+        // Save options and log the result
+        $update_result = update_option('swsib_options', $options);
+        $this->log_message("Options updated result: " . ($update_result ? 'success' : 'failed'));
+        
+        // DEBUG: Verify what was actually saved
+        $saved_options = get_option('swsib_options', array());
+        if (isset($saved_options['auto_login']['default_role_id'])) {
+            $this->log_message("DEBUG: Saved default_role_id: " . $saved_options['auto_login']['default_role_id'] . " (Type: " . gettype($saved_options['auto_login']['default_role_id']) . ")");
+        } else {
+            $this->log_message("DEBUG: default_role_id not found in saved options");
+        }
         
         // Add settings updated notice
         add_settings_error(
@@ -188,6 +231,165 @@ class SwiftSpeed_Siberian_Autologin {
     }
     
     /**
+     * Test direct database connection to Siberian
+     * 
+     * @return array Array with connection status
+     */
+    private function test_db_connection() {
+        // Check if DB is configured in settings first
+        if (!swsib()->is_db_configured()) {
+            return array(
+                'success' => false,
+                'message' => 'Database not configured in settings'
+            );
+        }
+        
+        // Get DB options from plugin settings
+        $options = get_option('swsib_options', array());
+        $db_options = isset($options['db_connect']) ? $options['db_connect'] : array();
+        
+        // Extract connection details
+        $host = isset($db_options['host']) ? $db_options['host'] : '';
+        $database = isset($db_options['database']) ? $db_options['database'] : '';
+        $username = isset($db_options['username']) ? $db_options['username'] : '';
+        $password = isset($db_options['password']) ? $db_options['password'] : '';
+        $port = isset($db_options['port']) && !empty($db_options['port']) ? intval($db_options['port']) : 3306;
+        
+        // Check if all required fields are set
+        if (empty($host) || empty($database) || empty($username)) {
+            return array(
+                'success' => false,
+                'message' => 'Missing required database configuration'
+            );
+        }
+        
+        // Try to establish a direct connection
+        try {
+            $conn = new mysqli($host, $username, $password, $database, $port);
+            
+            // Check for connection errors
+            if ($conn->connect_error) {
+                return array(
+                    'success' => false,
+                    'message' => 'Database connection error: ' . $conn->connect_error
+                );
+            }
+            
+            // Close connection and return success
+            $conn->close();
+            return array(
+                'success' => true,
+                'message' => 'Database connection successful'
+            );
+        } catch (Exception $e) {
+            return array(
+                'success' => false,
+                'message' => 'Database connection exception: ' . $e->getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Get Siberian roles directly
+     * 
+     * @return array Array with success status and roles if successful
+     */
+    private function get_siberian_roles() {
+        // First check if DB connection works
+        $connection_test = $this->test_db_connection();
+        if (!$connection_test['success']) {
+            return $connection_test;
+        }
+        
+        // Get DB options from plugin settings
+        $options = get_option('swsib_options', array());
+        $db_options = isset($options['db_connect']) ? $options['db_connect'] : array();
+        
+        // Extract connection details
+        $host = isset($db_options['host']) ? $db_options['host'] : '';
+        $database = isset($db_options['database']) ? $db_options['database'] : '';
+        $username = isset($db_options['username']) ? $db_options['username'] : '';
+        $password = isset($db_options['password']) ? $db_options['password'] : '';
+        $port = isset($db_options['port']) && !empty($db_options['port']) ? intval($db_options['port']) : 3306;
+        $prefix = isset($db_options['prefix']) ? $db_options['prefix'] : '';
+        
+        // Connect to database
+        try {
+            $conn = new mysqli($host, $username, $password, $database, $port);
+            
+            // Check for connection errors
+            if ($conn->connect_error) {
+                return array(
+                    'success' => false,
+                    'message' => 'Database connection error: ' . $conn->connect_error
+                );
+            }
+            
+            // Set charset
+            $conn->set_charset('utf8');
+            
+            // Prepare table name with prefix
+            $table_name = $prefix . 'acl_role';
+            
+            // First check if the table exists
+            $table_check = $conn->query("SHOW TABLES LIKE '{$table_name}'");
+            if ($table_check->num_rows === 0) {
+                // Try without prefix
+                $table_name = 'acl_role';
+                $table_check = $conn->query("SHOW TABLES LIKE '{$table_name}'");
+                
+                if ($table_check->num_rows === 0) {
+                    $conn->close();
+                    return array(
+                        'success' => false,
+                        'message' => 'Table acl_role not found in database'
+                    );
+                }
+            }
+            
+            // Query to get all roles
+            $query = "SELECT role_id, code, label, parent_id, is_self_assignable FROM {$table_name} ORDER BY role_id ASC";
+            $result = $conn->query($query);
+            
+            if (!$result) {
+                $conn->close();
+                return array(
+                    'success' => false,
+                    'message' => 'Error querying roles: ' . $conn->error
+                );
+            }
+            
+            // Fetch roles
+            $roles = array();
+            while ($row = $result->fetch_assoc()) {
+                $roles[] = $row;
+            }
+            
+            // Close connection
+            $conn->close();
+            
+            // Check if any roles were found
+            if (empty($roles)) {
+                return array(
+                    'success' => false,
+                    'message' => 'No roles found in acl_role table'
+                );
+            }
+            
+            return array(
+                'success' => true,
+                'roles' => $roles
+            );
+            
+        } catch (Exception $e) {
+            return array(
+                'success' => false,
+                'message' => 'Error fetching roles: ' . $e->getMessage()
+            );
+        }
+    }
+    
+    /**
      * Display Auto Login settings
      */
     public function display_settings() {
@@ -196,10 +398,11 @@ class SwiftSpeed_Siberian_Autologin {
         $autologin_text = isset($auto_login_options['autologin_text']) ? $auto_login_options['autologin_text'] : 'App Dashboard';
         $button_color = isset($auto_login_options['button_color']) ? $auto_login_options['button_color'] : '#3a4b79';
         $button_text_color = isset($auto_login_options['button_text_color']) ? $auto_login_options['button_text_color'] : '#ffffff';
-        $notification_text = isset($auto_login_options['notification_text']) ? $auto_login_options['notification_text'] : 'Connecting to Siberian. Please wait...';
+        $notification_text = isset($auto_login_options['notification_text']) ? $auto_login_options['notification_text'] : 'Connecting to Your App Dashboard. Please wait...';
         $api_user = isset($auto_login_options['api_user']) ? $auto_login_options['api_user'] : '';
         $api_password = isset($auto_login_options['api_password']) ? $auto_login_options['api_password'] : '';
         $default_role_id = isset($auto_login_options['default_role_id']) ? $auto_login_options['default_role_id'] : '2';
+        $sync_existing_role = isset($auto_login_options['sync_existing_role']) ? $auto_login_options['sync_existing_role'] : false;
         $keep_data = isset($auto_login_options['keep_data_on_uninstall']) ? $auto_login_options['keep_data_on_uninstall'] : true;
         $auto_authenticate = isset($auto_login_options['auto_authenticate']) ? $auto_login_options['auto_authenticate'] : false;
         $processing_text = isset($auto_login_options['processing_text']) ? $auto_login_options['processing_text'] : 'Processing...';
@@ -214,8 +417,28 @@ class SwiftSpeed_Siberian_Autologin {
         $not_logged_in_message = isset($auto_login_options['not_logged_in_message']) ? $auto_login_options['not_logged_in_message'] : 'You must be logged in to access or create an app.';
         $login_notification_text = isset($auto_login_options['login_notification_text']) ? $auto_login_options['login_notification_text'] : 'You are being redirected to login page. Please wait...';
         
-        // Log current settings for debugging
-        $this->log_message("Displaying settings with autologin_text: $autologin_text");
+        // DEBUG: Log current default_role_id value
+        $this->log_message("DEBUG: Current default_role_id value: " . $default_role_id . " (Type: " . gettype($default_role_id) . ")");
+        
+        // Actually try to fetch Siberian roles
+        $roles_result = $this->get_siberian_roles();
+        $roles_available = $roles_result['success'];
+        $siberian_roles = $roles_available ? $roles_result['roles'] : array();
+        $error_message = $roles_available ? '' : $roles_result['message'];
+        
+        // Log results for debugging
+        if ($roles_available) {
+            $this->log_message("Successfully fetched " . count($siberian_roles) . " roles from Siberian");
+            // DEBUG: Log all available roles
+            $role_ids = array();
+            foreach ($siberian_roles as $role) {
+                $role_ids[] = $role['role_id'];
+            }
+            $this->log_message("DEBUG: Available role IDs: " . implode(', ', $role_ids));
+        } else {
+            $this->log_message("Failed to fetch roles: " . $error_message);
+        }
+        
         ?>
         <h2><?php _e('Auto Login Settings', 'swiftspeed-siberian'); ?></h2>
         <p class="panel-description">
@@ -229,7 +452,7 @@ class SwiftSpeed_Siberian_Autologin {
             <input type="hidden" name="tab_id" value="auto_login">
             
             <!-- Siberian Configuration Section -->
-            <div class="swsib-section-header">
+            <div id="siberian-config-section" class="swsib-section-header">
                 <h3><?php _e('Siberian Configuration', 'swiftspeed-siberian'); ?></h3>
             </div>
             
@@ -258,7 +481,7 @@ class SwiftSpeed_Siberian_Autologin {
                     <p class="swsib-field-note"><?php _e('The URL to your Siberian CMS installation.', 'swiftspeed-siberian'); ?></p>
                 </div>
                 
-                <div class="swsib-field">
+                <div id="button-design-section" class="swsib-field">
                     <label for="swsib_options_auto_login_autologin_text"><?php _e('Auto-Login Button Text', 'swiftspeed-siberian'); ?></label>
                     <input type="text" id="swsib_options_auto_login_autologin_text" 
                         name="swsib_options[auto_login][autologin_text]" 
@@ -315,18 +538,119 @@ class SwiftSpeed_Siberian_Autologin {
                 </div>
                 
                 <div class="swsib-field">
-                    <label for="swsib_options_auto_login_default_role_id"><?php _e('Default User Role ID', 'swiftspeed-siberian'); ?></label>
-                    <input type="text" id="swsib_options_auto_login_default_role_id" 
-                        name="swsib_options[auto_login][default_role_id]" 
-                        value="<?php echo esc_attr($default_role_id); ?>" 
-                        placeholder="2" />
-                    <p class="swsib-field-note"><?php _e('Default role ID to assign to new users created in Siberian CMS. Standard user role is 2.', 'swiftspeed-siberian'); ?></p>
-                </div>
-                
-                <div class="swsib-field">
                     <button type="button" id="test_api_connection" class="button button-secondary"><?php _e('Test API Connection', 'swiftspeed-siberian'); ?></button>
+                    <div id="api_connection_result" style="margin-top: 10px; display: none;"></div>
                 </div>
                 
+
+
+               <!-- This is the corrected code for the role dropdown section in class-swsib-autologin.php -->
+
+<div class="swsib-field">
+    <label for="swsib_options_auto_login_default_role_id"><?php _e('Default User Role ID', 'swiftspeed-siberian'); ?></label>
+    
+    <?php if ($roles_available && !empty($siberian_roles)): 
+        // DEBUG: Check if default_role_id exists in available roles
+        $role_exists = false;
+        $default_role_info = null;
+        
+        // Find the role with ID 2 and the currently selected role
+        foreach ($siberian_roles as $role) {
+            if ((string)$role['role_id'] === "2") {
+                $default_role_info = $role;
+            }
+            if ((string)$role['role_id'] === (string)$default_role_id) {
+                $role_exists = true;
+            }
+        }
+        
+        $this->log_message("DEBUG: default_role_id " . $default_role_id . " exists in available roles: " . ($role_exists ? 'YES' : 'NO'));
+    ?>
+        <!-- Show dropdown with full direct HTML structure -->
+        <select id="swsib_options_auto_login_default_role_id" 
+            name="swsib_options[auto_login][default_role_id]" 
+            class="siberian-role-dropdown">
+            
+            <?php foreach ($siberian_roles as $role):
+                // For role ID 2, add the notice that it's the default signup role
+                $option_text = 'Role ID ' . $role['role_id'] . ', ' . $role['code'] . ', ' . $role['label'];
+                if ($role['role_id'] == 2) {
+                    $option_text .= ' (Standard SiberianCMS signup access)';
+                }
+                
+                // Force string comparison for determining selection
+                $is_selected = ($role_exists && (string)$default_role_id === (string)$role['role_id']) || 
+                              (!$role_exists && $role['role_id'] == 2);
+                
+                $this->log_message("DEBUG: Comparing role_id " . $role['role_id'] . " with default_role_id " . $default_role_id . ": " . ($is_selected ? 'MATCH' : 'NO MATCH') . 
+                    " (Types: " . gettype($role['role_id']) . " vs " . gettype($default_role_id) . ")");
+            ?>
+                <option value="<?php echo esc_attr($role['role_id']); ?>" <?php echo $is_selected ? 'selected="selected"' : ''; ?>>
+                    <?php echo esc_html($option_text); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        
+        <div class="swsib-notice info" style="margin-top: 10px;">
+            <p><?php _e('Select the appropriate role from your Siberian CMS database to assign to new users.', 'swiftspeed-siberian'); ?></p>
+            <?php if (!$role_exists && $default_role_id != "2"): ?>
+                <p class="swsib-warning"><strong>Note:</strong> Your previously selected role ID (<?php echo esc_html($default_role_id); ?>) is no longer available in the database. The default signup role (ID 2) has been selected.</p>
+            <?php endif; ?>
+        </div>
+        
+    <?php else: 
+        $this->log_message("DEBUG: No roles available, showing text input with default value 2");
+    ?>
+        <!-- When DB is not configured, always force value to "2" -->
+        <input type="text" id="swsib_options_auto_login_default_role_id" 
+            name="swsib_options[auto_login][default_role_id]" 
+            value="2" 
+            readonly 
+            class="disabled-field" />
+        
+        <div class="swsib-notice warning" style="margin-top: 10px;">
+            <p><?php _e('Default role ID for new Siberian users is 2, which is the standard for most Siberian CMS installations.', 'swiftspeed-siberian'); ?></p>
+            <?php if (swsib()->is_db_configured()): ?>
+                <p><?php 
+                    echo sprintf(
+                        __('Database connection is configured but roles could not be retrieved. Please <a href="%s">check your connection settings</a> in DB Connect and test the connection again.', 'swiftspeed-siberian'),
+                        admin_url('admin.php?page=swsib-integration&tab_id=db_connect')
+                    ); 
+                ?></p>
+                <p><strong><?php _e('Error:', 'swiftspeed-siberian'); ?></strong> <?php echo esc_html($error_message); ?></p>
+            <?php else: ?>
+                <p><?php 
+                    echo sprintf(
+                        __('To enable selection of different roles, please configure <a href="%s">DB Connect</a> first.', 'swiftspeed-siberian'),
+                        admin_url('admin.php?page=swsib-integration&tab_id=db_connect')
+                    ); 
+                ?></p>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+    
+</div>
+
+<!-- Add the Sync Existing User Role toggle after Default User Role ID -->
+<div class="swsib-field switch-field">
+    <label for="swsib_options_auto_login_sync_existing_role"><?php _e('Sync Existing User Role', 'swiftspeed-siberian'); ?></label>
+    <div class="toggle-container">
+        <label class="switch">
+            <input type="checkbox" id="swsib_options_auto_login_sync_existing_role" 
+                name="swsib_options[auto_login][sync_existing_role]" 
+                value="1" 
+                <?php checked($sync_existing_role); ?> />
+            <span class="slider round"></span>
+        </label>
+        <p class="swsib-field-note swsib-warning-note">
+            <strong><?php _e('Warning:', 'swiftspeed-siberian'); ?></strong> 
+            <?php _e('This will update existing Siberian user roles to match the default role when they login. Only enable if you know exactly what you\'re doing.', 'swiftspeed-siberian'); ?>
+        </p>
+    </div>
+</div>
+                    
+                    
+                    
                 <!-- Shortcode info moved inside the Siberian config section -->
                 <div class="shortcode-info">
                     <h3><?php _e('Shortcode Usage', 'swiftspeed-siberian'); ?></h3>
@@ -356,7 +680,7 @@ class SwiftSpeed_Siberian_Autologin {
             </div>
 
             <!-- Auto Authentication section -->
-            <div class="swsib-section-header">
+            <div id="auto-authentication-section" class="swsib-section-header">
                 <h3><?php _e('Automatic Authentication', 'swiftspeed-siberian'); ?></h3>
             </div>
             
@@ -419,12 +743,15 @@ class SwiftSpeed_Siberian_Autologin {
             </div>
 
             <!-- Login Redirect Section -->
-            <div class="swsib-section-header">
-                <h3><?php _e('Login Redirect Settings', 'swiftspeed-siberian'); ?></h3>
+            <div id="non-logged-in-section" class="swsib-section-header">
+                <h3><?php _e('Non-Logged In User', 'swiftspeed-siberian'); ?></h3>
             </div>
-            
+             <div class="swsib-notice info">
+            <p><strong><?php _e('What Happen if user is not logged in?:', 'swiftspeed-siberian'); ?></strong> 
+            <?php _e('If a user is not authenticated on your website yet and they click the button generated by your shortcode insertion, you can configure what happens in that case below:', 'swiftspeed-siberian'); ?></p>
+           </div>
             <div class="swsib-field switch-field">
-                <label for="swsib_options_auto_login_enable_login_redirect"><?php _e('Enable Login Redirect', 'swiftspeed-siberian'); ?></label>
+                <label for="swsib_options_auto_login_enable_login_redirect"><?php _e('Enable Non-Logged in User Config', 'swiftspeed-siberian'); ?></label>
                 <div class="toggle-container">
                     <label class="switch">
                         <input type="checkbox" id="swsib_options_auto_login_enable_login_redirect" 
@@ -433,7 +760,7 @@ class SwiftSpeed_Siberian_Autologin {
                             <?php checked($enable_login_redirect); ?> />
                         <span class="slider round"></span>
                     </label>
-                    <p class="swsib-field-note"><?php _e('When enabled, non-logged-in users will see a message and a login button.', 'swiftspeed-siberian'); ?></p>
+                    <p class="swsib-field-note"><?php _e('When enabled, non-logged-in users will see a message and a configured button.', 'swiftspeed-siberian'); ?></p>
                 </div>
             </div>
             
@@ -519,6 +846,43 @@ class SwiftSpeed_Siberian_Autologin {
                 <input type="submit" name="submit" id="auto-login-save-button" class="button button-primary" value="<?php _e('Save Changes', 'swiftspeed-siberian'); ?>">
             </div>
         </form>
+
+        <style type="text/css">
+            .disabled-field {
+                background-color: #f0f0f0;
+                cursor: not-allowed;
+                opacity: 0.7;
+            }
+            .siberian-role-dropdown {
+                width: 100%;
+                max-width: 100%;
+                padding: 10px 12px;
+                font-size: 14px;
+                border: 1px solid #dadce0;
+                border-radius: 4px;
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+            .swsib-warning {
+                color: #d63638;
+                margin-top: 5px;
+            }
+            .swsib-warning-note {
+                color: #d63638;
+            }
+            /* Highlight class for sections */
+            .swsib-highlight-section {
+                animation: highlight-pulse 1s ease-in-out;
+                background-color: rgba(255, 255, 0, 0.2);
+                border-radius: 4px;
+                padding: 10px;
+                transition: background-color 0.5s ease-out;
+            }
+            @keyframes highlight-pulse {
+                0% { background-color: rgba(255, 255, 0, 0); }
+                50% { background-color: rgba(255, 255, 0, 0.3); }
+                100% { background-color: rgba(255, 255, 0, 0.2); }
+            }
+        </style>
         <?php
     }
     
@@ -552,12 +916,18 @@ class SwiftSpeed_Siberian_Autologin {
     public function ajax_test_api() {
         // Check nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'swsib-nonce')) {
-            wp_send_json_error('Security check failed');
+            wp_send_json_error(array(
+                'message' => 'Security check failed'
+            ));
+            return;
         }
         
         // Check permissions
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permission denied');
+            wp_send_json_error(array(
+                'message' => 'Permission denied'
+            ));
+            return;
         }
         
         // Get parameters
@@ -566,7 +936,10 @@ class SwiftSpeed_Siberian_Autologin {
         $password = isset($_POST['password']) ? $_POST['password'] : '';
         
         if (empty($url) || empty($user) || empty($password)) {
-            wp_send_json_error('Missing required parameters');
+            wp_send_json_error(array(
+                'message' => 'Missing required parameters'
+            ));
+            return;
         }
         
         // Ensure URL ends with a trailing slash
@@ -598,7 +971,9 @@ class SwiftSpeed_Siberian_Autologin {
         // Check for errors
         if (is_wp_error($response)) {
             $this->log_message('API Test Error: ' . $response->get_error_message());
-            wp_send_json_error($response->get_error_message());
+            wp_send_json_error(array(
+                'message' => $response->get_error_message()
+            ));
             return;
         }
         
@@ -610,7 +985,9 @@ class SwiftSpeed_Siberian_Autologin {
         $this->log_message('API Test Response: ' . $response_body);
         
         if ($response_code !== 200) {
-            wp_send_json_error('Received response code ' . $response_code);
+            wp_send_json_error(array(
+                'message' => 'Received response code ' . $response_code
+            ));
             return;
         }
         
@@ -618,7 +995,9 @@ class SwiftSpeed_Siberian_Autologin {
         $response_data = json_decode($response_body, true);
         
         if (!$response_data) {
-            wp_send_json_error('Invalid response from API');
+            wp_send_json_error(array(
+                'message' => 'Invalid response from API'
+            ));
             return;
         }
         
@@ -635,7 +1014,9 @@ class SwiftSpeed_Siberian_Autologin {
         
         // If there's an error message but response code was 200, report the error
         if (isset($response_data['error']) && isset($response_data['message'])) {
-            wp_send_json_error($response_data['message']);
+            wp_send_json_error(array(
+                'message' => $response_data['message']
+            ));
             return;
         }
         
@@ -644,5 +1025,39 @@ class SwiftSpeed_Siberian_Autologin {
             'message' => __('API connection appears to be working!', 'swiftspeed-siberian'),
             'response' => $response_data
         ));
+    }
+    
+    /**
+     * AJAX handler for getting Siberian roles
+     */
+    public function ajax_get_siberian_roles() {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'swsib-nonce')) {
+            wp_send_json_error(array(
+                'message' => 'Security check failed'
+            ));
+            return;
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array(
+                'message' => 'Permission denied'
+            ));
+            return;
+        }
+        
+        // Try to get roles from DB
+        $roles_result = $this->get_siberian_roles();
+        
+        if ($roles_result['success']) {
+            wp_send_json_success(array(
+                'roles' => $roles_result['roles']
+            ));
+        } else {
+            wp_send_json_error(array(
+                'message' => $roles_result['message']
+            ));
+        }
     }
 }

@@ -75,15 +75,15 @@
             }
         });
         
-        // Advanced features toggle
+        // DB Connect toggle (renamed from Advanced features)
         $('#swsib_options_db_connect_enabled').on('change', function() {
-            toggleAdvancedFeatures();
+            toggleDbConnect();
         });
         
-        // Initialize advanced features visibility
-        toggleAdvancedFeatures();
+        // Initialize DB Connect visibility
+        toggleDbConnect();
         
-        // Test API connection
+        // Test API connection - COMPLETELY REVISED
         $('#test_api_connection').on('click', function(e) {
             e.preventDefault();
             
@@ -91,14 +91,15 @@
             var apiUser = $('#swsib_options_auto_login_api_user').val();
             var apiPassword = $('#swsib_options_auto_login_api_password').val();
             
+            // Show validation errors directly in the #api_connection_result
             if (!siberianUrl) {
-                showNotice('error', 'Please enter Siberian CMS URL');
+                $('#api_connection_result').html('<div class="swsib-notice error"><p>Please enter Siberian CMS URL</p></div>').show();
                 $('#swsib_options_auto_login_siberian_url').focus();
                 return;
             }
             
             if (!apiUser || !apiPassword) {
-                showNotice('error', 'Please enter API credentials');
+                $('#api_connection_result').html('<div class="swsib-notice error"><p>Please enter API credentials</p></div>').show();
                 if (!apiUser) {
                     $('#swsib_options_auto_login_api_user').focus();
                 } else {
@@ -110,8 +111,11 @@
             var $button = $(this);
             var originalText = $button.text();
             
-            $button.text('Testing...');
-            $button.prop('disabled', true);
+            $button.text('Testing...').prop('disabled', true);
+            
+            // Hide any existing notices that might be at the top of the page
+            $('.swsib-notice.settings-error').hide();
+            $('.swsib-header + .swsib-notice').remove();
             
             // AJAX request to test API connection
             $.ajax({
@@ -125,25 +129,32 @@
                     password: apiPassword
                 },
                 success: function(response) {
+                    // ONLY show notification in #api_connection_result
                     if (response.success) {
-                        showNotice('success', 'API connection successful!');
+                        $('#api_connection_result').html(
+                            '<div class="swsib-notice success"><p><strong>Success:</strong> API connection successful!</p></div>'
+                        ).show();
                     } else {
-                        showNotice('error', 'API connection failed: ' + response.data);
+                        $('#api_connection_result').html(
+                            '<div class="swsib-notice error"><p><strong>Error:</strong> ' + (response.data ? response.data.message : 'API connection failed') + '</p></div>'
+                        ).show();
                     }
                 },
                 error: function(xhr, status, error) {
-                    showNotice('error', 'Error testing API connection: ' + error);
+                    // ONLY show notification in #api_connection_result
+                    $('#api_connection_result').html(
+                        '<div class="swsib-notice error"><p><strong>Error:</strong> ' + error + '</p></div>'
+                    ).show();
                 },
                 complete: function() {
-                    $button.text(originalText);
-                    $button.prop('disabled', false);
+                    $button.text(originalText).prop('disabled', false);
                 }
             });
         });
         
         // Form validation override for hidden required fields
         $('.swsib-settings-form').on('submit', function(e) {
-            // If advanced features are disabled, remove required attribute from database fields
+            // If DB Connect is disabled, remove required attribute from database fields
             if (!$('#swsib_options_db_connect_enabled').is(':checked')) {
                 $('#swsib_options_db_connect_host, #swsib_options_db_connect_database, #swsib_options_db_connect_username, #swsib_options_db_connect_password')
                     .prop('required', false);
@@ -234,7 +245,7 @@
         var loginButtonText = $('#swsib_options_auto_login_login_button_text').val() || 'Login';
         $('#login-button-preview').text(loginButtonText);
         
-        // Restore active tab from URL parameter
+        // Restore active tab from URL parameter and handle scrolling to sections
         restoreActiveTab();
     });
     
@@ -246,12 +257,13 @@
     }
     
     /**
-     * Restore active tab from URL parameter
+     * Restore active tab from URL parameter and handle section scrolling
      */
     function restoreActiveTab() {
         // Get tab ID from URL parameter
         var urlParams = new URLSearchParams(window.location.search);
         var tabFromUrl = urlParams.get('tab_id');
+        var sectionTarget = urlParams.get('section');
         
         if (tabFromUrl) {
             // Convert tab_id format to tab selector format (auto_login -> #auto-login-tab)
@@ -259,10 +271,80 @@
             
             // Activate the tab
             activateTab(tabSelector);
+            
+            // If there's a section parameter and we're in the auto_login tab, handle scrolling
+            if (sectionTarget && tabFromUrl === 'auto_login') {
+                // Delay to ensure the tab content is fully visible and loaded
+                setTimeout(function() {
+                    scrollToSection(sectionTarget);
+                }, 1000); // Increased delay to 1000ms for more reliability
+            }
         } else {
             // Default to first tab
             activateTab($('.swsib-tabs a:first').attr('href'));
         }
+    }
+    
+    /**
+     * Scroll to a specific section and highlight it - IMPROVED
+     */
+    function scrollToSection(sectionId) {
+        var $target = $('#' + sectionId);
+        if ($target.length) {
+            console.log('Scrolling to section: ' + sectionId);
+            
+            // Scroll to the target section
+            $('html, body').animate({
+                scrollTop: $target.offset().top - 50
+            }, 800); // Slower animation for more reliability
+            
+            // Multiple highlight attempts with increasing delays for reliability
+            setTimeout(function() {
+                highlightSection($target);
+            }, 100);
+            
+            setTimeout(function() {
+                highlightSection($target);
+            }, 500);
+            
+            setTimeout(function() {
+                highlightSection($target);
+            }, 1000);
+        } else {
+            console.log('Section not found: ' + sectionId);
+            
+            // Try again with some common section prefixes/suffixes
+            var alternateIds = [
+                'section-' + sectionId,
+                sectionId + '-section',
+                sectionId.replace('-section', ''),
+                sectionId.replace('section-', '')
+            ];
+            
+            // Try each alternate ID
+            for (var i = 0; i < alternateIds.length; i++) {
+                $target = $('#' + alternateIds[i]);
+                if ($target.length) {
+                    console.log('Found alternate section ID: ' + alternateIds[i]);
+                    $('html, body').animate({
+                        scrollTop: $target.offset().top - 50
+                    }, 800);
+                    
+                    highlightSection($target);
+                    break;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Helper function to highlight a section
+     */
+    function highlightSection($target) {
+        $target.addClass('swsib-highlight-section');
+        setTimeout(function() {
+            $target.removeClass('swsib-highlight-section');
+        }, 2000);
     }
     
     /**
@@ -286,9 +368,13 @@
             // Update hidden fields in all forms
             $('input[name="tab_id"]').val(tabId);
             
-            // Update URL with tab ID (without page reload)
+            // Update URL with tab ID while preserving other parameters.
+            // Instead of calling pushState directly (which triggers the deprecated navigation store warning)
+            // we check if the WooCommerce modern API is available.
             var newUrl = updateQueryStringParameter(window.location.href, 'tab_id', tabId);
-            if (window.history && window.history.pushState) {
+            if (typeof wcNavigation !== 'undefined' && typeof wcNavigation.updateHistory === 'function') {
+                wcNavigation.updateHistory(newUrl);
+            } else if (window.history && window.history.pushState) {
                 window.history.pushState({}, '', newUrl);
             }
             
@@ -335,7 +421,7 @@
     }
     
     /**
-     * Helper function to update URL parameters
+     * Helper function to update URL parameters while preserving others
      */
     function updateQueryStringParameter(uri, key, value) {
         var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
@@ -361,9 +447,9 @@
     }
     
     /**
-     * Toggle advanced features based on checkbox
+     * Toggle DB Connect based on checkbox (renamed from toggleAdvancedFeatures)
      */
-    function toggleAdvancedFeatures() {
+    function toggleDbConnect() {
         var isEnabled = $('#swsib_options_db_connect_enabled').is(':checked');
         if (isEnabled) {
             $('#advanced-features-config').slideDown();
@@ -379,18 +465,21 @@
     }
     
     /**
-     * Show admin notice
+     * Show admin notice - FOR DB CONNECT AND OTHER NON-API TEST NOTICES ONLY
      */
     function showNotice(type, message) {
-        $('.swsib-notice:not(.info, .warning)').remove();
-        var noticeClass = 'swsib-notice ' + type;
-        var $notice = $('<div class="' + noticeClass + '">' + message + '</div>');
-        $('.swsib-header').after($notice);
-        setTimeout(function() {
-            $notice.fadeOut(function() {
-                $notice.remove();
-            });
-        }, 5000);
+        // Only use this for non-API test notices
+        if (!message.includes('API connection')) {
+            $('.swsib-notice:not(.info, .warning)').remove();
+            var noticeClass = 'swsib-notice ' + type;
+            var $notice = $('<div class="' + noticeClass + '">' + message + '</div>');
+            $('.swsib-header').after($notice);
+            setTimeout(function() {
+                $notice.fadeOut(function() {
+                    $notice.remove();
+                });
+            }, 5000);
+        }
     }
     
     /**
@@ -428,7 +517,7 @@
             'cursor: pointer;'
         );
         
-        // Set the hover color CSS variable
+        // Set the hover color CSS variable by slightly darkening the background color
         var hoverColor = adjustColor(bgColor, -20);
         document.documentElement.style.setProperty('--button-hover-color', hoverColor);
         
@@ -446,4 +535,4 @@
         });
     }
     
-})(jQuery)
+})(jQuery);

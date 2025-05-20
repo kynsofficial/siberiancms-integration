@@ -1,54 +1,53 @@
 <?php
 /**
  * Backup & Restore functionality for the plugin.
+ * This is the bootstrap class that loads the split components.
  */
 class SwiftSpeed_Siberian_Backup_Restore {
     
     /**
-     * Plugin options
+     * Core functionality instance.
+     * 
+     * @var SwiftSpeed_Siberian_Backup_Restore_Core
      */
-    private $options;
+    private $core;
     
     /**
-     * Initialize the class
+     * UI functionality instance.
+     * 
+     * @var SwiftSpeed_Siberian_Backup_Restore_UI
+     */
+    private $ui;
+    
+    /**
+     * Initialize the class.
      */
     public function __construct() {
-        // Get plugin options
-        $this->options = swsib()->get_options();
-    }
-    
-    /**
-     * Write to log using the central logging manager
-     */
-    private function log_message($message) {
-        if (swsib()->logging) {
-            swsib()->logging->write_to_log('backup_restore', 'backend', $message);
+        // Define and create the core directory if it doesn't exist
+        $core_dir = SWSIB_PLUGIN_DIR . 'admin/includes/backup-restore/core/';
+        if (!file_exists($core_dir)) {
+            wp_mkdir_p($core_dir);
         }
+        
+        // Load core components
+        require_once $core_dir . 'class-swsib-backup-restore-core.php';
+        require_once $core_dir . 'class-swsib-backup-restore-ui.php';
+        require_once $core_dir . 'class-swsib-backup-processor.php';
+        require_once $core_dir . 'class-swsib-restore-processor.php';
+        require_once $core_dir . 'class-swsib-settings-manager.php';
+        require_once $core_dir . 'class-swsib-cron-manager.php';
+        
+        // Initialize core component - now responsible for bootstrapping all sub-components
+        $this->core = new SwiftSpeed_Siberian_Backup_Restore_Core();
+        $this->ui = $this->core->get_ui();
     }
     
     /**
-     * Display Backup & Restore settings
+     * Display the backup/restore settings page.
+     *
+     * @return void
      */
     public function display_settings() {
-        ?>
-        <h2><?php _e('Backup & Restore Options', 'swiftspeed-siberian'); ?></h2>
-        <p class="panel-description">
-            <?php _e('Backup & Restore options will be available in a future update.', 'swiftspeed-siberian'); ?>
-        </p>
-        
-        <div class="coming-soon">
-            <h3><?php _e('Coming Soon', 'swiftspeed-siberian'); ?></h3>
-            <p><?php _e('Backup & Restore features are under development. Check back in a future update.', 'swiftspeed-siberian'); ?></p>
-            <p><?php _e('This feature will allow you to create and restore backups of your Siberian CMS database directly from WordPress.', 'swiftspeed-siberian'); ?></p>
-        </div>
-        <?php
-    }
-    
-    /**
-     * Process settings for Backup & Restore
-     */
-    public function process_settings($input) {
-        // Currently no settings to process
-        return $input;
+        $this->ui->display_settings();
     }
 }

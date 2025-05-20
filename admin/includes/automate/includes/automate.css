@@ -1,0 +1,1467 @@
+/* 
+ * SwiftSpeed Siberian Automation Styles - Modern Design
+ * Enhanced version with improved visual aesthetics
+ */
+
+:root {
+    --primary-color: #3a4b79;
+    --secondary-color: #0073aa;
+    --success-color: #28a745;
+    --warning-color: #ffb900;
+    --danger-color: #dc3545;
+    --info-color: #3498db;
+    --light-gray: #f7f7f7;
+    --medium-gray: #e5e5e5;
+    --dark-gray: #555;
+    --text-color: #333;
+    --card-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    --transition-speed: 0.3s;
+    --border-radius: 5px;
+}
+.loadings-spinner,.loading-spinner {
+    position: absolute;
+    inset: 0;
+    background: var(--tutor-color-gray-10);
+    border-radius: 3px;
+    z-index: 10;
+}
+/* 
+ * Tab Navigation 
+ */
+.swsib-automate-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--medium-gray);
+    background-color: #fff;
+    position: relative;
+    z-index: 1;
+}
+
+.swsib-automate-tabs a {
+    padding: 12px 20px;
+    text-decoration: none;
+    color: var(--dark-gray);
+    font-weight: 500;
+    margin-right: 4px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    transition: all var(--transition-speed) ease;
+    display: flex;
+    align-items: center;
+    position: relative;
+    top: 1px;
+}
+
+.swsib-automate-tabs a:hover {
+    color: var(--primary-color);
+}
+
+.swsib-automate-tabs a.active {
+    background-color: #fff;
+    color: var(--primary-color);
+    border-color: var(--medium-gray);
+    border-bottom-color: #fff;
+    font-weight: 600;
+}
+
+.swsib-automate-tab-content {
+    background-color: #fff;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    padding: 5px;
+    margin-bottom: 30px;
+}
+
+/* 
+ * Task Sections 
+ */
+.task-section {
+    background: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 25px;
+    padding: 20px;
+    transition: box-shadow var(--transition-speed) ease;
+}
+
+.task-section:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.task-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--medium-gray);
+    color: var(--primary-color);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.task-section .info-text {
+    background-color: #f8f8f8;
+    padding: 12px 15px;
+    border-left: 4px solid var(--info-color);
+    margin-bottom: 20px;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    color: #555;
+    font-size: 14px;
+}
+
+/* 
+ * Task Cards Grid 
+ */
+.task-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-gap: 25px;
+    margin-bottom: 25px;
+}
+
+/* 
+ * Task Card Styling 
+ */
+.task-card {
+    background-color: #fff;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    transition: all var(--transition-speed) ease;
+    height: fit-content; /* Ensure each card has its own height */
+}
+
+.task-card:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.task-card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.task-card-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.task-card-badge {
+    background: #f0f0f0;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: all var(--transition-speed) ease;
+}
+
+.task-card-badge.active {
+    background: var(--success-color);
+    color: white;
+}
+
+.task-card-description {
+    flex-grow: 1;
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.task-card-counts {
+    background: #f8f8f8;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: var(--border-radius);
+    display: flex;
+    justify-content: space-around;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.task-card-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 13px;
+    color: #666;
+}
+
+.task-card-count-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.task-card-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+}
+
+.task-card-actions button {
+    padding: 8px 15px !important;
+    height: auto !important;
+    transition: all 0.2s ease !important;
+}
+
+.task-card-actions .button-primary {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.task-card-actions .button-primary:hover {
+    background: #4a5b89 !important;
+    border-color: #4a5b89 !important;
+}
+
+/* 
+ * Task Settings Panel 
+ */
+.task-settings {
+    background-color: #f8f8f8;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--medium-gray);
+}
+
+.task-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+
+.task-settings-title {
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+    font-size: 15px;
+}
+
+.task-settings-toggle {
+    cursor: pointer;
+    color: var(--dark-gray);
+    transition: transform var(--transition-speed) ease;
+}
+
+.task-settings-toggle:hover {
+    color: var(--primary-color);
+}
+
+.task-settings-toggle .dashicons {
+    transition: transform var(--transition-speed) ease;
+}
+
+.task-settings-fields {
+    display: none;
+    animation: fadeIn var(--transition-speed) ease;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+    margin-top: 5px;
+}
+
+.task-settings-fields.visible {
+    display: block;
+}
+
+.task-settings-field-group {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.task-settings-field-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.task-settings-field {
+    margin-bottom: 15px;
+}
+
+.task-settings-field:last-child {
+    margin-bottom: 0;
+}
+
+.task-settings-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.task-settings-field select,
+.task-settings-field input[type="text"],
+.task-settings-field input[type="number"],
+.task-settings-field textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07);
+    font-size: 14px;
+}
+
+.task-settings-field select:focus,
+.task-settings-field input[type="text"]:focus,
+.task-settings-field input[type="number"]:focus,
+.task-settings-field textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px rgba(58, 75, 121, 0.25);
+    outline: none;
+}
+
+.task-settings-field .description {
+    font-size: 12px;
+    color: #777;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+.task-settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 
+ * Custom Frequency Input Styling 
+ */
+.custom-frequency-container {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.custom-frequency-container input[type="number"] {
+    width: 100px;
+    margin-right: 10px;
+    padding: 6px 10px;
+}
+
+.custom-frequency-container select {
+    width: 140px;
+    padding: 6px 10px;
+}
+
+/* 
+ * Email Template Styles 
+ */
+.email-template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 0 10px;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.email-template-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.email-template-toggle {
+    cursor: pointer;
+    color: var(--dark-gray);
+}
+
+.email-template-content {
+    display: none;
+    animation: fadeIn var(--transition-speed) ease;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid #eee;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.email-template-content.visible {
+    display: block;
+}
+
+.email-template-field {
+    margin-bottom: 15px;
+}
+
+.email-template-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.email-template-field input[type="text"],
+.email-template-field textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07);
+    font-size: 14px;
+}
+
+.email-template-field textarea {
+    min-height: 150px;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.email-placeholder-help {
+    margin-top: 15px;
+    background-color: #f8f8f8;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.email-placeholder-help p {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.email-placeholder-help ul {
+    margin: 0 0 0 20px;
+    padding: 0;
+}
+
+.email-placeholder-help li {
+    margin-bottom: 5px;
+}
+
+.email-placeholder-help code {
+    background: #fff;
+    padding: 2px 5px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+}
+
+/* 
+ * Subscription Table Styles 
+ */
+.subscription-limits-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    border: 1px solid var(--medium-gray);
+    box-shadow: var(--card-shadow);
+}
+
+.subscription-limits-table th,
+.subscription-limits-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border: 1px solid var(--medium-gray);
+}
+
+.subscription-limits-table th {
+    background-color: #f0f0f0;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.subscription-limits-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.subscription-limits-table tr:hover {
+    background-color: #f0f0f0;
+}
+
+.subscription-limits-table input[type="number"] {
+    width: 100px;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* 
+ * Task Progress Styles 
+ */
+.task-progress-container {
+    background-color: #fff;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 25px;
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.task-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--medium-gray);
+}
+
+.task-progress-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close-progress {
+    cursor: pointer;
+    color: var(--dark-gray);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-speed) ease;
+}
+
+.close-progress:hover {
+    background-color: #f0f0f0;
+    color: var(--danger-color);
+}
+
+.task-progress-bar-container {
+    height: 24px;
+    background-color: #f0f0f0;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.task-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    width: 0;
+    transition: width 0.5s ease;
+    border-radius: 12px;
+}
+
+.task-progress-percentage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    line-height: 24px;
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    font-size: 13px;
+}
+
+.task-progress-details {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.task-stats {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.task-time-elapsed {
+    font-family: monospace;
+    font-weight: 600;
+}
+
+.task-current-item {
+    font-style: italic;
+    color: #666;
+    background-color: #f9f9f9;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border-left: 3px solid var(--info-color);
+    font-size: 13px;
+}
+
+.task-progress-log {
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: #f8f8f8;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid #eee;
+}
+
+.log-entry {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.log-entry:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.log-entry.success {
+    color: var(--success-color);
+}
+
+.log-entry.error {
+    color: var(--danger-color);
+}
+
+.log-entry.warning {
+    color: var(--warning-color);
+}
+
+.log-entry.info {
+    color: var(--info-color);
+}
+
+/* 
+ * Email Settings Section 
+ */
+.email-settings-section {
+    background: #fff;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 25px;
+    padding: 20px;
+}
+
+.email-settings-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--medium-gray);
+    color: var(--primary-color);
+}
+
+.email-sender-settings {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f8f8;
+    border-radius: var(--border-radius);
+    border: 1px solid #eee;
+}
+
+.email-sender-settings h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-size: 16px;
+}
+
+.smtp-config {
+    margin-top: 25px;
+    background-color: #f8f8f8;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid #eee;
+}
+
+.smtp-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+
+.smtp-config-title {
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.smtp-config-toggle {
+    cursor: pointer;
+    color: var(--dark-gray);
+}
+
+.smtp-config-fields {
+    display: none;
+    animation: fadeIn var(--transition-speed) ease;
+}
+
+.smtp-config-fields.visible {
+    display: block;
+}
+
+.smtp-config-field {
+    margin-bottom: 15px;
+}
+
+.smtp-config-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.smtp-config-field input[type="text"],
+.smtp-config-field input[type="password"],
+.smtp-config-field input[type="number"],
+.smtp-config-field select {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07);
+    font-size: 14px;
+}
+
+.email-templates {
+    margin-top: 25px;
+}
+
+.email-templates h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.email-template {
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* 
+ * Loading Spinner 
+ */
+
+/* Notifications */
+.swsib-notification {
+    position: fixed;
+    top: 32px; /* Account for WP admin bar */
+    right: 15px;
+    padding: 15px 20px;
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+    z-index: 99999;
+    font-size: 14px;
+    max-width: 350px;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+}
+
+.swsib-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.swsib-notification.success {
+    border-left: 5px solid var(--success-color);
+}
+
+.swsib-notification.error {
+    border-left: 5px solid var(--danger-color);
+}
+
+.swsib-notification.info {
+    border-left: 5px solid var(--info-color);
+}
+
+.swsib-notification.warning {
+    border-left: 5px solid var(--warning-color);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 
+ * Responsive Styling 
+ */
+@media screen and (max-width: 1200px) {
+    .task-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .task-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .task-card {
+        margin-bottom: 20px;
+    }
+    
+    .task-stats {
+        flex-direction: column;
+    }
+    
+    .task-card-actions {
+        flex-direction: column;
+    }
+    
+    .task-card-actions button {
+        margin-bottom: 10px;
+        width: 100%;
+    }
+    
+    .task-card-actions button:last-child {
+        margin-bottom: 0;
+    }
+    
+    .subscription-limits-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .swsib-notification {
+        top: 46px; /* Smaller admin bar on mobile */
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+}
+
+/* Card height consistency and expansion */
+.task-grid {
+    align-items: start; /* Make cards align at the top */
+}
+
+.task-card.expanded {
+    z-index: 10; /* Bring the expanded card to the front */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Animation for opening panels */
+.task-settings-toggle.open .dashicons {
+    transform: rotate(180deg);
+}
+
+.email-template-toggle.open .dashicons {
+    transform: rotate(180deg);
+}
+
+.smtp-config-toggle.open .dashicons {
+    transform: rotate(180deg);
+}
+
+/* Notifications styling */
+.swsib-notice {
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+}
+
+.swsib-notice.info {
+    background-color: #f0f8ff;
+    border-left: 4px solid var(--info-color);
+}
+
+.swsib-notice.warning {
+    background-color: #fffaeb;
+    border-left: 4px solid var(--warning-color);
+}
+
+.swsib-notice.error {
+    background-color: #fef7f7;
+    border-left: 4px solid var(--danger-color);
+}
+
+.swsib-notice.success {
+    background-color: #f7fcf7;
+    border-left: 4px solid var(--success-color);
+}
+
+/* Button Styling - Match connection.css */
+.button.button-primary {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.button.button-primary:hover,
+.button.button-primary:focus {
+    background: #4a5b89 !important;
+    border-color: #4a5b89 !important;
+}
+
+.button {
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+/* Switch styling (improved from connection.css) */
+.switch-field {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.switch-field label {
+    margin-right: 15px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 26px;
+}
+
+.slider:before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* Focus states for better accessibility */
+button:focus, 
+a:focus, 
+input:focus, 
+select:focus, 
+textarea:focus {
+    outline: 2px solid rgba(58, 75, 121, 0.4);
+    outline-offset: 2px;
+}
+
+/* Improve button and input interactions */
+button, 
+input[type="submit"], 
+input[type="button"] {
+    cursor: pointer !important;
+}
+
+button:hover, 
+input[type="submit"]:hover, 
+input[type="button"]:hover {
+    transform: translateY(-1px);
+}
+
+button:active, 
+input[type="submit"]:active, 
+input[type="button"]:active {
+    transform: translateY(0);
+}
+
+/* Make disabled buttons visually distinct */
+button:disabled,
+input[type="submit"]:disabled,
+input[type="button"]:disabled {
+    opacity: 0.65;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* Form element consistency with connection.css */
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07);
+    font-size: 14px;
+}
+
+input[type="text"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px rgba(58, 75, 121, 0.25);
+    outline: none;
+}
+
+/* Field notes styling consistent with connection.css */
+.task-settings-field .description,
+.swsib-field-note {
+    color: #666;
+    font-style: italic;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+
+    .role-checkboxes {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-top: 5px;
+        background: #f9f9f9;
+    }
+    
+    .meta-filters {
+        margin-bottom: 10px;
+    }
+    
+    .meta-filter-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 5px;
+        align-items: center;
+    }
+    
+    .meta-filter-row input {
+        flex: 1;
+    }
+    
+    .add-meta-filter {
+        margin-bottom: 10px;
+    }
+
+/* Add these styles to automate.css */
+
+
+
+/* Spinner animation */
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+
+/* Delay loading of content after tab switch */
+.swsib-automate-tab-content {
+    position: relative;
+    min-height: 150px;
+}
+
+/* WordPress task tab specific styles */
+.task-section {
+    position: relative;
+    min-height: 100px;
+}
+
+/* Add some padding at the bottom */
+.task-section:last-child {
+    margin-bottom: 30px;
+}
+
+/* 
+ * Action Logs Styles - NEW
+ */
+
+/* Action Settings Container */
+.action-settings-container {
+    background-color: #f8f8f8;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: var(--border-radius);
+    border: 1px solid #eee;
+}
+
+.action-settings-container h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.action-settings-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.action-settings-row:last-child {
+    margin-bottom: 0;
+}
+
+.action-settings-row label {
+    margin-right: 15px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* Action Logs Table */
+.action-logs-container {
+    position: relative;
+    margin-top: 25px;
+}
+
+.action-logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.action-logs-table th {
+    text-align: left;
+    padding: 12px 15px;
+    background-color: #f0f0f0;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.action-logs-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.action-logs-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.action-logs-empty {
+    text-align: center;
+    color: #777;
+    padding: 30px 0 !important;
+    font-style: italic;
+}
+
+/* Action Status */
+.action-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.action-status.success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.action-status.error {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.action-status.warning {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.action-status.info {
+    background-color: var(--info-color);
+    color: white;
+}
+
+/* Action Details Modal */
+.action-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    animation: fadeIn var(--transition-speed) ease;
+}
+
+.action-modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 0;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn var(--transition-speed) ease;
+}
+
+.action-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--medium-gray);
+    background-color: #f8f8f8;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.action-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.action-modal-close {
+    color: var(--dark-gray);
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 5px;
+    border-radius: 4px;
+    transition: all var(--transition-speed) ease;
+}
+
+.action-modal-close:hover {
+    color: var(--danger-color);
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.action-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    position: relative;
+    flex-grow: a1;
+}
+
+.action-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--medium-gray);
+    background-color: #f8f8f8;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    text-align: right;
+}
+
+/* Details Content Styling */
+.action-details-row {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.action-details-row:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.action-details-label {
+    font-weight: 600;
+    color: var(--text-color);
+    width: 150px;
+    margin-right: 15px;
+}
+
+.action-details-value {
+    flex: 1;
+    color: #666;
+    overflow-wrap: break-word;
+}
+
+/* Code formatting for args */
+#action-details-args {
+    background-color: #f8f8f8;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: auto;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Operation details */
+.operation-details {
+    background-color: #f8f8f8;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.operation-detail {
+    margin-bottom: 10px;
+}
+
+.operation-detail:last-child {
+    margin-bottom: 0;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: var(--text-color);
+    margin-right: 10px;
+}
+
+/* Pagination Styling */
+.tablenav-pages {
+    float: right;
+    margin: 15px 0;
+}
+
+.tablenav-pages .displaying-num {
+    margin-right: 10px;
+    color: #666;
+}
+
+.tablenav-pages .pagination-links {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tablenav-pages .button {
+    padding: 0 !important;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 2px;
+}
+
+.tablenav-pages .paging-input {
+    margin: 0 10px;
+    color: #666;
+}
+
+/* Action Notice */
+.action-notice {
+    margin-top: 20px;
+}
+
+/* Add animation for modal */
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Column Widths */
+.action-logs-table .column-date {
+    width: 180px;
+}
+
+.action-logs-table .column-type {
+    width: 20%;
+}
+
+.action-logs-table .column-status {
+    width: 100px;
+    text-align: center;
+}
+
+.action-logs-table .column-actions {
+    width: 120px;
+    text-align: center;
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 782px) {
+    .action-settings-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .action-settings-row label {
+        margin-bottom: 10px;
+    }
+    
+    .action-details-label {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .tablenav-pages {
+        float: none;
+        text-align: center;
+    }
+    
+    .action-modal-content {
+        width: 95%;
+        margin: 5% auto;
+    }
+}
+
+/* Table Responsive Fixes */
+@media screen and (max-width: 900px) {
+    .action-logs-table {
+        display: block;
+        overflow-x: auto;
+    }
+}

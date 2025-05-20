@@ -457,9 +457,9 @@ class SwiftSpeed_Siberian_Autologin {
         
         ?>
         <h2><?php _e('Auto Login Settings', 'swiftspeed-siberian'); ?></h2>
-        <p class="panel-description">
-            <?php _e('Configure settings for automatic login between WordPress and Siberian CMS using API integration.', 'swiftspeed-siberian'); ?>
-        </p>
+        <p class="swsib-notice info">
+    <?php _e('Configure settings for automatic login between WordPress and Siberian CMS using API integration. <a href="https://swiftspeed.app/kb/siberiancms-plugin-doc/" target="_blank">Read API documentation</a>.', 'swiftspeed-siberian'); ?>
+       </p>
         
         <!-- Rest of the display_settings method continues as before -->
         <!-- Direct form submission to admin-post.php -->
@@ -538,7 +538,7 @@ class SwiftSpeed_Siberian_Autologin {
                         name="swsib_options[auto_login][notification_text]" 
                         value="<?php echo esc_attr($notification_text); ?>" 
                         placeholder="Connecting to Siberian. Please wait..." />
-                    <p class="swsib-field-note"><?php _e('Text to display while connecting to Siberian.', 'swiftspeed-siberian'); ?></p>
+                    <p class="swsib-field-note"><?php _e('The text you want the user to see in the UI Loader while connecting to your SiberianCMS installation.', 'swiftspeed-siberian'); ?></p>
                 </div>
                 
                 <div class="swsib-field">
@@ -611,7 +611,7 @@ class SwiftSpeed_Siberian_Autologin {
                         </select>
                         
                         <div class="swsib-notice info" style="margin-top: 10px;">
-                            <p><?php _e('Select the appropriate role from your Siberian CMS database to assign to new users.', 'swiftspeed-siberian'); ?></p>
+                            <p><?php _e('Select the appropriate role from your Siberian CMS database to assign to new users. What this does is that, any of your WordPress sign up, whether new or existing, will get assigned this role when they click your authentication button to access your SiberianCMS editor dashboard.', 'swiftspeed-siberian'); ?></p>
                             <?php if (!$role_exists && $default_role_id != "2"): ?>
                                 <p class="swsib-warning"><strong>Note:</strong> <?php _e('Your previously selected role ID', 'swiftspeed-siberian'); ?> (<?php echo esc_html($default_role_id); ?>) <?php _e('is no longer available in the database. The default signup role (ID 2) has been selected.', 'swiftspeed-siberian'); ?></p>
                             <?php endif; ?>

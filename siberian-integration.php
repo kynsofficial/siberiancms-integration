@@ -42,7 +42,10 @@ require_once SWSIB_PLUGIN_DIR . '/admin/includes/woocommerce/woocommerce-hook-lo
    LOAD NEW SUBSCRIPTION INTEGRATION
 ============================================================================= */
 
-
+// Load Composer autoloader if it exists
+if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
+    require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+}
 /* ============================================================================
    LOAD OTHER DEPENDENCIES
 ============================================================================= */
@@ -495,6 +498,14 @@ class SWSIB_Subscription_Nonce_Fix {
         
         wp_send_json($response);
     }
+
+
+
+
+
+
+
+
 }
 
 // Initialize the nonce fix

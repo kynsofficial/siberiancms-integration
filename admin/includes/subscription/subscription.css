@@ -1,52 +1,41 @@
 /**
  * SwiftSpeed Siberian - PE Subscriptions Styles
  */
-
+:root {
+  --primary-color: #3a4b79;
+  --primary-dark: #1d2646;
+  --primary-light: #5a6c9a;
+  --accent-color: #4285f4;
+  --success-color: #34a853;
+  --warning-color: #fbbc05;
+  --danger-color: #ea4335;
+  --text-dark: #202124;
+  --text-medium: #5f6368;
+  --text-light: #9aa0a6;
+  --border-color: #dadce0;
+  --bg-light: #f8f9fa;
+  --bg-white: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --button-hover-color: #5a6c9a;
+  --card-shadow: 0 0 5px rgba(0,0,0,0.1);
+  --transition-speed: 0.3s;
+  --border-radius: 5px;
+}
 /* -----------------------------------
    General Section Container
    ----------------------------------- */
-.swsib-section {
-    background-color: #fff;
-    border-radius: 5px;
-    box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    padding: 20px;
-    margin-bottom: 30px;
-}
 
-.swsib-section-tabs {
-    margin-bottom: 20px;
-    display: flex;
-    border-bottom: 1px solid #ddd;
-}
-
-.swsib-section-tabs a {
-    padding: 10px 20px;
-    text-decoration: none;
-    color: #555;
-    font-weight: 500;
-    margin-right: 2px;
-    border: 1px solid transparent;
-    border-bottom: none;
-    border-radius: 3px 3px 0 0;
-    transition: all 0.2s ease;
-}
 #swsib-subscription-content > div:nth-child(4) > div.swsib-add-tax{
 padding: 10px 20px;
 }
 
-.swsib-section-tabs a:hover {
-    background-color: #f9f9f9;
-    color: #3a4b79;
-}
 
-.swsib-section-tabs a.active {
-    background-color: #fff;
-    color: #3a4b79;
-    border-color: #ddd;
-    border-bottom-color: #fff;
-    margin-bottom: -1px;
-    font-weight: 600;
-}
+
 
 /* -----------------------------------
    Form Fields & Controls
@@ -400,11 +389,10 @@ input:checked + .slider:before {
 
 .swsib-plan-form {
     background: #fff;
-    border: 1px solid #ddd;
     border-radius: 6px;
     padding: 20px;
     margin-bottom: 25px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1); 
 }
 
 .swsib-plan-form h4 {

@@ -1,0 +1,1602 @@
+/**
+ * SwiftSpeed Siberian Integration
+ * Backup & Restore Styles
+ */
+/* CSS Variables */
+:root {
+  --siberian-primary-color: #3a4b79;
+  --siberian-primary-light: #4c5e8c;
+  --siberian-primary-dark: #2a3b69;
+  --siberian-medium-gray: #e5e5e5;
+  --siberian-light-gray: #f5f5f5;
+  --siberian-text-dark: #333;
+  --siberian-text-medium: #666;
+  --siberian-border-color: #ddd;
+  --siberian-success-color: #34a853;
+  --siberian-warning-color: #fbbc05;
+  --siberian-danger-color: #ea4335;
+  --siberian-bg-white: #fff;
+  --siberian-bg-light: #f8f9fa;
+  --siberian-accent-color: #4285f4;
+  --siberian-radius-sm: 4px;
+  --siberian-radius-md: 6px;
+  --siberian-radius-lg: 8px;
+  --siberian-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --siberian-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --siberian-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+/**
+ * SwiftSpeed Siberian Integration
+ * Backup & Restore Admin Styles - Enhanced for Progress Metrics
+ */
+
+/* Progress container enhancements */
+.siberian-backup-progress-container,
+.siberian-restore-progress-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    padding: 15px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+/* Progress bar enhancements */
+.siberian-backup-progress-bar,
+.siberian-restore-progress-bar {
+    height: 20px;
+    background-color: #f0f0f1;
+    border-radius: 4px;
+    margin: 15px 0;
+    overflow: hidden;
+}
+
+.siberian-backup-progress-fill,
+.siberian-restore-progress-fill {
+    height: 100%;
+    background-color: #2271b1;
+    width: 0;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+/* Stats container */
+.siberian-backup-stats,
+.siberian-restore-stats {
+    margin: 15px 0;
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 4px;
+    border-left: 4px solid #2271b1;
+}
+
+/* Performance metrics enhancements */
+.siberian-backup-performance, .siberian-restore-performance {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+    background: #f0f8ff;
+    padding: 12px;
+    border-radius: 4px;
+    border-left: 4px solid #0073aa;
+}
+
+.performance-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.performance-metric .metric-value {
+    font-weight: bold;
+    color: #2271b1;
+}
+
+/* Current file display */
+.siberian-current-file {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    padding: 5px 0;
+}
+
+/* Error state */
+.siberian-backup-progress-container.error .siberian-backup-status-text,
+.siberian-restore-progress-container.error .siberian-restore-status-text {
+    color: #d63638;
+}
+
+.siberian-backup-progress-container.error .siberian-backup-progress-fill,
+.siberian-restore-progress-container.error .siberian-restore-progress-fill {
+    background-color: #d63638;
+}
+
+/* Animated spinner */
+.dashicons.spinning {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Backup type cards with enhanced styling */
+.siberian-backup-type-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.siberian-backup-type-card {
+    border: 1px solid #ccd0d4;
+    border-radius: 5px;
+    padding: 15px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.siberian-backup-type-card:hover {
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.siberian-backup-type-card.active {
+    border-color: #2271b1;
+    background-color: #f0f8ff;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.siberian-backup-type-card .dashicons {
+    margin-top: 10px;
+    font-size: 30px;
+    width: 30px;
+    height: 30px;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.siberian-backup-type-card h3 {
+    margin: 5px 0;
+}
+
+.siberian-backup-type-card p {
+    color: #646970;
+    margin: 5px 0;
+}
+
+/* Backup history enhancements */
+.siberian-backup-history {
+    margin-top: 20px;
+}
+
+.siberian-backup-history table {
+    border-spacing: 0;
+    width: 100%;
+    clear: both;
+}
+
+.siberian-backup-actions {
+    white-space: nowrap;
+}
+
+.siberian-backup-actions .button {
+    margin: 2px;
+}
+
+/* Storage providers styling */
+.siberian-storage-tabs {
+    display: flex;
+    border-bottom: 1px solid #ccd0d4;
+    margin-bottom: 15px;
+}
+
+.siberian-storage-tabs a {
+    padding: 10px 15px;
+    display: inline-block;
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -1px;
+    font-weight: 500;
+}
+
+.siberian-storage-tabs a.active {
+    border-color: #ccd0d4;
+    border-bottom-color: #fff;
+    background: #fff;
+}
+
+.siberian-storage-tab-content {
+    display: none;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-top: none;
+}
+
+.siberian-storage-tab-content.active {
+    display: block;
+}
+
+/* Make backup progress info more visible */
+.siberian-backup-status-text,
+.siberian-restore-status-text {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    color: #1d2327;
+}
+
+/* Media queries for responsive design */
+@media screen and (max-width: 782px) {
+    .siberian-backup-type-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .siberian-backup-performance {
+        grid-template-columns: 1fr;
+    }
+    
+    .siberian-storage-tabs {
+        flex-direction: column;
+    }
+    
+    .siberian-storage-tabs a {
+        margin-bottom: 0;
+    }
+    
+    .siberian-storage-tabs a.active {
+        border-bottom-color: #ccd0d4;
+    }
+}
+/* Add these styles to your existing backup-restore.css file */
+
+.siberian-backup-stats {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #f9f9f9;
+    border-left: 4px solid #2271b1;
+    border-radius: 2px;
+}
+
+.siberian-backup-stats div {
+    margin: 5px 0;
+    font-size: 13px;
+}
+
+.siberian-background-info {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #f0f6fc;
+    border-left: 4px solid #72aee6;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+}
+
+.siberian-background-info .dashicons {
+    margin-right: 10px;
+    color: #2271b1;
+}
+
+/* Current file indicator */
+.siberian-current-file {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-family: monospace;
+}
+
+/* Animation for spinning icon */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.dashicons.spinning {
+    animation: spin 2s linear infinite;
+}
+
+/* Progress bar improvements */
+.siberian-backup-progress-bar,
+.siberian-restore-progress-bar {
+    height: 20px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    margin: 10px 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.siberian-backup-progress-fill,
+.siberian-restore-progress-fill {
+    height: 100%;
+    background-color: #2271b1;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+/* Add stripes to the progress bar for visual interest */
+.siberian-backup-progress-fill::after,
+.siberian-restore-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, .2) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, .2) 50%,
+        rgba(255, 255, 255, .2) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 30px 30px;
+    animation: progress-bar-stripes 2s linear infinite;
+    border-radius: 10px;
+}
+
+@keyframes progress-bar-stripes {
+    from { background-position: 0 0; }
+    to { background-position: 30px 0; }
+}
+
+/* Status messages */
+.siberian-backup-status-text,
+.siberian-restore-status-text {
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+/* Error state */
+#siberian-backup-progress-container.error .siberian-backup-progress-fill,
+#siberian-restore-progress-container.error .siberian-restore-progress-fill {
+    background-color: #d63638;
+}
+
+#siberian-backup-progress-container,#siberian-restore-progress-container {
+
+  border-radius: var(--siberian-radius-md);
+  padding: 20px;
+  box-shadow: var(--siberian-shadow-sm);
+}
+
+/* Remove extra spacing in section header */
+.siberian-section-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* Style tabs container */
+.siberian-tabs-nav {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--siberian-medium-gray);
+  background-color: var(--siberian-bg-white);
+  position: relative;
+  z-index: 1;
+}
+
+/* Reset WordPress default subsubsub styles */
+.siberian-tabs-nav .subsubsub {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  float: none;
+  width: 100%;
+}
+
+.siberian-tabs-nav .subsubsub li {
+  margin: 0;
+  padding: 0;
+  margin-right: 4px;
+  float: none;
+}
+
+/* Style tab links */
+.siberian-tabs-nav .subsubsub li a {
+  padding: 12px 20px;
+  text-decoration: none;
+  color: var(--siberian-text-medium);
+  font-weight: 500;
+  margin-right: 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--siberian-radius-sm) var(--siberian-radius-sm) 0 0;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  position: relative;
+  top: 1px;
+}
+
+.siberian-tabs-nav .subsubsub li a:hover {
+  color: var(--siberian-primary-color);
+}
+
+.siberian-tabs-nav .subsubsub li a.current {
+  background-color: var(--siberian-bg-white);
+  color: var(--siberian-primary-color);
+  border-color: var(--siberian-medium-gray);
+  border-bottom-color: var(--siberian-bg-white);
+  font-weight: 600;
+}
+
+/* Remove separators from subsubsub */
+.siberian-tabs-nav .subsubsub li::after {
+  content: none;
+}
+
+/* Field groups */
+.siberian-field-group {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--siberian-border-color);
+}
+
+.siberian-field-group:last-child {
+  border-bottom: none;
+}
+
+/* Form fields */
+.siberian-field {
+  margin-bottom: 20px;
+}
+
+.siberian-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--siberian-text-dark);
+  font-size: 14px;
+}
+
+.siberian-field input[type="text"],
+.siberian-field input[type="password"],
+.siberian-field input[type="number"],
+.siberian-field select,
+.siberian-field textarea {
+  width: 100%;
+  max-width: 500px;
+  padding: 10px 12px;
+  border: 1px solid var(--siberian-border-color);
+  border-radius: var(--siberian-radius-sm);
+  color: var(--siberian-text-dark);
+  background-color: var(--siberian-bg-white);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.siberian-field input[type="text"]:focus,
+.siberian-field input[type="password"]:focus,
+.siberian-field input[type="number"]:focus,
+.siberian-field select:focus,
+.siberian-field textarea:focus {
+  outline: none;
+  border-color: var(--siberian-accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+.siberian-field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.siberian-field-note {
+  color: var(--siberian-text-medium);
+  font-style: italic;
+  margin-top: 6px;
+  margin-bottom: 10;
+  font-size: 13px;
+}
+
+/* Radio & Checkbox styling */
+.siberian-field input[type="radio"],
+.siberian-field input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+/* Buttons */
+.button {
+  padding: 8px 16px;
+  border-radius: var(--siberian-radius-sm);
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  height: auto;
+  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--siberian-shadow-md);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button .dashicons {
+  margin-right: 8px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-primary {
+  background-color: var(--siberian-primary-color);
+  border-color: var(--siberian-primary-dark);
+  color: white;
+}
+
+.button-primary:hover, 
+.button-primary:focus {
+  background-color: var(--siberian-primary-light);
+  border-color: var(--siberian-primary-dark);
+  color: white;
+}
+
+/* Backup Type Cards */
+.siberian-backup-type-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.siberian-backup-type-card {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+  border: 2px solid var(--siberian-border-color);
+  border-radius: var(--siberian-radius-md);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: var(--siberian-bg-white);
+  box-shadow: var(--siberian-shadow-sm);
+  position: relative;
+}
+
+.siberian-backup-type-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--siberian-shadow-md);
+  border-color: var(--siberian-primary-light);
+}
+
+.siberian-backup-type-card.active {
+  border-color: var(--siberian-primary-color);
+  background-color: rgba(58, 75, 121, 0.05);
+}
+
+.siberian-backup-type-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+}
+
+.siberian-backup-type-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.siberian-backup-type-card-icon {
+  margin-right: 12px;
+  width: 40px;
+  height: 40px;
+  background-color: var(--siberian-primary-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.siberian-backup-type-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--siberian-text-dark);
+  margin: 0;
+}
+
+.siberian-backup-type-card-description {
+  color: var(--siberian-text-medium);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Progress Bars */
+.siberian-backup-progress-bar,
+.siberian-restore-progress-bar {
+  height: 20px;
+  background-color: var(--siberian-bg-light);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.siberian-backup-progress-fill,
+.siberian-restore-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--siberian-success-color), #2d9348);
+  width: 0;
+  transition: width 0.3s ease;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.siberian-backup-progress-fill:after,
+.siberian-restore-progress-fill:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 25%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 75%
+  );
+  transform: translateX(-100%);
+  animation: siberian-shimmer 2s infinite;
+}
+
+@keyframes siberian-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.siberian-backup-status-text,
+.siberian-restore-status-text {
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: var(--siberian-text-dark);
+  font-size: 14px;
+}
+
+.siberian-backup-stats,
+.siberian-restore-stats {
+  margin-bottom: 10px;
+  color: var(--siberian-text-medium);
+  font-size: 13px;
+}
+
+.siberian-backup-cancel-container,
+.siberian-restore-cancel-container {
+  margin-top: 20px;
+  text-align: right;
+}
+
+/* Error states */
+#siberian-backup-progress-container.error .siberian-backup-progress-fill,
+#siberian-restore-progress-container.error .siberian-restore-progress-fill {
+  background: linear-gradient(90deg, var(--siberian-danger-color), #c62828);
+}
+
+/* Backup/Restore Controls */
+.siberian-backup-controls,
+.siberian-restore-controls {
+  margin-bottom: 24px;
+}
+
+/* History Sections */
+.siberian-backup-history,
+.siberian-restore-history {
+  margin-top: 40px;
+}
+
+.siberian-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--siberian-border-color);
+}
+
+.siberian-history-header h3 {
+  margin: 0;
+  color: var(--siberian-text-dark);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.siberian-no-backups-message,
+.siberian-no-restores-message {
+  font-style: italic;
+  color: var(--siberian-text-medium);
+  padding: 40px 0;
+  text-align: center;
+  background-color: var(--siberian-bg-light);
+  border-radius: var(--siberian-radius-sm);
+  border: 1px dashed var(--siberian-border-color);
+}
+
+/* Table Styling */
+.wp-list-table {
+  border: 1px solid var(--siberian-border-color);
+  border-radius: var(--siberian-radius-sm);
+  border-spacing: 0;
+  width: 100%;
+  box-shadow: var(--siberian-shadow-sm);
+  overflow: hidden;
+}
+
+.wp-list-table thead th {
+  background-color: var(--siberian-bg-light);
+  border-bottom: 1px solid var(--siberian-border-color);
+  color: var(--siberian-text-dark);
+  font-weight: 600;
+  padding: 12px 15px;
+  text-align: left;
+}
+
+.wp-list-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.wp-list-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.wp-list-table tbody tr:hover {
+  background-color: rgba(66, 133, 244, 0.04);
+}
+
+.wp-list-table td {
+  border-bottom: 1px solid var(--siberian-border-color);
+  padding: 12px 15px;
+  vertical-align: middle;
+}
+
+.wp-list-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.siberian-backup-actions,
+.siberian-restore-actions {
+  min-width: 250px;
+  text-align: right;
+}
+
+.siberian-backup-actions .button,
+.siberian-restore-actions .button {
+  margin-right: 5px;
+  margin-bottom: 5px;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+.siberian-backup-actions .dashicons,
+.siberian-restore-actions .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+
+/* Lock icon */
+.wp-list-table .dashicons-lock {
+  color: var(--siberian-accent-color);
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+/* Storage Providers */
+.siberian-storage-providers, 
+.siberian-backup-section, 
+.siberian-restore-section,
+.siberian-settings-section {
+  background: var(--siberian-bg-white);
+  border-radius: var(--siberian-radius-md);
+  box-shadow: var(--siberian-shadow-sm);
+  margin-bottom: 25px;
+  padding: 20px;
+  transition: box-shadow 0.3s ease;
+}
+
+.siberian-storage-tabs {
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--siberian-border-color);
+}
+
+.siberian-storage-tabs ul {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.siberian-storage-tabs li {
+  margin-bottom: -1px;
+}
+
+.siberian-storage-tabs a {
+  display: block;
+  padding: 12px 20px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  margin-right: 8px;
+  border-radius: var(--siberian-radius-lg) var(--siberian-radius-lg) 0 0;
+  font-weight: 600;
+  color: var(--siberian-text-medium);
+  transition: all 0.2s ease;
+}
+
+.siberian-storage-tabs a:hover {
+  background-color: rgba(66, 133, 244, 0.04);
+  color: var(--siberian-primary-color);
+}
+
+.siberian-storage-tabs a.active {
+  background-color: var(--siberian-bg-white);
+  border-color: var(--siberian-border-color);
+  border-bottom-color: var(--siberian-bg-white);
+  color: var(--siberian-primary-color);
+}
+
+.siberian-storage-tabs a .dashicons-yes-alt {
+  color: var(--siberian-success-color);
+  margin-left: 6px;
+}
+
+.siberian-storage-tab-content {
+  display: none;
+  padding: 24px;
+  background: var(--siberian-bg-white);
+  border: 1px solid var(--siberian-border-color);
+  border-top: none;
+  border-radius: 0 0 var(--siberian-radius-sm) var(--siberian-radius-sm);
+  animation: siberian-fadeIn 0.3s ease-out;
+}
+
+.siberian-storage-tab-content.active {
+  display: block;
+}
+
+.siberian-actions {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--siberian-border-color);
+  text-align: right;
+}
+
+/* Test connection results */
+.siberian-test-result {
+  margin-left: 10px;
+  display: inline-block;
+  vertical-align: middle;
+  font-weight: 500;
+  transition: opacity 0.3s ease;
+}
+
+/* Spinning animation */
+.spinning {
+  animation: siberian-spin 1.5s linear infinite;
+  display: inline-block;
+}
+
+@keyframes siberian-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Notices */
+.swsib-notice {
+  background: var(--siberian-bg-white);
+  border-left: 4px solid #00a0d2;
+  box-shadow: var(--siberian-shadow-sm);
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border-radius: 0 var(--siberian-radius-sm) var(--siberian-radius-sm) 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.swsib-notice.info {
+  border-left-color: var(--siberian-accent-color);
+  background-color: rgba(66, 133, 244, 0.05);
+}
+
+.swsib-notice.success {
+  border-left-color: var(--siberian-success-color);
+  background-color: rgba(52, 168, 83, 0.05);
+}
+
+.swsib-notice.warning {
+  border-left-color: var(--siberian-warning-color);
+  background-color: rgba(251, 188, 5, 0.05);
+}
+
+.swsib-notice.error {
+  border-left-color: var(--siberian-danger-color);
+  background-color: rgba(234, 67, 53, 0.05);
+}
+
+.swsib-notice p {
+  margin: 0.5em 0;
+}
+
+/* Loading indicator */
+.siberian-loading-indicator {
+  text-align: center;
+  padding: 30px;
+  color: var(--siberian-text-medium);
+  font-style: italic;
+}
+
+.siberian-loading-indicator .dashicons {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Error message */
+.siberian-error-message {
+  padding: 15px;
+  background-color: rgba(234, 67, 53, 0.05);
+  border-left: 4px solid var(--siberian-danger-color);
+  margin-bottom: 20px;
+  border-radius: 0 var(--siberian-radius-sm) var(--siberian-radius-sm) 0;
+  color: var(--siberian-text-dark);
+}
+
+.siberian-error-message .dashicons {
+  color: var(--siberian-danger-color);
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Utility Classes */
+.siberian-required {
+  color: var(--siberian-danger-color);
+  font-weight: bold;
+  margin-left: 3px;
+}
+
+/* Animations */
+@keyframes siberian-fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast notifications */
+#siberian-toast-container {
+  position: fixed;
+  top: 40px;
+  right: 20px;
+  z-index: 999999;
+}
+
+.siberian-toast {
+  background-color: white;
+  color: #333;
+  padding: 12px 20px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  transform: translateX(120%);
+  opacity: 0;
+  transition: all 0.3s ease;
+  max-width: 350px;
+}
+
+.siberian-toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.siberian-toast .dashicons {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.siberian-toast-success {
+  border-left: 4px solid var(--siberian-success-color);
+}
+
+.siberian-toast-success .dashicons {
+  color: var(--siberian-success-color);
+}
+
+.siberian-toast-error {
+  border-left: 4px solid var(--siberian-danger-color);
+}
+
+.siberian-toast-error .dashicons {
+  color: var(--siberian-danger-color);
+}
+
+.siberian-toast-info {
+  border-left: 4px solid var(--siberian-accent-color);
+}
+
+.siberian-toast-info .dashicons {
+  color: var(--siberian-accent-color);
+}
+
+.siberian-toast-warning {
+  border-left: 4px solid var(--siberian-warning-color);
+}
+
+.siberian-toast-warning .dashicons {
+  color: var(--siberian-warning-color);
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .siberian-tabs-nav .subsubsub li a {
+    padding: 10px 15px;
+    font-size: 13px;
+  }
+  
+  .siberian-history-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .siberian-history-header h3 {
+    margin-bottom: 10px;
+  }
+  
+  .siberian-backup-actions, 
+  .siberian-restore-actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  .siberian-backup-actions .button, 
+  .siberian-restore-actions .button {
+    margin-bottom: 8px;
+  }
+  
+  .siberian-backup-type-cards {
+    flex-direction: column;
+  }
+  
+  .siberian-backup-type-card {
+    max-width: none;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .siberian-tabs-nav .subsubsub {
+    flex-direction: column;
+  }
+  
+  .siberian-tabs-nav .subsubsub li {
+    margin-bottom: 5px;
+  }
+  
+  .siberian-tabs-nav .subsubsub li a {
+    border-radius: var(--siberian-radius-sm);
+    border: 1px solid var(--siberian-border-color);
+  }
+  
+  .siberian-tabs-nav .subsubsub li a.current {
+    border-bottom-color: var(--siberian-border-color);
+  }
+  
+  .siberian-storage-tabs ul {
+    flex-direction: column;
+  }
+  
+  .siberian-storage-tabs li {
+    margin-bottom: 5px;
+  }
+  
+  .siberian-storage-tabs a {
+    border-radius: var(--siberian-radius-sm);
+    border: 1px solid var(--siberian-border-color);
+  }
+  
+  .siberian-storage-tabs a.active {
+    border-bottom-color: var(--siberian-border-color);
+  }
+  
+  .wp-list-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* Schedule list styling */
+.siberian-schedule-list {
+    margin-top: 15px;
+}
+
+.siberian-schedule-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--siberian-shadow-sm);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.siberian-schedule-card:hover {
+    box-shadow: var(--siberian-shadow-md);
+    transform: translateY(-2px);
+}
+
+.siberian-schedule-card.disabled {
+    opacity: 0.7;
+    background: #f9f9f9;
+}
+
+.siberian-schedule-card .siberian-schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+.siberian-schedule-card .siberian-schedule-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.siberian-schedule-card .siberian-schedule-title .dashicons {
+    margin-right: 8px;
+    color: var(--siberian-primary-color);
+}
+
+.siberian-schedule-card .siberian-schedule-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.siberian-schedule-card .siberian-schedule-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.siberian-schedule-card .siberian-schedule-info {
+    margin: 0;
+    font-size: 14px;
+    color: var(--siberian-text-medium);
+}
+
+.siberian-schedule-card .siberian-schedule-info span {
+    font-weight: 600;
+    color: var(--siberian-text-dark);
+    margin-right: 5px;
+}
+
+.siberian-schedule-card .siberian-schedule-footer {
+    background-color: var(--siberian-bg-light);
+    margin: 0 -20px -20px;
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Status badge */
+.siberian-status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 10px;
+}
+
+.siberian-status-badge.enabled {
+    background-color: #d1fae5;
+    color: #047857;
+}
+
+.siberian-status-badge.disabled {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Empty schedules state */
+.siberian-empty-schedules {
+    text-align: center;
+    padding: 40px 20px;
+    background-color: var(--siberian-bg-light);
+    border-radius: 8px;
+    border: 1px dashed #ddd;
+}
+
+.siberian-empty-schedules .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #999;
+    margin-bottom: 15px;
+}
+
+.siberian-empty-schedules h4 {
+    font-size: 18px;
+    margin: 0 0 10px 0;
+    color: var(--siberian-text-dark);
+}
+
+.siberian-empty-schedules p {
+    color: var(--siberian-text-medium);
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Modal styling */
+/**
+ * Backup/Restore modal styling
+ */
+
+/* Modal base styles */
+.siberian-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999999;
+    display: none;
+}
+
+.siberian-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.siberian-modal-content {
+    position: relative;
+    width: 700px;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: 50px auto;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.siberian-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.siberian-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.siberian-modal-close {
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    font-weight: bold;
+}
+
+.siberian-modal-body {
+    padding: 20px;
+}
+
+.siberian-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 15px 20px;
+    border-top: 1px solid #ddd;
+    gap: 10px;
+}
+
+/* Form fields within modal */
+#siberian-schedule-form .siberian-field {
+    margin-bottom: 20px;
+}
+
+#siberian-schedule-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+#siberian-schedule-form input[type="text"],
+#siberian-schedule-form input[type="number"],
+#siberian-schedule-form select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Schedule interval display */
+.siberian-interval-setting {
+    display: flex;
+    gap: 10px;
+}
+
+.siberian-interval-setting input[type="number"] {
+    width: 80px;
+}
+
+.siberian-interval-setting select {
+    flex: 1;
+}
+
+/* Toggle switch styling */
+.siberian-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.siberian-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.siberian-toggle-slider {
+    display: inline-block;
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background-color: #ccc;
+    border-radius: 34px;
+    transition: .4s;
+    margin-right: 10px;
+}
+
+.siberian-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+}
+
+.siberian-toggle input:checked + .siberian-toggle-slider {
+    background-color: #2196F3;
+}
+
+.siberian-toggle input:checked + .siberian-toggle-slider:before {
+    transform: translateX(18px);
+}
+
+.siberian-toggle-label {
+    font-weight: normal;
+    margin-left: 5px;
+}
+
+/* Storage providers checkboxes - proper spacing */
+.siberian-storage-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.siberian-storage-checkbox {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.siberian-storage-checkbox input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+.siberian-next-run-info {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+    border-left: 3px solid #2196F3;
+}
+
+
+.siberian-schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.siberian-schedule-title {
+    margin: 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-right: 80px;
+}
+
+.siberian-schedule-title .dashicons {
+    margin-right: 8px;
+    color: #2271b1;
+}
+
+.siberian-status-badge {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    color: white;
+    font-weight: normal;
+}
+
+.siberian-status-badge.enabled {
+    color: white;
+    background-color: #46b450;
+}
+
+.siberian-status-badge.disabled {
+    background-color: #bbb;
+}
+
+.siberian-schedule-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.siberian-schedule-actions .button {
+    padding: 0 5px;
+    height: 28px;
+    line-height: 26px;
+}
+
+.siberian-schedule-actions .button .dashicons {
+    margin-top: 4px;
+}
+
+.siberian-schedule-content {
+    flex-grow: 1;
+    margin-bottom: 15px;
+}
+
+.siberian-schedule-info {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.siberian-schedule-info span {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.siberian-schedule-footer {
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.siberian-empty-schedules {
+    text-align: center;
+    padding: 30px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px dashed #ddd;
+}
+
+.siberian-empty-schedules .dashicons {
+    font-size: 48px;
+    height: 48px;
+    width: 48px;
+    display: block;
+    margin: 0 auto 15px;
+    color: #bbb;
+}
+
+/* Toast notifications */
+#siberian-toast-container {
+    position: fixed;
+    top: 32px; /* Below WP admin bar */
+    right: 20px;
+    z-index: 99999;
+}
+
+.siberian-toast {
+    background-color: #fff;
+    color: #333;
+    border-radius: 4px;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    min-width: 300px;
+    max-width: 450px;
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+    border-left: 4px solid #666;
+}
+
+.siberian-toast.show {
+    transform: translateX(0);
+}
+
+.siberian-toast .dashicons {
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+.siberian-toast-success {
+    border-left-color: #46b450;
+}
+
+.siberian-toast-success .dashicons {
+    color: #46b450;
+}
+
+.siberian-toast-error {
+    border-left-color: #dc3232;
+}
+
+.siberian-toast-error .dashicons {
+    color: #dc3232;
+}
+
+.siberian-toast-warning {
+    border-left-color: #ffb900;
+}
+
+.siberian-toast-warning .dashicons {
+    color: #ffb900;
+}
+
+.siberian-toast-info {
+    border-left-color: #00a0d2;
+}
+
+.siberian-toast-info .dashicons {
+    color: #00a0d2;
+}

@@ -99,6 +99,20 @@ class SwiftSpeed_Siberian_Admin {
     private $license_form_displayed = false;
 
     /**
+     * Loaded tab contents cache
+     * 
+     * @var array
+     */
+    private $loaded_tabs = [];
+
+    /**
+     * Maps of tab IDs to script handles that should be loaded
+     *
+     * @var array
+     */
+    private $tab_script_mapping = [];
+
+    /**
      * Initialize the class.
      */
     public function __construct() {
@@ -111,6 +125,9 @@ class SwiftSpeed_Siberian_Admin {
         // Initialize feature classes.
         $this->load_feature_classes();
 
+        // Setup tab-to-script mapping
+        $this->setup_tab_script_mapping();
+
         // Add admin menu—using a lower priority to reduce conflicts.
         add_action('admin_menu', array($this, 'add_menu_page'), 99);
 
@@ -119,6 +136,49 @@ class SwiftSpeed_Siberian_Admin {
 
         // Add filter to persist active tab on settings save.
         add_filter('wp_redirect', array($this, 'settings_save_redirect'), 10, 2);
+        
+        // Add AJAX handler for tab content loading
+        add_action('wp_ajax_swsib_load_tab_content', array($this, 'ajax_load_tab_content'));
+        
+        // Add AJAX handler for full page script reload
+        add_action('wp_ajax_swsib_reload_tab_page', array($this, 'ajax_reload_tab_page'));
+    }
+
+    /**
+     * Setup mapping between tab IDs and their required script handles
+     */
+    private function setup_tab_script_mapping() {
+        $this->tab_script_mapping = array(
+            'auto_login' => array(
+                'swsib-autologin-js',
+                'wp-color-picker'
+            ),
+            'db_connect' => array(
+                'swsib-db-connect-js'
+            ),
+            'woocommerce' => array(
+                'swsib-woocommerce-js'
+            ),
+            'clean' => array(
+                'swsib-clean-js'
+            ),
+            'automate' => array(
+                'swsib-automate-js',
+                'swsib-app-management-js',
+                'swsib-wp-tasks-js',
+                'swsib-image-cleanup-js',
+                'swsib-user-management-js'
+            ),
+            'advanced_autologin' => array(
+                'swsib-advanced-autologin-js'
+            ),
+            'backup_restore' => array(
+                'swsib-backup-restore-js'
+            ),
+            'subscription' => array(
+                'swsib-subscription-js'
+            )
+        );
     }
 
     /**
@@ -141,7 +201,7 @@ class SwiftSpeed_Siberian_Admin {
     private function load_feature_classes() {
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/autologin/class-swsib-autologin.php';
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/compatibility/class-swsib-password-sync.php';
-        require_once SWSIB_PLUGIN_DIR . 'admin/includes/dbconnect/dbconnect.php';
+        require_once SWSIB_PLUGIN_DIR . 'admin/includes/connect/connection.php';
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/woocommerce/class-swsib-woocommerce.php';
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/clean/class-swsib-clean.php';
         require_once SWSIB_PLUGIN_DIR . 'admin/includes/automate/class-swsib-automate.php';
@@ -161,6 +221,146 @@ class SwiftSpeed_Siberian_Admin {
         $this->logging             = swsib()->logging ?: new SwiftSpeed_Siberian_Logging_Manager();
         $this->advanced_autologin  = new SwiftSpeed_Siberian_Advanced_AutoLogin();
         $this->backup_restore      = new SwiftSpeed_Siberian_Backup_Restore();
+    }
+
+    /**
+     * AJAX handler for reloading a full page with specific tab
+     */
+    public function ajax_reload_tab_page() {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'swsib-nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permission denied'));
+            return;
+        }
+
+        // Get the requested tab
+        $tab_id = isset($_POST['tab_id']) ? sanitize_key($_POST['tab_id']) : '';
+        
+        if (empty($tab_id)) {
+            wp_send_json_error(array('message' => 'No tab specified'));
+            return;
+        }
+
+        // Get the admin URL for the requested tab
+        $url = admin_url('admin.php?page=swsib-integration&tab_id=' . $tab_id);
+        
+        wp_send_json_success(array(
+            'url' => $url
+        ));
+    }
+
+    /**
+     * AJAX handler for loading tab content
+     */
+    public function ajax_load_tab_content() {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'swsib-nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permission denied'));
+            return;
+        }
+
+        // Get the requested tab
+        $tab_id = isset($_POST['tab_id']) ? sanitize_key($_POST['tab_id']) : '';
+        
+        if (empty($tab_id)) {
+            wp_send_json_error(array('message' => 'No tab specified'));
+            return;
+        }
+
+        // For certain tabs that need full script reloading, send a signal to do a page reload
+        $tabs_requiring_reload = array('db_connect', 'advanced_autologin', 'automate', 'clean');
+        
+        if (in_array($tab_id, $tabs_requiring_reload)) {
+            wp_send_json_success(array(
+                'reload_required' => true,
+                'tab_id' => $tab_id,
+                'url' => admin_url('admin.php?page=swsib-integration&tab_id=' . $tab_id)
+            ));
+            return;
+        }
+
+        // Start output buffering to capture the HTML
+        ob_start();
+        
+        // Render the tab content based on tab ID
+        switch ($tab_id) {
+            case 'auto_login':
+                $this->autologin->display_settings();
+                break;
+            case 'compatibility':
+                $this->password_sync->display_admin_settings();
+                break;
+            case 'woocommerce':
+                $this->render_woocommerce_tab();
+                break;
+            case 'subscription':
+                $this->render_subscription_tab();
+                break;
+            case 'logging':
+                $this->logging->display_settings();
+                break;
+            case 'license':
+                swsib()->license->display_license_tab();
+                break;
+            default:
+                // For any other tabs, we'll do a page reload to be safe
+                wp_send_json_success(array(
+                    'reload_required' => true,
+                    'tab_id' => $tab_id,
+                    'url' => admin_url('admin.php?page=swsib-integration&tab_id=' . $tab_id)
+                ));
+                return;
+        }
+        
+        // Get the buffered content
+        $content = ob_get_clean();
+        
+        // Send the HTML content
+        wp_send_json_success(array(
+            'content' => $content,
+            'tab_id' => $tab_id,
+            'reload_required' => false
+        ));
+    }
+
+    /**
+     * Helper method to render the WooCommerce tab content
+     */
+    private function render_woocommerce_tab() {
+        $license = swsib()->license;
+        $is_license_valid = $license->is_valid();
+        
+        if ($is_license_valid) {
+            $this->woocommerce->display_settings();
+        } else {
+            swsib()->license->display_activation_form();
+        }
+    }
+
+    /**
+     * Helper method to render the Subscription tab content
+     */
+    private function render_subscription_tab() {
+        $license = swsib()->license;
+        $is_license_valid = $license->is_valid();
+        
+        if ($is_license_valid) {
+            $this->subscription->display_settings();
+        } else {
+            swsib()->license->display_activation_form();
+        }
     }
 
     /**
@@ -236,6 +436,7 @@ class SwiftSpeed_Siberian_Admin {
         if (strpos($hook, 'swsib-integration') === false) {
             return;
         }
+        
         wp_enqueue_style('dashicons');
         wp_enqueue_style('wp-color-picker');
         wp_enqueue_script('wp-color-picker');
@@ -253,9 +454,9 @@ class SwiftSpeed_Siberian_Admin {
             true
         );
 
-        // Retrieve license status (with forced check).
+        // Retrieve license status (with lightweight check - no force)
         $license        = swsib()->license;
-        $license_valid  = $license->is_valid(true);
+        $license_valid  = $license->is_valid(false);
 
         wp_localize_script(
             'swsib-admin',
@@ -274,7 +475,7 @@ class SwiftSpeed_Siberian_Admin {
                     'advanced_autologin',
                     'backup_restore'
                 )),
-                'tabs_always_no_save'   => json_encode(array('compatibility', 'license', 'subscription', 'woocommerce')),
+                'tabs_always_no_save'   => json_encode(array('compatibility', 'license')),
                 'premium_tabs'          => json_encode(array(
                     'woocommerce',
                     'subscription',
@@ -282,7 +483,19 @@ class SwiftSpeed_Siberian_Admin {
                     'automate',
                     'advanced_autologin',
                     'backup_restore'
-                ))
+                )),
+                'tabs_requiring_full_reload' => json_encode(array(
+                    'db_connect',
+                    'advanced_autologin',
+                    'automate',
+                    'clean',
+                    'backup_restore',
+                    'subscription',
+                    'woocommerce'
+                )),
+                'lazy_loading_enabled'  => true,
+                'loading_text'          => __('Loading tab content...', 'swiftspeed-siberian'),
+                'plugin_url'            => SWSIB_PLUGIN_URL
             )
         );
     }
@@ -294,12 +507,12 @@ class SwiftSpeed_Siberian_Admin {
      */
     public function display_settings_page() {
         $license         = swsib()->license;
-        // Force license check on settings page load.
-        $license_valid   = $license->is_valid(true);
+        // Use non-forced check for initial page load to improve performance
+        $license_valid   = $license->is_valid(false);
         $is_license_valid = $license_valid;
         $is_db_configured = swsib()->is_db_configured();
 
-        // Determine the active tab from the URL parameter; default to "auto_login".
+        // Determine the active tab from the URL parameter; default to "auto_login"
         $tab_param        = isset($_GET['tab_id']) ? sanitize_key($_GET['tab_id']) : 'auto_login';
         $this->active_tab = $tab_param;
 
@@ -326,11 +539,11 @@ class SwiftSpeed_Siberian_Admin {
                                     <?php _e('Auto Login', 'swiftspeed-siberian'); ?>
                                 </a>
                             </li>
-                            <!-- Moved DB Connect to be the second tab -->
+                            <!-- Moved Connect to be the second tab -->
                             <li>
                                 <a href="#db-connect-tab" class="<?php echo $this->active_tab === 'db_connect' ? 'active' : ''; ?>" data-tab-id="db_connect">
                                     <span class="dashicons dashicons-database"></span>
-                                    <?php _e('DB Connect', 'swiftspeed-siberian'); ?>
+                                    <?php _e('Connection', 'swiftspeed-siberian'); ?>
                                 </a>
                             </li>
                             <li>
@@ -413,126 +626,222 @@ class SwiftSpeed_Siberian_Admin {
                 <div class="swsib-content">
                     <!-- Auto Login Tab -->
                     <div id="auto-login-tab" class="swsib-tab-content <?php echo $this->active_tab === 'auto_login' ? 'active' : ''; ?>" data-tab-id="auto_login">
-                        <?php $this->autologin->display_settings(); ?>
+                        <?php if ($this->active_tab === 'auto_login'): ?>
+                            <?php $this->autologin->display_settings(); ?>
+                        <?php else: ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- DB Connect Tab (formerly Advanced Features) -->
                     <div id="db-connect-tab" class="swsib-tab-content <?php echo $this->active_tab === 'db_connect' ? 'active' : ''; ?>" data-tab-id="db_connect">
-                        <?php $this->db_connect->display_settings(); ?>
+                        <?php if ($this->active_tab === 'db_connect'): ?>
+                            <?php $this->db_connect->display_settings(); ?>
+                        <?php else: ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Compatibility Tab -->
                     <div id="compatibility-tab" class="swsib-tab-content <?php echo $this->active_tab === 'compatibility' ? 'active' : ''; ?>" data-tab-id="compatibility">
-                        <?php $this->password_sync->display_admin_settings(); ?>
+                        <?php if ($this->active_tab === 'compatibility'): ?>
+                            <?php $this->password_sync->display_admin_settings(); ?>
+                        <?php else: ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Advanced Auto Login Tab -->
                     <div id="advanced-autologin-tab" class="swsib-tab-content <?php echo $this->active_tab === 'advanced_autologin' ? 'active' : ''; ?>" data-tab-id="advanced_autologin">
-                        <?php if ($is_license_valid): ?>
-                            <?php if ($is_db_configured): ?>
-                                <?php $this->advanced_autologin->display_settings(); ?>
-                            <?php else: ?>
-                                <div class="swsib-notice warning">
-                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
-                                    <p><?php _e('You need to configure DB Connect before using Advanced Auto Login.', 'swiftspeed-siberian'); ?></p>
-                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
-                                </div>
-                            <?php endif; ?>
+                        <?php if ($this->active_tab === 'advanced_autologin'): ?>
+                            <?php 
+                            $license = swsib()->license;
+                            $is_license_valid = $license->is_valid();
+                            $is_db_configured = swsib()->is_db_configured();
+                            
+                            if ($is_license_valid) {
+                                if ($is_db_configured) {
+                                    $this->advanced_autologin->display_settings();
+                                } else {
+                                    echo '<div class="swsib-notice warning">';
+                                    echo '<p><strong>' . __('DB Connect Required', 'swiftspeed-siberian') . '</strong></p>';
+                                    echo '<p>' . __('You need to configure DB Connect before using Advanced Auto Login.', 'swiftspeed-siberian') . '</p>';
+                                    echo '<p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab">' . __('Configure DB Connect', 'swiftspeed-siberian') . '</a></p>';
+                                    echo '</div>';
+                                }
+                            } else {
+                                swsib()->license->display_activation_form();
+                            }
+                            ?>
                         <?php else: ?>
-                            <?php swsib()->license->display_activation_form(); ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
 
                     <!-- WooCommerce Tab -->
                     <div id="woocommerce-tab" class="swsib-tab-content <?php echo $this->active_tab === 'woocommerce' ? 'active' : ''; ?>" data-tab-id="woocommerce">
-                        <?php if ($is_license_valid): ?>
-                            <?php $this->woocommerce->display_settings(); ?>
+                        <?php if ($this->active_tab === 'woocommerce'): ?>
+                            <?php $this->render_woocommerce_tab(); ?>
                         <?php else: ?>
-                            <?php swsib()->license->display_activation_form(); ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
 
                     <!-- PE Subscription Tab -->
                     <div id="subscription-tab" class="swsib-tab-content <?php echo $this->active_tab === 'subscription' ? 'active' : ''; ?>" data-tab-id="subscription">
-                        <?php if ($is_license_valid): ?>
-                            <?php $this->subscription->display_settings(); ?>
+                        <?php if ($this->active_tab === 'subscription'): ?>
+                            <?php $this->render_subscription_tab(); ?>
                         <?php else: ?>
-                            <?php swsib()->license->display_activation_form(); ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
 
                     <!-- Clean Tab -->
                     <div id="clean-tab" class="swsib-tab-content <?php echo $this->active_tab === 'clean' ? 'active' : ''; ?>" data-tab-id="clean">
-                        <?php if ($is_license_valid): ?>
-                            <?php if ($is_db_configured): ?>
-                                <?php $this->clean->display_settings(); ?>
-                            <?php else: ?>
-                                <div class="swsib-notice warning">
-                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
-                                    <p><?php _e('You need to configure DB Connect before using Clean tools.', 'swiftspeed-siberian'); ?></p>
-                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
-                                </div>
-                            <?php endif; ?>
+                        <?php if ($this->active_tab === 'clean'): ?>
+                            <?php 
+                            $license = swsib()->license;
+                            $is_license_valid = $license->is_valid();
+                            $is_db_configured = swsib()->is_db_configured();
+                            
+                            if ($is_license_valid) {
+                                if ($is_db_configured) {
+                                    $this->clean->display_settings();
+                                } else {
+                                    echo '<div class="swsib-notice warning">';
+                                    echo '<p><strong>' . __('DB Connect Required', 'swiftspeed-siberian') . '</strong></p>';
+                                    echo '<p>' . __('You need to configure DB Connect before using Clean tools.', 'swiftspeed-siberian') . '</p>';
+                                    echo '<p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab">' . __('Configure DB Connect', 'swiftspeed-siberian') . '</a></p>';
+                                    echo '</div>';
+                                }
+                            } else {
+                                swsib()->license->display_activation_form();
+                            }
+                            ?>
                         <?php else: ?>
-                            <?php swsib()->license->display_activation_form(); ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
 
                     <!-- Automate Tab -->
                     <div id="automate-tab" class="swsib-tab-content <?php echo $this->active_tab === 'automate' ? 'active' : ''; ?>" data-tab-id="automate">
-                        <?php if ($is_license_valid): ?>
-                            <?php if ($is_db_configured): ?>
-                                <?php $this->automate->display_settings(); ?>
-                            <?php else: ?>
-                                <div class="swsib-notice warning">
-                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
-                                    <p><?php _e('You need to configure DB Connect before using Automation tools.', 'swiftspeed-siberian'); ?></p>
-                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
-                                </div>
-                            <?php endif; ?>
+                        <?php if ($this->active_tab === 'automate'): ?>
+                            <?php 
+                            $license = swsib()->license;
+                            $is_license_valid = $license->is_valid();
+                            $is_db_configured = swsib()->is_db_configured();
+                            
+                            if ($is_license_valid) {
+                                if ($is_db_configured) {
+                                    $this->automate->display_settings();
+                                } else {
+                                    echo '<div class="swsib-notice warning">';
+                                    echo '<p><strong>' . __('DB Connect Required', 'swiftspeed-siberian') . '</strong></p>';
+                                    echo '<p>' . __('You need to configure DB Connect before using Automation tools.', 'swiftspeed-siberian') . '</p>';
+                                    echo '<p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab">' . __('Configure DB Connect', 'swiftspeed-siberian') . '</a></p>';
+                                    echo '</div>';
+                                }
+                            } else {
+                                swsib()->license->display_activation_form();
+                            }
+                            ?>
                         <?php else: ?>
-                            <?php swsib()->license->display_activation_form(); ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
 
                     <!-- Backup & Restore Tab -->
                     <div id="backup-restore-tab" class="swsib-tab-content <?php echo $this->active_tab === 'backup_restore' ? 'active' : ''; ?>" data-tab-id="backup_restore">
-                        <?php if ($is_license_valid): ?>
-                            <?php if ($is_db_configured): ?>
-                                <?php $this->backup_restore->display_settings(); ?>
-                            <?php else: ?>
-                                <div class="swsib-notice warning">
-                                    <p><strong><?php _e('DB Connect Required', 'swiftspeed-siberian'); ?></strong></p>
-                                    <p><?php _e('You need to configure DB Connect before using Backup & Restore tools.', 'swiftspeed-siberian'); ?></p>
-                                    <p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab"><?php _e('Configure DB Connect', 'swiftspeed-siberian'); ?></a></p>
-                                </div>
-                            <?php endif; ?>
+                        <?php if ($this->active_tab === 'backup_restore'): ?>
+                            <?php 
+                            $license = swsib()->license;
+                            $is_license_valid = $license->is_valid();
+                            $is_db_configured = swsib()->is_db_configured();
+                            
+                            if ($is_license_valid) {
+                                if ($is_db_configured) {
+                                    $this->backup_restore->display_settings();
+                                } else {
+                                    echo '<div class="swsib-notice warning">';
+                                    echo '<p><strong>' . __('DB Connect Required', 'swiftspeed-siberian') . '</strong></p>';
+                                    echo '<p>' . __('You need to configure DB Connect before using Backup & Restore tools.', 'swiftspeed-siberian') . '</p>';
+                                    echo '<p><a href="#" class="swsib-tab-link" data-tab="db-connect-tab">' . __('Configure DB Connect', 'swiftspeed-siberian') . '</a></p>';
+                                    echo '</div>';
+                                }
+                            } else {
+                                swsib()->license->display_activation_form();
+                            }
+                            ?>
                         <?php else: ?>
-                            <?php swsib()->license->display_activation_form(); ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
 
                     <!-- Logging Tab -->
                     <div id="logging-tab" class="swsib-tab-content <?php echo $this->active_tab === 'logging' ? 'active' : ''; ?>" data-tab-id="logging">
-                        <?php $this->logging->display_settings(); ?>
+                        <?php if ($this->active_tab === 'logging'): ?>
+                            <?php $this->logging->display_settings(); ?>
+                        <?php else: ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- License Tab -->
                     <div id="license-tab" class="swsib-tab-content <?php echo $this->active_tab === 'license' ? 'active' : ''; ?>" data-tab-id="license">
-                        <?php swsib()->license->display_license_tab(); ?>
+                        <?php if ($this->active_tab === 'license'): ?>
+                            <?php swsib()->license->display_license_tab(); ?>
+                        <?php else: ?>
+                            <div class="swsib-loading-placeholder">
+                                <span class="spinner is-active"></span>
+                                <p><?php _e('Loading tab content...', 'swiftspeed-siberian'); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
         </div>
 
+     
+
         <script>
             jQuery(document).ready(function($) {
-                // Handle clicks on tab links that require license activation.
+                // Handle clicks on tab links that require license activation
                 $('.swsib-tab-link').on('click', function(e) {
                     e.preventDefault();
                     var tabId = $(this).data('tab');
                     $('.swsib-tabs a[href="#' + tabId + '"]').trigger('click');
                 });
+                
                 $('.swsib-tabs a.license-required').on('click', function(e) {
                     if (!<?php echo $is_license_valid ? 'true' : 'false'; ?>) {
                         e.preventDefault();

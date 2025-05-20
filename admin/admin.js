@@ -5,250 +5,35 @@
 (function($) {
     'use strict';
 
+    // Store loaded tab content
+    var loadedTabs = {};
+    // Track tab loading state to prevent double-clicks
+    var isTabLoading = false;
+    // Track the current URL's tab to prevent infinite loops
+    var currentUrlTabId = null;
+
     // Initialize when document is ready
     $(document).ready(function() {
         console.log('SwiftSpeed Siberian admin JS loaded');
 
+        // Get the tab from URL immediately to prevent loops
+        var urlParams = new URLSearchParams(window.location.search);
+        currentUrlTabId = urlParams.get('tab_id');
+        console.log('Current URL tab ID: ' + currentUrlTabId);
+
         // Initialize tab navigation
         initTabs();
         
-        // Initialize toggle switches
-        initToggleSwitches();
-
-        // Initialize color picker
-        if ($.fn.wpColorPicker) {
-            $('.swsib-color-picker').wpColorPicker({
-                change: function(event, ui) {
-                    // Use toHexString() to get a valid hex color
-                    var color = ui.color.toString();
-                    var id = $(this.el).attr('id');
-                    
-                    if (id === 'swsib_options_auto_login_button_color') {
-                        // Store in localStorage for persistence
-                        localStorage.setItem('swsib_button_bg_color', color);
-                        updateButtonPreview(color);
-                    } else if (id === 'swsib_options_auto_login_button_text_color') {
-                        localStorage.setItem('swsib_button_text_color', color);
-                        updateButtonPreview(undefined, color);
-                    } else if (id === 'swsib_options_auto_login_processing_bg_color') {
-                        $('#processing-preview-container').css('background-color', color);
-                    } else if (id === 'swsib_options_auto_login_processing_text_color') {
-                        $('#processing-preview-container').css('color', color);
-                    }
-                },
-                clear: function() {
-                    var id = $(this.el).attr('id');
-                    if (id === 'swsib_options_auto_login_button_color') {
-                        localStorage.setItem('swsib_button_bg_color', '#3a4b79');
-                        updateButtonPreview('#3a4b79');
-                    } else if (id === 'swsib_options_auto_login_button_text_color') {
-                        localStorage.setItem('swsib_button_text_color', '#ffffff');
-                        updateButtonPreview(undefined, '#ffffff');
-                    }
-                }
-            });
+        // Handle any section parameter in the URL
+        var sectionTarget = urlParams.get('section');
+        if (sectionTarget && currentUrlTabId === 'auto_login') {
+            // Delay to ensure the tab content is fully visible and loaded
+            setTimeout(function() {
+                scrollToSection(sectionTarget);
+            }, 1000);
         }
-        
-        // Force an initial update of the button preview shortly after load
-        setTimeout(function() {
-            var storedBgColor = localStorage.getItem('swsib_button_bg_color');
-            var initialColor = storedBgColor || $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
-            var storedTextColor = localStorage.getItem('swsib_button_text_color');
-            var initialTextColor = storedTextColor || $('#swsib_options_auto_login_button_text_color').val() || '#ffffff';
-            
-            updateButtonPreview(initialColor, initialTextColor);
-        }, 100);
-        
-        // Add periodic refresh to ensure colors don't revert
-        setInterval(function() {
-            var storedBgColor = localStorage.getItem('swsib_button_bg_color');
-            var storedTextColor = localStorage.getItem('swsib_button_text_color');
-            updateButtonPreview(storedBgColor, storedTextColor);
-        }, 60000); // Check every minute
-        
-        // Also refresh when tab becomes visible again
-        document.addEventListener('visibilitychange', function() {
-            if (!document.hidden) {
-                var storedBgColor = localStorage.getItem('swsib_button_bg_color');
-                var storedTextColor = localStorage.getItem('swsib_button_text_color');
-                updateButtonPreview(storedBgColor, storedTextColor);
-            }
-        });
-        
-        // DB Connect toggle (renamed from Advanced features)
-        $('#swsib_options_db_connect_enabled').on('change', function() {
-            toggleDbConnect();
-        });
-        
-        // Initialize DB Connect visibility
-        toggleDbConnect();
-        
-        // Test API connection - COMPLETELY REVISED
-        $('#test_api_connection').on('click', function(e) {
-            e.preventDefault();
-            
-            var siberianUrl = $('#swsib_options_auto_login_siberian_url').val();
-            var apiUser = $('#swsib_options_auto_login_api_user').val();
-            var apiPassword = $('#swsib_options_auto_login_api_password').val();
-            
-            // Show validation errors directly in the #api_connection_result
-            if (!siberianUrl) {
-                $('#api_connection_result').html('<div class="swsib-notice error"><p>Please enter Siberian CMS URL</p></div>').show();
-                $('#swsib_options_auto_login_siberian_url').focus();
-                return;
-            }
-            
-            if (!apiUser || !apiPassword) {
-                $('#api_connection_result').html('<div class="swsib-notice error"><p>Please enter API credentials</p></div>').show();
-                if (!apiUser) {
-                    $('#swsib_options_auto_login_api_user').focus();
-                } else {
-                    $('#swsib_options_auto_login_api_password').focus();
-                }
-                return;
-            }
-            
-            var $button = $(this);
-            var originalText = $button.text();
-            
-            $button.text('Testing...').prop('disabled', true);
-            
-            // Hide any existing notices that might be at the top of the page
-            $('.swsib-notice.settings-error').hide();
-            $('.swsib-header + .swsib-notice').remove();
-            
-            // AJAX request to test API connection
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'swsib_test_api',
-                    nonce: swsib_admin.nonce,
-                    url: siberianUrl,
-                    user: apiUser,
-                    password: apiPassword
-                },
-                success: function(response) {
-                    // ONLY show notification in #api_connection_result
-                    if (response.success) {
-                        $('#api_connection_result').html(
-                            '<div class="swsib-notice success"><p><strong>Success:</strong> API connection successful!</p></div>'
-                        ).show();
-                    } else {
-                        $('#api_connection_result').html(
-                            '<div class="swsib-notice error"><p><strong>Error:</strong> ' + (response.data ? response.data.message : 'API connection failed') + '</p></div>'
-                        ).show();
-                    }
-                },
-                error: function(xhr, status, error) {
-                    // ONLY show notification in #api_connection_result
-                    $('#api_connection_result').html(
-                        '<div class="swsib-notice error"><p><strong>Error:</strong> ' + error + '</p></div>'
-                    ).show();
-                },
-                complete: function() {
-                    $button.text(originalText).prop('disabled', false);
-                }
-            });
-        });
-        
-        // Form validation override for hidden required fields
-        $('.swsib-settings-form').on('submit', function(e) {
-            // If DB Connect is disabled, remove required attribute from database fields
-            if (!$('#swsib_options_db_connect_enabled').is(':checked')) {
-                $('#swsib_options_db_connect_host, #swsib_options_db_connect_database, #swsib_options_db_connect_username, #swsib_options_db_connect_password')
-                    .prop('required', false);
-            }
-            
-            // Get current tab
-            var activeTabId = getActiveTabId();
-            
-            // If we're not on the DB Connect tab, ensure db_connect fields aren't required
-            if (activeTabId !== 'db_connect') {
-                $('#swsib_options_db_connect_host, #swsib_options_db_connect_database, #swsib_options_db_connect_username, #swsib_options_db_connect_password')
-                    .prop('required', false);
-            }
-            
-            // Debug submit
-            console.log('Form submitted for tab: ' + activeTabId);
-        });
-        
-        // Test DB connection
-        $('#test_connection').on('click', function(e) {
-            // Let the form submit normally but add a parameter
-            $(this).closest('form').append('<input type="hidden" name="test_connection" value="1">');
-        });
-        
-        // Disable tabs if DB not configured
-        if (!swsib_admin.is_db_configured) {
-            $('.swsib-tabs a.disabled').on('click', function(e) {
-                e.preventDefault();
-                showNotice('warning', 'You must configure database connection settings first.');
-            });
-        }
-        
-        // Update button preview when text changes
-        $('#swsib_options_auto_login_autologin_text').on('input change', function() {
-            var text = $(this).val() || 'App Dashboard';
-            $('.button-preview .swsib-button').text(text);
-        });
-        
-        // Update login button text preview
-        $('#swsib_options_auto_login_login_button_text').on('input change', function() {
-            var text = $(this).val() || 'Login';
-            $('#login-button-preview').text(text);
-        });
-        
-        // Update login message preview
-        $('#swsib_options_auto_login_not_logged_in_message').on('input change', function() {
-            var text = $(this).val() || 'You must be logged in to access or create an app.';
-            $('.login-message').text(text);
-        });
-        
-        // Toggle auto-authenticate settings visibility
-        $('#swsib_options_auto_login_auto_authenticate').on('change', function() {
-            if ($(this).is(':checked')) {
-                $('#auto-authenticate-settings').slideDown();
-            } else {
-                $('#auto-authenticate-settings').slideUp();
-            }
-        });
-        
-        // Toggle login redirect settings visibility
-        $('#swsib_options_auto_login_enable_login_redirect').on('change', function() {
-            if ($(this).is(':checked')) {
-                $('#login-redirect-settings').slideDown();
-            } else {
-                $('#login-redirect-settings').slideUp();
-            }
-        });
-        
-        // Toggle Siberian configuration settings visibility
-        $('#swsib_options_auto_login_enable_siberian_config').on('change', function() {
-            if ($(this).is(':checked')) {
-                $('#siberian-config-settings').slideDown();
-            } else {
-                $('#siberian-config-settings').slideUp();
-            }
-        });
-        
-        // Initialize button preview with current settings
-        var storedBgColor = localStorage.getItem('swsib_button_bg_color');
-        var initialColor = storedBgColor || $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
-        updateButtonPreview(initialColor);
-        
-        // Set initial button text
-        var buttonText = $('#swsib_options_auto_login_autologin_text').val() || 'App Dashboard';
-        $('.button-preview .swsib-button').text(buttonText);
-        
-        // Set initial login button text
-        var loginButtonText = $('#swsib_options_auto_login_login_button_text').val() || 'Login';
-        $('#login-button-preview').text(loginButtonText);
-        
-        // Restore active tab from URL parameter and handle scrolling to sections
-        restoreActiveTab();
     });
-    
+
     /**
      * Get active tab ID
      */
@@ -257,36 +42,7 @@
     }
     
     /**
-     * Restore active tab from URL parameter and handle section scrolling
-     */
-    function restoreActiveTab() {
-        // Get tab ID from URL parameter
-        var urlParams = new URLSearchParams(window.location.search);
-        var tabFromUrl = urlParams.get('tab_id');
-        var sectionTarget = urlParams.get('section');
-        
-        if (tabFromUrl) {
-            // Convert tab_id format to tab selector format (auto_login -> #auto-login-tab)
-            var tabSelector = '#' + tabFromUrl.replace(/_/g, '-') + '-tab';
-            
-            // Activate the tab
-            activateTab(tabSelector);
-            
-            // If there's a section parameter and we're in the auto_login tab, handle scrolling
-            if (sectionTarget && tabFromUrl === 'auto_login') {
-                // Delay to ensure the tab content is fully visible and loaded
-                setTimeout(function() {
-                    scrollToSection(sectionTarget);
-                }, 1000); // Increased delay to 1000ms for more reliability
-            }
-        } else {
-            // Default to first tab
-            activateTab($('.swsib-tabs a:first').attr('href'));
-        }
-    }
-    
-    /**
-     * Scroll to a specific section and highlight it - IMPROVED
+     * Scroll to a specific section and highlight it
      */
     function scrollToSection(sectionId) {
         var $target = $('#' + sectionId);
@@ -296,7 +52,7 @@
             // Scroll to the target section
             $('html, body').animate({
                 scrollTop: $target.offset().top - 50
-            }, 800); // Slower animation for more reliability
+            }, 800);
             
             // Multiple highlight attempts with increasing delays for reliability
             setTimeout(function() {
@@ -348,14 +104,196 @@
     }
     
     /**
+     * Load tab content via AJAX
+     */
+    function loadTabContent(tabId, callback) {
+        if (isTabLoading) {
+            console.log('Tab loading already in progress, skipping redundant load request');
+            return;
+        }
+        
+        isTabLoading = true;
+        
+        // Check if content is already loaded and cached
+        if (loadedTabs[tabId]) {
+            console.log('Using cached content for tab: ' + tabId);
+            
+            // Show loading indicator briefly for consistency
+            var $tabContent = $('#' + tabId.replace(/_/g, '-') + '-tab');
+            $tabContent.html(
+                '<div class="swsib-loading-placeholder">' +
+                '<span class="spinner is-active"></span>' +
+                '<p>' + swsib_admin.loading_text + '</p>' +
+                '</div>'
+            );
+            
+            // Short delay then apply cached content
+            setTimeout(function() {
+                $tabContent.html(loadedTabs[tabId]);
+                $tabContent.addClass('content-loaded');
+                
+                if (typeof callback === 'function') {
+                    callback(loadedTabs[tabId]);
+                }
+                
+                isTabLoading = false;
+            }, 200);
+            
+            return;
+        }
+        
+        console.log('Loading content for tab: ' + tabId);
+        
+        // Show loading indicator
+        $('#' + tabId.replace(/_/g, '-') + '-tab').html(
+            '<div class="swsib-loading-placeholder">' +
+            '<span class="spinner is-active"></span>' +
+            '<p>' + swsib_admin.loading_text + '</p>' +
+            '</div>'
+        );
+        
+        // Make AJAX request to load tab content
+        $.ajax({
+            url: swsib_admin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swsib_load_tab_content',
+                nonce: swsib_admin.nonce,
+                tab_id: tabId
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Check if we need to do a full page reload for this tab
+                    if (response.data.reload_required) {
+                        console.log('Tab requires full page reload. Redirecting to: ' + response.data.url);
+                        
+                        // CRITICAL FIX: Only navigate if we're not already on this tab
+                        if (currentUrlTabId !== tabId) {
+                            window.location.href = response.data.url;
+                            return;
+                        } else {
+                            console.log('Already on tab ' + tabId + ', no need to reload');
+                            isTabLoading = false;
+                        }
+                    } else {
+                        // Store in cache
+                        loadedTabs[tabId] = response.data.content;
+                        
+                        // Update tab content
+                        $('#' + tabId.replace(/_/g, '-') + '-tab').html(response.data.content);
+                        $('#' + tabId.replace(/_/g, '-') + '-tab').addClass('content-loaded');
+                        
+                        if (typeof callback === 'function') {
+                            callback(response.data.content);
+                        }
+                        
+                        isTabLoading = false;
+                    }
+                } else {
+                    $('#' + tabId.replace(/_/g, '-') + '-tab').html(
+                        '<div class="swsib-notice error">' +
+                        '<p>Error loading tab content. Please refresh the page and try again.</p>' +
+                        '<button class="button retry-tab-load" data-tab-id="' + tabId + '">Retry Loading</button>' +
+                        '</div>'
+                    );
+                    
+                    // Add retry button handler
+                    $('.retry-tab-load').on('click', function() {
+                        var retryTabId = $(this).data('tab-id');
+                        isTabLoading = false; // Reset loading state
+                        loadTabContent(retryTabId, callback);
+                    });
+                    
+                    console.error('Error loading tab content:', response);
+                    isTabLoading = false;
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#' + tabId.replace(/_/g, '-') + '-tab').html(
+                    '<div class="swsib-notice error">' +
+                    '<p>Error loading tab content: ' + error + '</p>' +
+                    '<button class="button retry-tab-load" data-tab-id="' + tabId + '">Retry Loading</button>' +
+                    '</div>'
+                );
+                
+                // Add retry button handler
+                $('.retry-tab-load').on('click', function() {
+                    var retryTabId = $(this).data('tab-id');
+                    isTabLoading = false; // Reset loading state
+                    loadTabContent(retryTabId, callback);
+                });
+                
+                console.error('AJAX error loading tab content:', error);
+                isTabLoading = false;
+            }
+        });
+    }
+    
+    /**
+     * Check if a tab requires a full page reload
+     */
+    function doesTabRequireFullReload(tabId) {
+        // Get the tabs requiring full reload array
+        var tabsRequiringReload = [];
+        
+        try {
+            tabsRequiringReload = JSON.parse(swsib_admin.tabs_requiring_full_reload);
+        } catch (e) {
+            console.error('Error parsing tabs requiring reload:', e);
+            // Fallback to a default list
+            tabsRequiringReload = ['db_connect', 'advanced_autologin', 'automate', 'clean', 'backup_restore'];
+        }
+        
+        return tabsRequiringReload.indexOf(tabId) !== -1;
+    }
+    
+    /**
+     * Directly navigate to tab
+     */
+    function navigateToTab(tabId) {
+        // CRITICAL FIX: Only navigate if we're not already on this tab
+        if (currentUrlTabId !== tabId) {
+            window.location.href = updateQueryStringParameter(window.location.href, 'tab_id', tabId);
+        } else {
+            console.log('Already on tab ' + tabId + ', no need to navigate');
+            
+            // Still update the UI to show this tab as active
+            var tabSelector = '#' + tabId.replace(/_/g, '-') + '-tab';
+            
+            // Remove active class from all tabs and tab contents
+            $('.swsib-tabs a').removeClass('active');
+            $('.swsib-tab-content').removeClass('active');
+            
+            // Add active class to specified tab and its content
+            $('.swsib-tabs a[href="' + tabSelector + '"]').addClass('active');
+            $(tabSelector).addClass('active').addClass('content-loaded');
+        }
+    }
+    
+    /**
      * Activate a specific tab
      */
     function activateTab(tabSelector) {
+        if (isTabLoading) {
+            console.log('Tab loading in progress, ignoring tab activation request');
+            return;
+        }
+        
         // Only activate if the tab exists and is not disabled
         var $tab = $('.swsib-tabs a[href="' + tabSelector + '"]');
         if ($tab.length && !$tab.hasClass('disabled')) {
             // Get the tab ID
             var tabId = $tab.attr('data-tab-id');
+            
+            // Debug
+            console.log('Activating tab: ' + tabId + ' (selector: ' + tabSelector + ')');
+            
+            // Check if this tab requires a full page reload
+            if (doesTabRequireFullReload(tabId)) {
+                console.log('Tab ' + tabId + ' requires full page reload');
+                navigateToTab(tabId);
+                return;
+            }
             
             // Remove active class from all tabs and tab contents
             $('.swsib-tabs a').removeClass('active');
@@ -368,14 +306,14 @@
             // Update hidden fields in all forms
             $('input[name="tab_id"]').val(tabId);
             
-            // Update URL with tab ID while preserving other parameters.
-            // Instead of calling pushState directly (which triggers the deprecated navigation store warning)
-            // we check if the WooCommerce modern API is available.
+            // Update URL with tab ID while preserving other parameters
             var newUrl = updateQueryStringParameter(window.location.href, 'tab_id', tabId);
             if (typeof wcNavigation !== 'undefined' && typeof wcNavigation.updateHistory === 'function') {
                 wcNavigation.updateHistory(newUrl);
             } else if (window.history && window.history.pushState) {
                 window.history.pushState({}, '', newUrl);
+                // Update our tracking variable
+                currentUrlTabId = tabId;
             }
             
             // Update required attributes based on active tab
@@ -387,16 +325,16 @@
                     .prop('required', false);
             }
             
-            // If the activated tab is Auto Login, update the button preview
-            if (tabId === 'auto_login') {
-                var storedBgColor = localStorage.getItem('swsib_button_bg_color');
-                var storedTextColor = localStorage.getItem('swsib_button_text_color');
-                var bgColor = storedBgColor || $('#swsib_options_auto_login_button_color').val() || '#3a4b79';
-                var textColor = storedTextColor || $('#swsib_options_auto_login_button_text_color').val() || '#ffffff';
-                updateButtonPreview(bgColor, textColor);
+            // Load tab content via AJAX if not already loaded
+            if (swsib_admin.lazy_loading_enabled && !$(tabSelector).hasClass('content-loaded')) {
+                loadTabContent(tabId, function() {
+                    $(tabSelector).addClass('content-loaded');
+                });
             }
             
             console.log('Tab activated: ' + tabId);
+        } else {
+            console.error('Tab not found or disabled: ' + tabSelector);
         }
     }
     
@@ -404,17 +342,36 @@
      * Initialize tabs functionality
      */
     function initTabs() {
+        // Log tab initialization
+        console.log('Initializing tabs');
+        
+        console.log('Active tab from URL: ' + currentUrlTabId);
+        
         // Set first tab as active if none is
         if ($('.swsib-tab-content.active').length === 0) {
+            console.log('No active tab found, setting first tab as active');
             $('.swsib-tabs a:first').addClass('active');
             $('.swsib-tab-content:first').addClass('active');
+        } else {
+            console.log('Active tab found: ' + $('.swsib-tab-content.active').attr('id'));
+            // Mark the active tab as content-loaded
+            $('.swsib-tab-content.active').addClass('content-loaded');
         }
         
         // Handle tab clicks
-        $('.swsib-tabs a:not(.disabled)').on('click', function(e) {
+        $('.swsib-tabs a:not(.disabled)').off('click').on('click', function(e) {
             e.preventDefault();
             // Get the target tab
             var target = $(this).attr('href');
+            var tabId = $(this).attr('data-tab-id');
+            
+            // Don't process if it's already the active tab
+            if (tabId === currentUrlTabId && doesTabRequireFullReload(tabId)) {
+                console.log('Already on tab ' + tabId + ', ignoring click');
+                return;
+            }
+            
+            console.log('Tab clicked: ' + target);
             // Activate the tab
             activateTab(target);
         });
@@ -434,20 +391,7 @@
     }
     
     /**
-     * Initialize toggle switches
-     */
-    function initToggleSwitches() {
-        $('.switch input[type="checkbox"]').each(function() {
-            var $switch = $(this).closest('.switch');
-            var $slider = $switch.find('.slider');
-            if (!$slider.hasClass('round')) {
-                $slider.addClass('round');
-            }
-        });
-    }
-    
-    /**
-     * Toggle DB Connect based on checkbox (renamed from toggleAdvancedFeatures)
+     * Toggle DB Connect based on checkbox
      */
     function toggleDbConnect() {
         var isEnabled = $('#swsib_options_db_connect_enabled').is(':checked');
@@ -520,8 +464,6 @@
         // Set the hover color CSS variable by slightly darkening the background color
         var hoverColor = adjustColor(bgColor, -20);
         document.documentElement.style.setProperty('--button-hover-color', hoverColor);
-        
-        console.log('Button preview updated with bg color: ' + bgColor + ', text color: ' + textColor);
     }
     
     /**

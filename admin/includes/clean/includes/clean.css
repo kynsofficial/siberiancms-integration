@@ -1,0 +1,542 @@
+/**
+ * SwiftSpeed Siberian - Clean Feature Styles (Consolidated + Updated)
+ */
+
+/* -----------------------------------
+   General Layout
+   ----------------------------------- */
+.swsib-clean-container {
+    margin-top: 20px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    padding: 20px;
+}
+
+/* -----------------------------------
+   Tab Navigation
+   ----------------------------------- */
+.swsib-clean-tabs,
+.swsib-clean-tab-navigation {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+.swsib-clean-tabs ul,
+.swsib-clean-tab-navigation ul {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.swsib-clean-tabs li,
+.swsib-clean-tab-navigation li {
+    margin-right: 2px;
+    margin-bottom: -1px;
+}
+.swsib-clean-tabs a,
+.swsib-clean-tab-navigation a {
+    display: block;
+    padding: 10px 20px;
+    text-decoration: none;
+    color: #555;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 3px 3px 0 0;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+.swsib-clean-tabs a:hover,
+.swsib-clean-tab-navigation a:hover {
+    color: #3a4b79;
+}
+.swsib-clean-tabs a.active,
+.swsib-clean-tab-navigation a.active {
+    background-color: #fff;
+    color: #3a4b79;
+    border-color: #ddd;
+    border-bottom-color: #fff;
+    font-weight: 600;
+}
+
+/* -----------------------------------
+   Tab Content Panes
+   ----------------------------------- */
+.swsib-clean-tab-content {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-top: none;
+    padding: 20px;
+    border-radius: 0 0 3px 3px;
+    min-height: 300px;
+}
+.swsib-clean-tab-pane {
+    display: none;
+}
+.swsib-clean-tab-pane.active {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* -----------------------------------
+   Search & Controls
+   ----------------------------------- */
+.swsib-clean-search-box {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.swsib-clean-search-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+.swsib-clean-actions,
+.swsib-clean-actions-left,
+.swsib-clean-actions-right {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.swsib-clean-actions-left { flex: 1; }
+.swsib-clean-actions-right { justify-content: flex-end; }
+
+.swsib-clean-button {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f7f7f7;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+}
+.swsib-clean-button:hover { background-color: #f0f0f0; }
+.swsib-clean-button:disabled,
+.swsib-clean-button.disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+.swsib-clean-button.primary {
+    background-color: #3a4b79;
+    color: #fff;
+    border-color: #2f3c62;
+}
+.swsib-clean-button.primary:hover { background-color: #2f3c62; }
+.swsib-clean-button.danger {
+    background-color: #dc3545;
+    color: #fff;
+    border-color: #bd2130;
+}
+.swsib-clean-button.danger:hover { background-color: #bd2130; }
+.swsib-clean-button.warning {
+    background-color: #ffc107;
+    color: #212529;
+    border-color: #d39e00;
+}
+.swsib-clean-button.warning:hover { background-color: #e0a800; }
+.swsib-clean-button.info {
+    background-color: #17a2b8;
+    color: #fff;
+    border-color: #138496;
+}
+.swsib-clean-button.info:hover { background-color: #138496; }
+.swsib-clean-button.success {
+    background-color: #28a745;
+    color: #fff;
+    border-color: #1e7e34;
+}
+.swsib-clean-button.success:hover { background-color: #218838; }
+
+/* -----------------------------------
+   Status Badges
+   ----------------------------------- */
+.swsib-clean-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 100px;
+    /* Removed text-transform: uppercase */
+}
+.swsib-clean-badge.success {
+    background-color: #28a745;
+    color: #fff;
+}
+.swsib-clean-badge.danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+.swsib-clean-badge.warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+.swsib-clean-badge.info {
+    background-color: #17a2b8;
+    color: #fff;
+}
+
+/* -----------------------------------
+   Notices
+   ----------------------------------- */
+.swsib-notice {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+.swsib-notice p {
+    margin: 0;
+}
+.swsib-notice.info {
+    background-color: #e5f5fa;
+    border-color: #17a2b8;
+    color: #0c525d;
+}
+.swsib-notice.warning {
+    background-color: #fff8e6;
+    border-color: #ffc107;
+    color: #856404;
+}
+.swsib-notice.danger {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+.swsib-notice.success {
+    background-color: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+/* -----------------------------------
+   Backup-First Container (Reminder Banner)
+   ----------------------------------- */
+.backup-first-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f8ff;
+    border: 1px solid #3498db;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.backup-first-icon {
+    font-size: 24px;
+    color: #3498db;
+}
+.backup-first-message {
+    flex: 1;
+}
+.backup-first-button {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+.backup-first-button:hover {
+    background-color: #2980b9;
+}
+
+/* -----------------------------------
+   Refresh Button
+   ----------------------------------- */
+.swsib-clean-refresh-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.swsib-clean-refresh-button .refresh-icon {
+    color: white;
+    font-size: 16px;
+    display: inline-block;
+}
+
+/* -----------------------------------
+   Tables & Pagination
+   ----------------------------------- */
+.swsib-clean-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.swsib-clean-table th,
+.swsib-clean-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+.swsib-clean-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+    white-space: nowrap;
+    position: relative;
+}
+.swsib-clean-table th.sortable {
+    cursor: pointer;
+}
+.swsib-clean-table th.sortable:after {
+    content: "\2195"; /* Up/down arrows */
+    font-size: 12px;
+    color: #999;
+    margin-left: 5px;
+}
+.swsib-clean-table th.sort-asc:after {
+    content: "\2191"; /* Up arrow */
+    color: #333;
+}
+.swsib-clean-table th.sort-desc:after {
+    content: "\2193"; /* Down arrow */
+    color: #333;
+}
+.swsib-clean-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+.swsib-clean-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.swsib-clean-table .checkbox-cell { width: 30px; text-align: center; }
+.swsib-clean-table .actions-cell  { width: 100px; white-space: nowrap; }
+.swsib-clean-table .no-data-row td {
+    text-align: center; padding: 20px; color: #666;
+}
+
+/* Loading indicator in tables */
+.swsib-clean-table .loading-indicator {
+    padding: 30px;
+    text-align: center;
+    font-size: 15px;
+    color: #666;
+    background-color: #f9f9f9;
+}
+.swsib-clean-table .loading-indicator .swsib-clean-spinner {
+    margin-right: 10px;
+    border-color: rgba(0,0,0,0.1);
+    border-top-color: #3a4b79;
+}
+.swsib-clean-table .error-message {
+    padding: 20px;
+    color: #dc3545;
+    background-color: #f8f8f8;
+    font-weight: 500;
+}
+
+.swsib-clean-pagination {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 15px; padding: 10px 0; border-top: 1px solid #f0f0f0;
+}
+.swsib-clean-pagination-info { color: #666; font-size: 13px; }
+.swsib-clean-pagination-controls {
+    display: flex; gap: 10px;
+}
+.swsib-clean-pagination-controls button {
+    padding: 5px 10px; border: 1px solid #ddd;
+    background-color: #fff; cursor: pointer; border-radius: 3px;
+}
+.swsib-clean-pagination-controls button:hover {
+    background-color: #f0f0f0;
+}
+.swsib-clean-pagination-controls button.active {
+    background-color: #3a4b79; color: #fff; border-color: #2f3c62;
+}
+.swsib-clean-pagination-controls button:disabled {
+    opacity: 0.5; cursor: not-allowed;
+}
+
+/* -----------------------------------
+   Modals
+   ----------------------------------- */
+.swsib-clean-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; opacity: 0; visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.swsib-clean-modal-overlay.active {
+    opacity: 1; visibility: visible;
+}
+.swsib-clean-modal {
+    background-color: #fff; border-radius: 5px;
+    padding: 20px; width: 600px; max-width: 95%;
+    max-height: 95vh; overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform: translateY(-20px); opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.swsib-clean-modal-overlay.active .swsib-clean-modal {
+    transform: translateY(0); opacity: 1;
+}
+.swsib-clean-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 15px; padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+.swsib-clean-modal-header h3 {
+    margin: 0; font-size: 18px; color: #3a4b79;
+}
+.swsib-clean-modal-close {
+    background: none; border: none; font-size: 24px; cursor: pointer;
+    color: #666;
+}
+.swsib-clean-modal-close:hover { color: #333; }
+.swsib-clean-modal-body   { margin-bottom: 20px; }
+.swsib-clean-modal-footer {
+    display: flex; justify-content: flex-end; gap: 15px;
+    padding-top: 15px; border-top: 1px solid #ddd;
+}
+
+/* -----------------------------------
+   Progress Indicators & Logs
+   ----------------------------------- */
+.swsib-clean-progress {
+    margin: 20px 0; display: none; background-color: #f9f9f9;
+    border: 1px solid #ddd; border-radius: 5px; padding: 15px;
+}
+.swsib-clean-progress.active { display: block; }
+.swsib-clean-progress-bar {
+    height: 20px; background-color: #f0f0f0; border-radius: 10px;
+    overflow: hidden; margin-bottom: 10px; border: 1px solid #ddd;
+}
+.swsib-clean-progress-bar-fill {
+    height: 100%; background-color: #3a4b79; width: 0;
+    transition: width 0.5s ease;
+}
+.swsib-clean-progress-text {
+    font-size: 14px; color: #333; margin-bottom: 15px; font-weight: 500;
+}
+
+.swsib-clean-log {
+    max-height: 250px; overflow-y: auto; background-color: #f7f7f7;
+    border: 1px solid #ddd; border-radius: 4px; padding: 10px;
+    font-family: monospace; font-size: 13px; line-height: 1.5; display: none;
+}
+.swsib-clean-log.active { display: block; }
+.swsib-clean-log-entry {
+    margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #eee;
+}
+.swsib-clean-log-entry:last-child {
+    margin-bottom: 0; padding-bottom: 0; border-bottom: none;
+}
+.swsib-clean-log-entry.success { color: #28a745; }
+.swsib-clean-log-entry.error   { color: #dc3545; }
+.swsib-clean-log-entry.warning { color: #ffc107; }
+.swsib-clean-log-entry.info    { color: #17a2b8; }
+
+/* -----------------------------------
+   Messages
+   ----------------------------------- */
+.swsib-clean-message {
+    margin: 20px 0; padding: 15px 20px; border-left: 4px solid transparent;
+    border-radius: 4px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.05);
+}
+.swsib-clean-message.info    { border-color: #3498db; background: #f0f8ff; }
+.swsib-clean-message.warning { border-color: #ffb900; background: #fffaeb; }
+.swsib-clean-message.error   { border-color: #dc3545; background: #fef7f7; }
+.swsib-clean-message.success { border-color: #28a745; background: #f7fcf7; }
+
+/* -----------------------------------
+   Spinner
+   ----------------------------------- */
+.swsib-clean-spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 3px solid rgba(255,255,255,0.3); border-radius: 50%;
+    border-top-color: #fff; animation: swsib-clean-spin 1s linear infinite;
+    vertical-align: middle; margin-right: 5px;
+}
+@keyframes swsib-clean-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* -----------------------------------
+   Status Row Styling 
+   ----------------------------------- */
+.swsib-clean-table tr.locked-app {
+    background-color: rgba(255, 193, 7, 0.05);
+}
+.swsib-clean-table tr.inactive-user {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+/* -----------------------------------
+   Folder Cleanup Placeholder
+   ----------------------------------- */
+.swsib-clean-folder-placeholder {
+    text-align: center; padding: 50px 20px;
+    background-color: #f9f9f9; border: 2px dashed #ddd;
+    border-radius: 5px; margin-bottom: 20px;
+}
+.swsib-clean-folder-placeholder h3 { margin-top: 0; font-size: 20px; color: #3a4b79; }
+.swsib-clean-folder-placeholder p  { color: #666; margin-bottom: 20px; }
+
+/* -----------------------------------
+   Responsive Adjustments
+   ----------------------------------- */
+@media (max-width: 768px) {
+    .swsib-clean-actions,
+    .swsib-clean-actions-left,
+    .swsib-clean-actions-right {
+        flex-direction: column;
+    }
+    .swsib-clean-table,
+    .swsib-clean-tab-content {
+        overflow-x: auto;
+    }
+    .swsib-clean-search-box {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .swsib-clean-search-input {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}
+
+/* -----------------------------------
+   Utility Classes
+   ----------------------------------- */
+.swsib-clean-text-truncate {
+    max-width: 150px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    display: inline-block; vertical-align: middle;
+}
+.swsib-text-center { text-align: center; }
+.swsib-text-right  { text-align: right; }
+.swsib-mt-20       { margin-top: 20px; }
+.swsib-mb-20       { margin-bottom: 20px; }
+.swsib-hidden,
+.swsib-clean-hidden { display: none !important; }
+
+/* -----------------------------------
+   Fade-in Animation
+   ----------------------------------- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

@@ -34,9 +34,11 @@ class SwiftSpeed_Siberian_Logging_Manager {
             'backend' => 'License Backend',
             'frontend' => 'License Frontend'
         ),
-        'db_connect' => array(
+        'dbconnect' => array(
             'backend' => 'DB Connect Backend',
-            'frontend' => 'DB Connect Frontend'
+        ),
+        'fileconnect' => array(
+            'backend' => 'File Connect Backend',
         ),
         'woocommerce' => array(
             'backend' => 'WooCommerce Integration Backend',
@@ -45,7 +47,7 @@ class SwiftSpeed_Siberian_Logging_Manager {
        'subscription' => array(
             'backend' => 'Subscription Integration Backend',
             'database' => 'Subscription Integration Database',
-            'frontend' => 'Subscription Integration Frontend',
+            'frontend' => 'Subscription Integration Frontend'
 
 
         ),
@@ -53,11 +55,20 @@ class SwiftSpeed_Siberian_Logging_Manager {
             'backend' => 'Clean Backend'
         ),
         'automate' => array(
-            'backend' => 'Automate Backend'
+            'backend' => 'Automate Backend'          
         ),
+
+        'backup' => array(
+            'backup' => 'Backup Files',
+            'restore' => 'Restore Files',
+            'storage' => 'Backup Storage'          
+        ),
+
+
         'admin' => array(
             'backend' => 'Admin Backend'
         ),
+    
         'system' => array(
             'error' => 'System Errors',
             'info' => 'System Info'

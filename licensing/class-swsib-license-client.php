@@ -49,6 +49,11 @@ class SwiftSpeed_Siberian_License_Client {
     private $license_notice = null;
     
     /**
+     * Tracking when the last license check was performed
+     */
+    private $last_check_time = 0;
+    
+    /**
      * Private constructor (singleton pattern)
      */
     private function __construct() {
@@ -57,7 +62,9 @@ class SwiftSpeed_Siberian_License_Client {
         
         // Hooks
         add_action('admin_init', array($this, 'process_license_form'), 5);
-        add_action('admin_init', array($this, 'check_license_status'), 30);
+        
+        // Only run the license check when actually needed
+        add_action('admin_init', array($this, 'maybe_check_license_status'), 30);
 
         // Remove WordPress settings errors related to license
         add_action('admin_init', array($this, 'remove_all_license_notices'), 1);
@@ -95,27 +102,42 @@ class SwiftSpeed_Siberian_License_Client {
             $('.swsib-tabs a').on('click', function() {
                 var tabId = $(this).data('tab-id');
                 
-                // If navigating to a premium tab, refresh license status
+                // If navigating to a premium tab, refresh license status only if needed
                 if (premiumTabs.includes(tabId)) {
-                    // Make AJAX call to refresh license
-                    $.ajax({
-                        url: ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'swsib_refresh_license',
-                            nonce: '<?php echo wp_create_nonce('swsib-refresh-license'); ?>'
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                // Instead of reloading the page, if the license is invalid, switch to the License tab
-                                if (!response.data.is_valid) {
-                                    $('.swsib-tabs a[href="#license-tab"]').trigger('click');
+                    // Check if we need to refresh (using a hidden input to track)
+                    var lastRefresh = parseInt($('#swsib-license-last-refresh').val() || 0);
+                    var now = Math.floor(Date.now() / 1000);
+                    
+                    // Only refresh once every 5 minutes maximum
+                    if ((now - lastRefresh) > 300) { 
+                        // Make AJAX call to refresh license
+                        $.ajax({
+                            url: ajaxurl,
+                            type: 'POST',
+                            data: {
+                                action: 'swsib_refresh_license',
+                                nonce: '<?php echo wp_create_nonce('swsib-refresh-license'); ?>'
+                            },
+                            success: function(response) {
+                                // Update the last refresh time
+                                $('#swsib-license-last-refresh').val(now);
+                                
+                                if (response.success) {
+                                    // Instead of reloading the page, if the license is invalid, switch to the License tab
+                                    if (!response.data.is_valid) {
+                                        $('.swsib-tabs a[href="#license-tab"]').trigger('click');
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
             });
+            
+            // Add hidden field to track last refresh time if it doesn't exist
+            if (!$('#swsib-license-last-refresh').length) {
+                $('body').append('<input type="hidden" id="swsib-license-last-refresh" value="0">');
+            }
         });
         </script>
         <?php
@@ -217,24 +239,56 @@ class SwiftSpeed_Siberian_License_Client {
     }
     
     /* -------------------------------------------------------------------------
-        PERIODIC LICENSE CHECK
+        PERIODIC LICENSE CHECK - OPTIMIZED FOR PERFORMANCE
        ------------------------------------------------------------------------- */
     
     /**
-     * Check license status occasionally (once per day) or on forced param
+     * Check license status only when necessary
+     * This is a performance-optimized version that minimizes API calls
      */
-    public function check_license_status() {
-        $last_check = get_option('swsib_license_last_check', 0);
-        $now        = time();
+    public function maybe_check_license_status() {
+        // Only check license on specific admin pages that need it
+        if (!$this->should_check_license()) {
+            return;
+        }
         
-        // Only once a day unless forced via ?force_license_check=1
-        if (($now - $last_check) < DAY_IN_SECONDS && !isset($_GET['force_license_check'])) {
+        $last_check = get_option('swsib_license_last_check', 0);
+        $now = time();
+        
+        // Only check every few hours or when forced via URL parameter
+        if (($now - $last_check) < 3 * HOUR_IN_SECONDS && !isset($_GET['force_license_check'])) {
             return;
         }
         
         // Save time & do a forced check now
         update_option('swsib_license_last_check', $now);
         $this->is_valid(true);
+    }
+
+    /**
+     * Determine if we should check license status based on current context
+     */
+    private function should_check_license() {
+        // Check if we're on a page where license status matters
+        $screen = get_current_screen();
+        
+        // No need to check license on most admin pages
+        if (!$screen || strpos($screen->id, 'swsib-integration') === false) {
+            return false;
+        }
+        
+        // Check if we're on a premium tab that requires license check
+        $premium_tabs = array('woocommerce', 'subscription', 'clean', 'automate', 'advanced_autologin', 'backup_restore');
+        
+        // Get current tab from URL
+        $tab_id = isset($_GET['tab_id']) ? sanitize_key($_GET['tab_id']) : '';
+        
+        // Only check if we're on a premium tab or license tab
+        if ($tab_id === 'license' || in_array($tab_id, $premium_tabs)) {
+            return true;
+        }
+        
+        return false;
     }
     
     /* -------------------------------------------------------------------------
@@ -259,17 +313,23 @@ class SwiftSpeed_Siberian_License_Client {
     }
     
     /* -------------------------------------------------------------------------
-        LICENSE VALIDATION & CACHING
+        LICENSE VALIDATION & CACHING - PERFORMANCE OPTIMIZED
        ------------------------------------------------------------------------- */
     
     /**
      * Check if license is valid + activated on this site
+     * 
+     * @param bool $force_check Whether to force a fresh API check
+     * @return bool Whether license is valid and activated
      */
     public function is_valid($force_check = false) {
-        // If we have a known status and not forcing a re-check, just reuse
+        // Check if we've already performed a check in this request
         if (!$force_check && $this->license_status !== null) {
             return $this->license_status && $this->is_activated_on_site;
         }
+        
+        // Record time of this check for rate limiting
+        $this->last_check_time = time();
         
         // Get license key from user settings
         $license_key = $this->get_license_key();
@@ -517,21 +577,33 @@ class SwiftSpeed_Siberian_License_Client {
     }
     
     /**
-     * Return license details ( triggers is_valid if not set )
+     * Return license details (uses cached data when possible)
      */
     public function get_license_details() {
         if ($this->license_details === null) {
-            $this->is_valid(); // triggers a check
+            // Try to get from transient first before triggering a check
+            $cached_status = get_transient('swsib_license_check');
+            if ($cached_status !== false && isset($cached_status['details'])) {
+                $this->license_details = $cached_status['details'];
+            } else {
+                $this->is_valid(false); // trigger non-forced check
+            }
         }
         return $this->license_details;
     }
     
     /**
-     * Return whether license is activated on this site ( triggers is_valid if unknown )
+     * Return whether license is activated on this site (uses cached data when possible)
      */
     public function is_activated_on_site() {
         if ($this->is_activated_on_site === null) {
-            $this->is_valid();
+            // Try to get from transient first
+            $cached_activated = get_transient('swsib_license_activated');
+            if ($cached_activated !== false) {
+                $this->is_activated_on_site = $cached_activated;
+            } else {
+                $this->is_valid(false); // trigger non-forced check
+            }
         }
         return $this->is_activated_on_site;
     }
@@ -685,11 +757,25 @@ class SwiftSpeed_Siberian_License_Client {
             return;
         }
         
+        // Check when the last check was performed to avoid excessive API calls
+        $now = time();
+        if (($now - $this->last_check_time) < 60 && $this->license_status !== null) {
+            // Return cached result if checked within the last minute
+            wp_send_json_success(array(
+                'is_valid' => $this->license_status && $this->is_activated_on_site,
+                'message' => 'Using cached license status',
+                'cached' => true
+            ));
+            return;
+        }
+        
+        // Perform a forced check
         $is_valid = $this->is_valid(true);
         
         wp_send_json_success(array(
             'is_valid' => $is_valid,
-            'message' => $is_valid ? 'License is valid' : 'License is invalid'
+            'message' => $is_valid ? 'License is valid' : 'License is invalid',
+            'cached' => false
         ));
     }
     

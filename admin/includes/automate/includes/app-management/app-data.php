@@ -25,7 +25,12 @@ class SwiftSpeed_Siberian_App_Data {
     /**
      * Chunk size for batch processing
      */
-    private $chunk_size = 50;
+    private $chunk_size = 5;
+    
+    /**
+     * Cache for tables with app_id column (to avoid repeated queries)
+     */
+    private $app_id_tables = null;
     
     /**
      * Constructor
@@ -647,36 +652,120 @@ private function ensure_valid_connection() {
     }
     
     /**
-     * Delete all related data for an app
+     * Get all tables that have app_id column (cached for performance)
+     */
+    private function get_app_id_tables() {
+        if ($this->app_id_tables !== null) {
+            return $this->app_id_tables;
+        }
+        
+        if (!$this->db_connection) {
+            $this->app_id_tables = array();
+            return array();
+        }
+        
+        $tables_query = "SELECT DISTINCT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                      WHERE COLUMN_NAME = 'app_id' 
+                      AND TABLE_SCHEMA = '{$this->db_name}'
+                      AND TABLE_NAME != 'application'";
+        
+        $tables_result = $this->db_connection->query($tables_query);
+        
+        if (!$tables_result) {
+            $this->log_message("Failed to get tables with app_id column: " . $this->db_connection->error);
+            $this->app_id_tables = array();
+            return array();
+        }
+        
+        $tables = array();
+        while ($table_row = $tables_result->fetch_assoc()) {
+            $tables[] = $table_row['TABLE_NAME'];
+        }
+        
+        $this->app_id_tables = $tables;
+        return $tables;
+    }
+    
+    /**
+     * Delete all related data for an app (legacy method - kept for compatibility)
      */
     public function delete_app_data($app_id) {
         if (!$this->db_connection) {
             throw new Exception("Database connection not available");
         }
         
-        // Find tables with app_id column
-        $tables_query = "SELECT DISTINCT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-                      WHERE COLUMN_NAME = 'app_id' 
-                      AND TABLE_SCHEMA = '{$this->db_name}'";
-        
-        $tables_result = $this->db_connection->query($tables_query);
-        
-        if (!$tables_result) {
-            throw new Exception("Failed to get tables with app_id column: " . $this->db_connection->error);
-        }
+        // Get tables with app_id column
+        $tables = $this->get_app_id_tables();
         
         // Delete from each table that has an app_id column
-        while ($table_row = $tables_result->fetch_assoc()) {
-            $table_name = $table_row['TABLE_NAME'];
-            
-            // Skip application table as we'll delete from it separately
-            if ($table_name === 'application') {
-                continue;
-            }
-            
+        foreach ($tables as $table_name) {
             $delete_query = "DELETE FROM {$table_name} WHERE app_id = $app_id";
             $this->db_connection->query($delete_query);
         }
+    }
+    
+    /**
+     * Bulk delete all related data for multiple apps (OPTIMIZED)
+     * This is the new high-performance method
+     */
+    public function bulk_delete_app_data($app_ids) {
+        if (!$this->db_connection || empty($app_ids)) {
+            return;
+        }
+        
+        // Convert app_ids to a safe string for IN clause
+        $app_ids_str = implode(',', array_map('intval', $app_ids));
+        
+        if (empty($app_ids_str)) {
+            return;
+        }
+        
+        // Get tables with app_id column
+        $tables = $this->get_app_id_tables();
+        
+        // Delete from each table that has an app_id column using bulk IN clause
+        foreach ($tables as $table_name) {
+            $delete_query = "DELETE FROM {$table_name} WHERE app_id IN ({$app_ids_str})";
+            $result = $this->db_connection->query($delete_query);
+            
+            if (!$result) {
+                $this->log_message("Failed to bulk delete from table {$table_name}: " . $this->db_connection->error);
+            } else {
+                $affected_rows = $this->db_connection->affected_rows;
+                if ($affected_rows > 0) {
+                    $this->log_message("Bulk deleted {$affected_rows} records from table {$table_name}");
+                }
+            }
+        }
+    }
+    
+    /**
+     * Bulk delete apps from application table (OPTIMIZED)
+     */
+    public function bulk_delete_applications($app_ids) {
+        if (!$this->db_connection || empty($app_ids)) {
+            return false;
+        }
+        
+        // Convert app_ids to a safe string for IN clause
+        $app_ids_str = implode(',', array_map('intval', $app_ids));
+        
+        if (empty($app_ids_str)) {
+            return false;
+        }
+        
+        $app_query = "DELETE FROM application WHERE app_id IN ({$app_ids_str})";
+        $result = $this->db_connection->query($app_query);
+        
+        if (!$result) {
+            $this->log_message("Failed to bulk delete applications: " . $this->db_connection->error);
+            return false;
+        }
+        
+        $affected_rows = $this->db_connection->affected_rows;
+        $this->log_message("Bulk deleted {$affected_rows} applications from application table");
+        
+        return true;
     }
     
     /**

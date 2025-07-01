@@ -35,7 +35,17 @@ class SwiftSpeed_Siberian_WP_Tasks {
     /**
      * Chunk size for processing large datasets
      */
-    private $chunk_size = 50;
+    private $chunk_size = 5; // Increased from 50 to 100
+    
+    /**
+     * Maximum batches to process in a single run
+     */
+    private $max_batches_per_run = 10;
+    
+    /**
+     * Flag to indicate if we're processing in the background
+     */
+    private $is_background_processing = false;
     
     /**
      * Constructor
@@ -82,6 +92,13 @@ class SwiftSpeed_Siberian_WP_Tasks {
         
         // Add direct handler for task execution
         add_action('swsib_run_scheduled_task', array($this, 'handle_scheduled_task'), 10, 2);
+        
+        // Add handler for loopback requests
+        add_action('wp_ajax_nopriv_swsib_wp_tasks_loopback', array($this, 'handle_loopback_request'));
+        add_action('wp_ajax_swsib_wp_tasks_loopback', array($this, 'handle_loopback_request'));
+        
+        // Set up background processing check for active tasks
+        add_action('admin_init', array($this, 'check_active_background_tasks'));
     }
     
     /**
@@ -116,6 +133,9 @@ class SwiftSpeed_Siberian_WP_Tasks {
         add_action('wp_ajax_swsib_get_unsynced_users_count', array($this->data, 'ajax_get_unsynced_users_count'));
         // Preview data handler
         add_action('wp_ajax_swsib_preview_wp_tasks_data', array($this->data, 'ajax_preview_wp_tasks_data'));
+        
+        // Background processing status check
+        add_action('wp_ajax_swsib_check_background_task_status', array($this, 'ajax_check_background_task_status'));
     }
     
     /**
@@ -144,7 +164,95 @@ class SwiftSpeed_Siberian_WP_Tasks {
     }
     
     /**
+     * Check for active background tasks on admin page load
+     */
+    public function check_active_background_tasks() {
+        // Only check in admin area
+        if (!is_admin()) {
+            return;
+        }
+        
+        // Check for running tasks
+        $tasks = array('spam_users', 'unsynced_users');
+        $active_tasks = array();
+        
+        foreach ($tasks as $task) {
+            $progress_file = $this->get_progress_file($task);
+            if (file_exists($progress_file)) {
+                $progress_data = json_decode(file_get_contents($progress_file), true);
+                if ($progress_data && isset($progress_data['status']) && $progress_data['status'] === 'running') {
+                    // Check if task has been updated recently (within 5 minutes)
+                    if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) < 300) {
+                        $active_tasks[$task] = $progress_data;
+                    }
+                }
+            }
+        }
+        
+        if (!empty($active_tasks)) {
+            // Store active tasks in transient for JS to pick up
+            set_transient('swsib_active_background_tasks', $active_tasks, 300);
+            
+            // For each active task, ensure a loopback is triggered if needed
+            foreach ($active_tasks as $task => $data) {
+                $this->ensure_background_processing($task);
+            }
+        } else {
+            delete_transient('swsib_active_background_tasks');
+        }
+    }
+    
+    /**
+     * AJAX handler to check background task status
+     */
+    public function ajax_check_background_task_status() {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'swsib-automate-nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed.'));
+            return;
+        }
+        
+        // Get active tasks
+        $active_tasks = get_transient('swsib_active_background_tasks');
+        
+        if ($active_tasks) {
+            wp_send_json_success(array(
+                'active_tasks' => $active_tasks
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'No active background tasks.'));
+        }
+    }
+    
+    /**
+     * Ensure background processing is continuing for a task
+     */
+    private function ensure_background_processing($task) {
+        $progress_file = $this->get_progress_file($task);
+        if (!file_exists($progress_file)) {
+            return false;
+        }
+        
+        $progress_data = json_decode(file_get_contents($progress_file), true);
+        if (!$progress_data || !isset($progress_data['status']) || $progress_data['status'] !== 'running') {
+            return false;
+        }
+        
+        // Check if the last update was less than 1 minute ago - if so, assume it's still running
+        if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) < 60) {
+            return true;
+        }
+        
+        // If it's been more than 1 minute, trigger a new loopback request
+        $this->log_message("Restarting background processing for task: $task");
+        $this->trigger_loopback_request($task);
+        
+        return true;
+    }
+    
+    /**
      * Handle scheduled tasks directly - Improved to use TRUE batching across scheduler runs
+     * and now processes multiple batches until completion using loopback requests
      */
     public function handle_scheduled_task($task_type, $task_args) {
         $this->log_message("Handling scheduled task: $task_type with args: " . print_r($task_args, true));
@@ -193,9 +301,9 @@ class SwiftSpeed_Siberian_WP_Tasks {
             if ($progress_exists) {
                 $progress_data = json_decode(file_get_contents($progress_file), true);
                 
-                // If the task is already completed, start fresh
-                if (isset($progress_data['status']) && $progress_data['status'] === 'completed') {
-                    $this->log_message("Previous task was already completed, starting fresh");
+                // If the task is already completed or cancelled, start fresh
+                if (isset($progress_data['status']) && ($progress_data['status'] === 'completed' || $progress_data['status'] === 'cancelled')) {
+                    $this->log_message("Previous task was already completed/cancelled, starting fresh");
                     $progress_exists = false;
                 }
             }
@@ -215,52 +323,90 @@ class SwiftSpeed_Siberian_WP_Tasks {
             
             $this->log_message("Processing batch $batch_index of type $batch_type");
             
-            // Process just a single batch in this run
-            $batch_result = $this->process_batch($task, $batch_index);
+            // Set background processing flag
+            $this->is_background_processing = true;
             
-            // Check if the task is now complete
-            if ($batch_result['completed']) {
-                $this->log_message("Task $task completed in this run");
+            // Process multiple batches in this run, up to max_batches_per_run
+            $batches_processed = 0;
+            $continue_processing = true;
+            $task_completed = false;
+            
+            while ($continue_processing && $batches_processed < $this->max_batches_per_run) {
+                // Process the next batch
+                $batch_result = $this->process_batch($task, $batch_index);
+                $batches_processed++;
                 
-                // Get final progress data for rich operation details
-                $progress_data = json_decode(file_get_contents($progress_file), true);
-                
-                $operation_details = array(
-                    'task' => $task,
-                    'processed' => $progress_data['processed'],
-                    'total' => $progress_data['total'],
-                    'timestamp' => time()
-                );
-                
-                if ($task === 'spam_users') {
-                    $operation_details['deleted'] = $progress_data['deleted'];
-                    $operation_details['errors'] = $progress_data['errors'];
-                    $operation_details['summary'] = "Processed {$progress_data['processed']} spam users: Deleted {$progress_data['deleted']} with {$progress_data['errors']} errors";
-                    
-                    // Include deleted users for the action logs
-                    if (isset($progress_data['deleted_users']) && !empty($progress_data['deleted_users'])) {
-                        $operation_details['deleted_users'] = $progress_data['deleted_users'];
-                        $operation_details['deleted_users_list'] = $progress_data['deleted_users'];
-                    }
-                } elseif ($task === 'unsynced_users') {
-                    $operation_details['created'] = $progress_data['created'];
-                    $operation_details['deleted'] = $progress_data['deleted'];
-                    $operation_details['errors'] = $progress_data['errors'];
-                    $operation_details['summary'] = "Processed {$progress_data['processed']} users: Created {$progress_data['created']}, Deleted {$progress_data['deleted']}, with {$progress_data['errors']} errors";
-                    
-                    // Include user lists for the action logs
-                    if (isset($progress_data['created_users']) && !empty($progress_data['created_users'])) {
-                        $operation_details['created_users'] = $progress_data['created_users'];
-                        $operation_details['created_users_list'] = $progress_data['created_users'];
-                    }
-                    
-                    if (isset($progress_data['deleted_users']) && !empty($progress_data['deleted_users'])) {
-                        $operation_details['deleted_users'] = $progress_data['deleted_users'];
-                        $operation_details['deleted_users_list'] = $progress_data['deleted_users'];
-                    }
+                if (!$batch_result['success']) {
+                    $this->log_message("Error processing batch $batch_index: " . $batch_result['message']);
+                    $continue_processing = false;
                 }
                 
-                $success = true; // Consider it a success even with some errors
+                // Check if the task is now complete
+                if ($batch_result['completed']) {
+                    $task_completed = true;
+                    $continue_processing = false;
+                    $this->log_message("Task $task completed after processing $batches_processed batches");
+                } else {
+                    // Update batch index for next iteration
+                    $batch_index = $batch_result['next_batch'];
+                    
+                    // Update progress file for latest batch info
+                    $progress_data = json_decode(file_get_contents($progress_file), true);
+                    
+                    // Check if we've processed enough batches for this run
+                    if ($batches_processed >= $this->max_batches_per_run) {
+                        $this->log_message("Reached max batches per run ($this->max_batches_per_run), will continue via loopback");
+                        
+                        // Trigger a loopback request to continue processing in the background
+                        $this->trigger_loopback_request($task);
+                        $continue_processing = false;
+                    }
+                }
+            }
+            
+            // Get final progress data
+            $progress_data = json_decode(file_get_contents($progress_file), true);
+            
+            // Prepare operation details
+            $operation_details = array(
+                'task' => $task,
+                'processed' => $progress_data['processed'],
+                'total' => $progress_data['total'],
+                'timestamp' => time()
+            );
+            
+            if ($task === 'spam_users') {
+                $operation_details['deleted'] = $progress_data['deleted'];
+                $operation_details['errors'] = $progress_data['errors'];
+                $operation_details['summary'] = "Processed {$progress_data['processed']} spam users: Deleted {$progress_data['deleted']} with {$progress_data['errors']} errors";
+                
+                // Include deleted users for the action logs
+                if (isset($progress_data['deleted_users']) && !empty($progress_data['deleted_users'])) {
+                    $operation_details['deleted_users'] = $progress_data['deleted_users'];
+                    $operation_details['deleted_users_list'] = $progress_data['deleted_users'];
+                }
+            } elseif ($task === 'unsynced_users') {
+                $operation_details['created'] = $progress_data['created'];
+                $operation_details['deleted'] = $progress_data['deleted'];
+                $operation_details['errors'] = $progress_data['errors'];
+                $operation_details['summary'] = "Processed {$progress_data['processed']} users: Created {$progress_data['created']}, Deleted {$progress_data['deleted']}, with {$progress_data['errors']} errors";
+                
+                // Include user lists for the action logs
+                if (isset($progress_data['created_users']) && !empty($progress_data['created_users'])) {
+                    $operation_details['created_users'] = $progress_data['created_users'];
+                    $operation_details['created_users_list'] = $progress_data['created_users'];
+                }
+                
+                if (isset($progress_data['deleted_users']) && !empty($progress_data['deleted_users'])) {
+                    $operation_details['deleted_users'] = $progress_data['deleted_users'];
+                    $operation_details['deleted_users_list'] = $progress_data['deleted_users'];
+                }
+            }
+            
+            $success = true; // Consider it a success even with some errors
+            $message = '';
+            
+            if ($task_completed) {
                 $message = ($task === 'spam_users') ? 
                           "Spam users cleanup completed. Deleted {$progress_data['deleted']} users with {$progress_data['errors']} errors." :
                           "User synchronization completed. Created {$progress_data['created']} users, deleted {$progress_data['deleted']} users, with {$progress_data['errors']} errors.";
@@ -270,44 +416,32 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 $swsib_last_task_result = array(
                     'success' => $success,
                     'message' => $message,
-                    'operation_details' => $operation_details
+                    'operation_details' => $operation_details,
+                    'completed' => true
                 );
                 
                 return array(
                     'success' => $success,
                     'message' => $message,
-                    'operation_details' => $operation_details
+                    'operation_details' => $operation_details,
+                    'completed' => true
                 );
             } else {
-                // Task is not complete yet, we'll continue in the next scheduler run
-                $this->log_message("Task $task not completed yet, will continue in next run at batch {$batch_result['next_batch']}");
+                // Task is continuing via loopback, return current progress
+                $message = "Task in progress. Processed {$progress_data['processed']} out of {$progress_data['total']} items.";
                 
-                // Return partial progress for logging purposes
-                $progress_data = json_decode(file_get_contents($progress_file), true);
-                
-                $operation_details = array(
-                    'task' => $task,
-                    'processed' => $progress_data['processed'],
-                    'total' => $progress_data['total'],
-                    'timestamp' => time(),
-                    'status' => 'in_progress',
-                    'progress_percentage' => $progress_data['progress'],
-                    'batch' => $batch_result['next_batch'],
-                    'summary' => "Task in progress: Processed {$progress_data['processed']} out of {$progress_data['total']} items (" . $progress_data['progress'] . "%)"
+                // For compatibility with the action logs system
+                global $swsib_last_task_result;
+                $swsib_last_task_result = array(
+                    'success' => $success,
+                    'message' => $message,
+                    'operation_details' => $operation_details,
+                    'completed' => false
                 );
                 
-                if ($task === 'spam_users') {
-                    $operation_details['deleted'] = $progress_data['deleted'];
-                    $operation_details['errors'] = $progress_data['errors'];
-                } elseif ($task === 'unsynced_users') {
-                    $operation_details['created'] = $progress_data['created'];
-                    $operation_details['deleted'] = $progress_data['deleted'];
-                    $operation_details['errors'] = $progress_data['errors'];
-                }
-                
                 return array(
-                    'success' => true,
-                    'message' => "Task in progress. Processed {$progress_data['processed']} out of {$progress_data['total']} items.",
+                    'success' => $success,
+                    'message' => $message,
                     'operation_details' => $operation_details,
                     'completed' => false
                 );
@@ -323,6 +457,85 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 'timestamp' => time()
             )
         );
+    }
+    
+    /**
+     * Trigger a loopback request to continue processing in the background
+     * Using a more persistent nonce approach
+     */
+    private function trigger_loopback_request($task) {
+        // Create a specific persistent nonce key for the task
+        $nonce_action = 'swsib_wp_tasks_loopback_' . $task;
+        $nonce = wp_create_nonce($nonce_action);
+        
+        // Store the nonce in an option for validation later
+        update_option('swsib_loopback_nonce_' . $task, $nonce, false);
+        
+        $url = admin_url('admin-ajax.php?action=swsib_wp_tasks_loopback&task=' . urlencode($task) . '&nonce=' . $nonce);
+        
+        $args = array(
+            'timeout'   => 0.01,
+            'blocking'  => false,
+            'sslverify' => apply_filters('https_local_ssl_verify', false),
+            'headers'   => array('Cache-Control' => 'no-cache'),
+        );
+        
+        $this->log_message("Triggering loopback request for task: $task");
+        wp_remote_get($url, $args);
+    }
+    
+    /**
+     * Handle loopback request to continue processing batches
+     * Improved nonce verification
+     */
+    public function handle_loopback_request() {
+        // Get task
+        $task = isset($_GET['task']) ? sanitize_text_field($_GET['task']) : '';
+        
+        if (empty($task)) {
+            $this->log_message("No task specified in loopback request");
+            wp_die('No task specified.', 'Error', array('response' => 400));
+        }
+        
+        // Get and verify nonce
+        $nonce = isset($_GET['nonce']) ? sanitize_text_field($_GET['nonce']) : '';
+        $stored_nonce = get_option('swsib_loopback_nonce_' . $task);
+        
+        if (empty($nonce) || $nonce !== $stored_nonce) {
+            $this->log_message("Invalid nonce in loopback request");
+            // Don't die here - check if the task is valid and continue anyway
+            if (!$this->is_valid_running_task($task)) {
+                wp_die('Security check failed.', 'Security Error', array('response' => 403));
+            }
+        }
+        
+        $this->log_message("Handling loopback request for task: $task");
+        
+        // Set background processing flag
+        $this->is_background_processing = true;
+        
+        // Call handle_scheduled_task with the task
+        $this->handle_scheduled_task('wp_cleanup', array('task' => $task));
+        
+        // Always die to prevent output
+        wp_die();
+    }
+    
+    /**
+     * Check if a task is valid and running
+     */
+    private function is_valid_running_task($task) {
+        $progress_file = $this->get_progress_file($task);
+        if (!file_exists($progress_file)) {
+            return false;
+        }
+        
+        $progress_data = json_decode(file_get_contents($progress_file), true);
+        if (!$progress_data || !isset($progress_data['status']) || $progress_data['status'] !== 'running') {
+            return false;
+        }
+        
+        return true;
     }
     
     /**
@@ -349,24 +562,37 @@ class SwiftSpeed_Siberian_WP_Tasks {
             return;
         }
         
-        // Initialize the task
-        $this->initialize_task($task);
+        // Get mode (start, continue, etc.)
+        $mode = isset($_POST['mode']) ? sanitize_text_field($_POST['mode']) : 'start';
         
-        // Process the first batch directly - this will get things started
-        $batch_result = $this->process_next_batch($task);
-        
-        // Return the result
-        if ($batch_result['success']) {
-            wp_send_json_success(array(
-                'message' => 'Task started. First batch processed.',
-                'progress' => $batch_result['progress'],
-                'next_batch' => $batch_result['next_batch'],
-                'completed' => $batch_result['completed']
-            ));
+        if ($mode === 'start') {
+            // Initialize the task
+            $this->initialize_task($task);
+            
+            // Process the first batch directly - this will get things started
+            $batch_result = $this->process_next_batch($task);
+            
+            // Return the result
+            if ($batch_result['success']) {
+                // Trigger a loopback request to continue processing in the background
+                if (!$batch_result['completed']) {
+                    $this->trigger_loopback_request($task);
+                }
+                
+                wp_send_json_success(array(
+                    'message' => 'Task started. First batch processed. Continuing in background.',
+                    'progress' => $batch_result['progress'],
+                    'next_batch' => $batch_result['next_batch'],
+                    'completed' => $batch_result['completed']
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => $batch_result['message']
+                ));
+            }
         } else {
-            wp_send_json_error(array(
-                'message' => $batch_result['message']
-            ));
+            // Handle other modes if needed
+            wp_send_json_error(array('message' => 'Invalid mode.'));
         }
     }
     
@@ -399,6 +625,11 @@ class SwiftSpeed_Siberian_WP_Tasks {
         
         // Process the next batch
         $batch_result = $this->process_batch($task, $batch_index);
+        
+        // If more batches to process and not a background process, trigger loopback
+        if ($batch_result['success'] && !$batch_result['completed'] && !$this->is_background_processing) {
+            $this->trigger_loopback_request($task);
+        }
         
         // Return the result
         if ($batch_result['success']) {
@@ -459,6 +690,13 @@ class SwiftSpeed_Siberian_WP_Tasks {
         
         if (isset($progress_data['progress']) && isset($progress_data['processed']) && isset($progress_data['total'])) {
             $this->log_message("Returning WordPress progress data: progress={$progress_data['progress']}, processed={$progress_data['processed']}, total={$progress_data['total']}, logs=" . count($progress_data['logs']));
+        }
+        
+        // If the task is running but hasn't been updated recently, check if we need to restart
+        if (isset($progress_data['status']) && $progress_data['status'] === 'running' && 
+            isset($progress_data['last_update']) && (time() - $progress_data['last_update']) > 60) {
+            // Trigger a new loopback request
+            $this->ensure_background_processing($task_type);
         }
         
         wp_send_json_success($progress_data);
@@ -620,13 +858,16 @@ class SwiftSpeed_Siberian_WP_Tasks {
         $progress_file = $this->get_progress_file($task);
         file_put_contents($progress_file, json_encode($progress_data));
         
+        // Store in transient for other parts of the system to know there's an active task
+        set_transient('swsib_active_background_tasks', array($task => $progress_data), 300);
+        
         $this->log_message("Task $task initialized with $total items, $total_batches batches");
         
         return true;
     }
     
     /**
-     * Process all batches - only used for manual UI tasks, not for automated tasks
+     * Process all batches - now with loopback requests for background processing
      */
     private function process_all_batches($task) {
         $this->log_message("Processing all batches for task: $task");
@@ -644,22 +885,21 @@ class SwiftSpeed_Siberian_WP_Tasks {
             return false;
         }
         
-        // Process all remaining batches
+        // Process as many batches as we can in this run
         $completed = false;
-        $batch = 0;
-        $max_iterations = 100; // Safety limit
-        $iterations = 0;
+        $batch = $progress_data['current_batch'];
+        $batches_processed = 0;
+        $max_batches = $this->max_batches_per_run;
         
-        while (!$completed && $iterations < $max_iterations) {
-            $iterations++;
-            $this->log_message("Processing batch $batch for task $task (iteration $iterations)");
+        $this->log_message("Starting to process batches for task $task from batch $batch");
+        
+        while (!$completed && $batches_processed < $max_batches) {
+            $this->log_message("Processing batch $batch for task $task (batch $batches_processed of max $max_batches)");
             
             $result = $this->process_batch($task, $batch);
             $completed = $result['completed'];
             $batch = $result['next_batch'];
-            
-            // Sleep briefly to prevent server overload
-            usleep(100000); // 0.1 second
+            $batches_processed++;
             
             // If there was an error, stop processing
             if (!$result['success']) {
@@ -669,15 +909,17 @@ class SwiftSpeed_Siberian_WP_Tasks {
             
             // Debug logging for progress
             $this->log_message("Batch processing progress: " . $result['progress'] . "%, next batch: " . $result['next_batch'] . ", completed: " . ($completed ? 'true' : 'false'));
+            
+            // If we've reached the max batches but task is not complete, trigger a loopback
+            if ($batches_processed >= $max_batches && !$completed) {
+                $this->log_message("Reached max batches per run ($max_batches), triggering loopback to continue");
+                $this->trigger_loopback_request($task);
+                break;
+            }
         }
         
-        // Check if we hit the safety limit
-        if ($iterations >= $max_iterations && !$completed) {
-            $this->log_message("Warning: Hit safety limit of $max_iterations iterations without completing task");
-        }
-        
-        $this->log_message("Finished processing all batches for task: $task");
-        return true;
+        $this->log_message("Finished processing batches for task: $task, completed: " . ($completed ? 'true' : 'false'));
+        return $completed;
     }
     
     /**
@@ -709,7 +951,7 @@ class SwiftSpeed_Siberian_WP_Tasks {
     }
     
     /**
-     * Process a specific batch
+     * Process a specific batch with enhanced logging
      */
     private function process_batch($task, $batch_index) {
         // Get progress data
@@ -729,11 +971,11 @@ class SwiftSpeed_Siberian_WP_Tasks {
             );
         }
         
-        // Check if processing is already completed
-        if ($progress_data['status'] === 'completed') {
+        // Check if processing is already completed or cancelled
+        if ($progress_data['status'] === 'completed' || $progress_data['status'] === 'cancelled') {
             return array(
                 'success' => true,
-                'message' => 'Processing already completed',
+                'message' => 'Processing already completed or cancelled',
                 'progress' => 100,
                 'next_batch' => 0,
                 'completed' => true
@@ -742,6 +984,13 @@ class SwiftSpeed_Siberian_WP_Tasks {
         
         // Get current batch type
         $batch_type = $progress_data['batch_type'];
+        
+        // Add batch processing log
+        $progress_data['logs'][] = array(
+            'time' => time(),
+            'message' => sprintf(__('Processing batch %d (%s)', 'swiftspeed-siberian'), $batch_index + 1, $batch_type),
+            'type' => 'info'
+        );
         
         // Process based on batch type
         if ($batch_type === 'create') {
@@ -755,6 +1004,20 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 $progress_data['errors'] += $result['errors'];
                 $progress_data['processed'] += $result['processed'];
                 $progress_data['current_batch'] = $batch_index + 1;
+                $progress_data['last_update'] = time();
+                
+                // Add batch completion log with summary
+                $progress_data['logs'][] = array(
+                    'time' => time(),
+                    'message' => sprintf(__('Batch %d completed: Created %d users, %d errors', 'swiftspeed-siberian'), 
+                                       $batch_index + 1, $result['processed'], $result['errors']),
+                    'type' => $result['errors'] > 0 ? 'warning' : 'success'
+                );
+                
+                // Add logs from batch processing
+                if (isset($result['logs']) && !empty($result['logs'])) {
+                    $progress_data['logs'] = array_merge($progress_data['logs'], $result['logs']);
+                }
                 
                 // Add created users to the list if any
                 if (isset($result['created_users']) && !empty($result['created_users'])) {
@@ -795,6 +1058,22 @@ class SwiftSpeed_Siberian_WP_Tasks {
                                            $progress_data['created'], $progress_data['errors']),
                         'type' => 'success'
                     );
+                    
+                    // Remove from active tasks transient
+                    $active_tasks = get_transient('swsib_active_background_tasks');
+                    if ($active_tasks && isset($active_tasks[$task])) {
+                        unset($active_tasks[$task]);
+                        if (!empty($active_tasks)) {
+                            set_transient('swsib_active_background_tasks', $active_tasks, 300);
+                        } else {
+                            delete_transient('swsib_active_background_tasks');
+                        }
+                    }
+                } else {
+                    // Update active tasks transient
+                    $active_tasks = get_transient('swsib_active_background_tasks') ?: array();
+                    $active_tasks[$task] = $progress_data;
+                    set_transient('swsib_active_background_tasks', $active_tasks, 300);
                 }
                 
                 // Update progress file
@@ -811,6 +1090,7 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 // No more create batches, switch to delete
                 $progress_data['batch_type'] = 'delete';
                 $progress_data['current_batch'] = 0;
+                $progress_data['last_update'] = time();
                 file_put_contents($progress_file, json_encode($progress_data));
                 
                 // Process first delete batch
@@ -827,6 +1107,20 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 $progress_data['errors'] += $result['errors'];
                 $progress_data['processed'] += $result['processed'];
                 $progress_data['current_batch'] = $batch_index + 1;
+                $progress_data['last_update'] = time();
+                
+                // Add batch completion log with summary
+                $progress_data['logs'][] = array(
+                    'time' => time(),
+                    'message' => sprintf(__('Batch %d completed: Deleted %d users, %d errors', 'swiftspeed-siberian'), 
+                                       $batch_index + 1, $result['processed'], $result['errors']),
+                    'type' => $result['errors'] > 0 ? 'warning' : 'success'
+                );
+                
+                // Add logs from batch processing
+                if (isset($result['logs']) && !empty($result['logs'])) {
+                    $progress_data['logs'] = array_merge($progress_data['logs'], $result['logs']);
+                }
                 
                 // Add deleted users to the list if any
                 if (isset($result['deleted_users']) && !empty($result['deleted_users'])) {
@@ -858,6 +1152,22 @@ class SwiftSpeed_Siberian_WP_Tasks {
                                            $progress_data['created'], $progress_data['deleted'], $progress_data['errors']),
                         'type' => 'success'
                     );
+                    
+                    // Remove from active tasks transient
+                    $active_tasks = get_transient('swsib_active_background_tasks');
+                    if ($active_tasks && isset($active_tasks[$task])) {
+                        unset($active_tasks[$task]);
+                        if (!empty($active_tasks)) {
+                            set_transient('swsib_active_background_tasks', $active_tasks, 300);
+                        } else {
+                            delete_transient('swsib_active_background_tasks');
+                        }
+                    }
+                } else {
+                    // Update active tasks transient
+                    $active_tasks = get_transient('swsib_active_background_tasks') ?: array();
+                    $active_tasks[$task] = $progress_data;
+                    set_transient('swsib_active_background_tasks', $active_tasks, 300);
                 }
                 
                 // Update progress file
@@ -875,6 +1185,7 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 $progress_data['status'] = 'completed';
                 $progress_data['progress'] = 100;
                 $progress_data['current_item'] = __('Task completed', 'swiftspeed-siberian');
+                $progress_data['last_update'] = time();
                 
                 // Add completion log
                 $progress_data['logs'][] = array(
@@ -883,6 +1194,17 @@ class SwiftSpeed_Siberian_WP_Tasks {
                                        $progress_data['created'], $progress_data['deleted'], $progress_data['errors']),
                     'type' => 'success'
                 );
+                
+                // Remove from active tasks transient
+                $active_tasks = get_transient('swsib_active_background_tasks');
+                if ($active_tasks && isset($active_tasks[$task])) {
+                    unset($active_tasks[$task]);
+                    if (!empty($active_tasks)) {
+                        set_transient('swsib_active_background_tasks', $active_tasks, 300);
+                    } else {
+                        delete_transient('swsib_active_background_tasks');
+                    }
+                }
                 
                 // Update progress file
                 file_put_contents($progress_file, json_encode($progress_data));
@@ -899,7 +1221,7 @@ class SwiftSpeed_Siberian_WP_Tasks {
     }
     
     /**
-     * Process a batch of users to create
+     * Process a batch of users to create with detailed logging
      */
     private function process_create_batch($task, $users) {
         $processed = 0;
@@ -939,8 +1261,8 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 // Log success
                 $logs[] = array(
                     'time' => time(),
-                    'message' => sprintf(__('Created WordPress user (ID: %d) for Siberian user (ID: %d)', 'swiftspeed-siberian'), 
-                                       $wp_user_id, $user['admin_id']),
+                    'message' => sprintf(__('Created WordPress user %s (ID: %d) for Siberian user %s (ID: %d)', 'swiftspeed-siberian'), 
+                                       $userdata['user_login'], $wp_user_id, $user['email'], $user['admin_id']),
                     'type' => 'success'
                 );
                 
@@ -963,8 +1285,8 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 // Log error
                 $logs[] = array(
                     'time' => time(),
-                    'message' => sprintf(__('Failed to create WordPress user: %s', 'swiftspeed-siberian'), 
-                                       $wp_user_id->get_error_message()),
+                    'message' => sprintf(__('Failed to create WordPress user for %s: %s', 'swiftspeed-siberian'), 
+                                       $user['email'], $wp_user_id->get_error_message()),
                     'type' => 'error'
                 );
                 
@@ -972,18 +1294,16 @@ class SwiftSpeed_Siberian_WP_Tasks {
             }
         }
         
-        // Add logs to progress
-        $this->add_task_logs($task, $logs);
-        
         return array(
             'processed' => $processed,
             'errors' => $errors,
-            'created_users' => $created_users
+            'created_users' => $created_users,
+            'logs' => $logs
         );
     }
     
     /**
-     * Process a batch of users to delete
+     * Process a batch of users to delete with detailed logging
      */
     private function process_delete_batch($task, $user_ids) {
         $processed = 0;
@@ -1022,8 +1342,8 @@ class SwiftSpeed_Siberian_WP_Tasks {
                     // Log finding Siberian user
                     $logs[] = array(
                         'time' => time(),
-                        'message' => sprintf(__('Found corresponding Siberian user with ID: %d', 'swiftspeed-siberian'), 
-                                           $siberian_id),
+                        'message' => sprintf(__('Found corresponding Siberian user with ID: %d for %s', 'swiftspeed-siberian'), 
+                                           $siberian_id, $user->user_email),
                         'type' => 'info'
                     );
                     
@@ -1064,8 +1384,8 @@ class SwiftSpeed_Siberian_WP_Tasks {
                 // Log success
                 $logs[] = array(
                     'time' => time(),
-                    'message' => sprintf(__('Deleted WordPress user ID: %d (%s)', 'swiftspeed-siberian'), 
-                                       $user->ID, $user->user_email),
+                    'message' => sprintf(__('Deleted WordPress user %s (ID: %d, %s)', 'swiftspeed-siberian'), 
+                                       $user->user_login, $user->ID, $user->user_email),
                     'type' => 'success'
                 );
                 
@@ -1086,8 +1406,8 @@ class SwiftSpeed_Siberian_WP_Tasks {
                     // Log success
                     $logs[] = array(
                         'time' => time(),
-                        'message' => sprintf(__('Force deleted WordPress user ID: %d', 'swiftspeed-siberian'), 
-                                           $user->ID),
+                        'message' => sprintf(__('Force deleted WordPress user %s (ID: %d)', 'swiftspeed-siberian'), 
+                                           $user->user_login, $user->ID),
                         'type' => 'success'
                     );
                     
@@ -1098,8 +1418,8 @@ class SwiftSpeed_Siberian_WP_Tasks {
                     // Log error
                     $logs[] = array(
                         'time' => time(),
-                        'message' => sprintf(__('Failed to delete user ID %d: %s', 'swiftspeed-siberian'), 
-                                           $user->ID, $e->getMessage()),
+                        'message' => sprintf(__('Failed to delete user %s (ID %d): %s', 'swiftspeed-siberian'), 
+                                           $user->user_login, $user->ID, $e->getMessage()),
                         'type' => 'error'
                     );
                     
@@ -1108,13 +1428,11 @@ class SwiftSpeed_Siberian_WP_Tasks {
             }
         }
         
-        // Add logs to progress
-        $this->add_task_logs($task, $logs);
-        
         return array(
             'processed' => $processed,
             'errors' => $errors,
-            'deleted_users' => $deleted_users
+            'deleted_users' => $deleted_users,
+            'logs' => $logs
         );
     }
     
@@ -1137,6 +1455,7 @@ class SwiftSpeed_Siberian_WP_Tasks {
         $progress_data['status'] = 'completed';
         $progress_data['progress'] = 100;
         $progress_data['current_item'] = __('Task completed', 'swiftspeed-siberian');
+        $progress_data['last_update'] = time();
         
         // Calculate execution time
         $execution_time = time() - $progress_data['start_time'];
@@ -1154,6 +1473,17 @@ class SwiftSpeed_Siberian_WP_Tasks {
         
         // Update progress file
         file_put_contents($progress_file, json_encode($progress_data));
+        
+        // Remove from active tasks transient
+        $active_tasks = get_transient('swsib_active_background_tasks');
+        if ($active_tasks && isset($active_tasks[$task])) {
+            unset($active_tasks[$task]);
+            if (!empty($active_tasks)) {
+                set_transient('swsib_active_background_tasks', $active_tasks, 300);
+            } else {
+                delete_transient('swsib_active_background_tasks');
+            }
+        }
         
         $this->log_message("Task $task marked as completed");
         
@@ -1183,6 +1513,12 @@ class SwiftSpeed_Siberian_WP_Tasks {
             
             // Write updated data
             file_put_contents($progress_file, json_encode($progress_data));
+            
+            // Update active tasks transient
+            $active_tasks = get_transient('swsib_active_background_tasks') ?: array();
+            $active_tasks[$task] = $progress_data;
+            set_transient('swsib_active_background_tasks', $active_tasks, 300);
+            
             return true;
         }
         

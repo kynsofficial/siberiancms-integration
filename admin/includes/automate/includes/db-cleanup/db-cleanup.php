@@ -33,9 +33,9 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     private $settings;
     
     /**
-     * Chunk size for processing large datasets
+     * Chunk size for processing large datasets - SIGNIFICANTLY INCREASED for performance
      */
-    private $chunk_size = 2;
+    private $chunk_size = 50;
     
     /**
      * Flag to track if we created a new connection that needs to be closed
@@ -51,6 +51,21 @@ class SwiftSpeed_Siberian_DB_Cleanup {
      * Delay between connection attempts (microseconds)
      */
     private $connection_retry_delay = 500000; // 0.5 seconds
+    
+    /**
+     * Maximum execution time for a batch operation in seconds
+     */
+    private $max_execution_time = 45; // 45 seconds per batch
+    
+    /**
+     * Maximum batches to process in a single run
+     */
+    private $max_batches_per_run = 10;
+    
+    /**
+     * Flag to indicate if we're processing in the background
+     */
+    private $is_background_processing = false;
     
     /**
      * Constructor
@@ -81,6 +96,13 @@ class SwiftSpeed_Siberian_DB_Cleanup {
         
         // Add direct handler for task execution
         add_action('swsib_run_scheduled_task', array($this, 'handle_scheduled_task'), 10, 2);
+        
+        // Add handler for loopback requests
+        add_action('wp_ajax_nopriv_swsib_db_cleanup_loopback', array($this, 'handle_loopback_request'));
+        add_action('wp_ajax_swsib_db_cleanup_loopback', array($this, 'handle_loopback_request'));
+        
+        // Set up background processing check for active tasks
+        add_action('admin_init', array($this, 'check_active_background_tasks'));
     }
     
     /**
@@ -107,15 +129,24 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     }
     
     /**
-     * Get database connection - lazy initialization
+     * Get database connection - lazy initialization with efficient caching
      * Will attempt to establish a connection if one doesn't exist
      * 
      * @return mysqli|null Database connection or null on failure
      */
     public function get_db_connection() {
         // If we already have a valid connection, return it
-        if ($this->db_connection !== null && !$this->db_connection->connect_error && $this->db_connection->ping()) {
-            return $this->db_connection;
+        if ($this->db_connection !== null && !$this->db_connection->connect_error) {
+            // Use a more lightweight connection check - no ping which creates overhead
+            try {
+                $result = @$this->db_connection->query("SELECT 1");
+                if ($result) {
+                    $result->free();
+                    return $this->db_connection;
+                }
+            } catch (Exception $e) {
+                $this->log_message("Connection test failed: " . $e->getMessage());
+            }
         }
         
         // If connection is invalid and we need to close it
@@ -155,6 +186,12 @@ class SwiftSpeed_Siberian_DB_Cleanup {
                 
                 // Reset mysqli report mode
                 mysqli_report(MYSQLI_REPORT_OFF);
+                
+                // Set optimal connection parameters for bulk operations
+                $db_connection->set_charset('utf8');
+                $db_connection->query("SET wait_timeout=300"); // 5-minute wait timeout
+                $db_connection->query("SET innodb_lock_wait_timeout=50"); // 50-second lock timeout
+                $db_connection->query("SET max_execution_time=90000"); // 90-second max execution (if supported)
                 
                 // Check connection
                 if (!$db_connection->connect_error) {
@@ -229,6 +266,9 @@ class SwiftSpeed_Siberian_DB_Cleanup {
         add_action('wp_ajax_swsib_get_backoffice_alerts_count', array($this->data, 'ajax_get_backoffice_alerts_count'));
         add_action('wp_ajax_swsib_get_cleanup_log_count', array($this->data, 'ajax_get_cleanup_log_count'));
         add_action('wp_ajax_swsib_get_optimize_tables_info', array($this->data, 'ajax_get_optimize_tables_info'));
+        
+        // Background processing status check
+        add_action('wp_ajax_swsib_check_db_background_task_status', array($this, 'ajax_check_background_task_status'));
     }
     
     /**
@@ -257,13 +297,179 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     }
     
     /**
-     * Handle scheduled task - Using batch processing
-     * Improved with proper database connection handling
+     * Check for active background tasks on admin page load
+     */
+    public function check_active_background_tasks() {
+        // Only check in admin area
+        if (!is_admin()) {
+            return;
+        }
+        
+        // Check for running tasks
+        $tasks = array('sessions', 'mail_logs', 'source_queue', 'optimize', 'backoffice_alerts', 'cleanup_log');
+        $active_tasks = array();
+        
+        foreach ($tasks as $task) {
+            $progress_file = $this->get_progress_file($task);
+            if (file_exists($progress_file)) {
+                $progress_data = json_decode(file_get_contents($progress_file), true);
+                if ($progress_data && isset($progress_data['status']) && $progress_data['status'] === 'running') {
+                    // Check if task has been updated recently (within 5 minutes)
+                    if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) < 300) {
+                        $active_tasks[$task] = $progress_data;
+                    }
+                }
+            }
+        }
+        
+        if (!empty($active_tasks)) {
+            // Store active tasks in transient for JS to pick up
+            set_transient('swsib_active_db_background_tasks', $active_tasks, 300);
+            
+            // For each active task, ensure a loopback is triggered if needed
+            foreach ($active_tasks as $task => $data) {
+                $this->ensure_background_processing($task);
+            }
+        } else {
+            delete_transient('swsib_active_db_background_tasks');
+        }
+    }
+    
+    /**
+     * AJAX handler to check background task status
+     */
+    public function ajax_check_background_task_status() {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'swsib-automate-nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed.'));
+            return;
+        }
+        
+        // Get active tasks
+        $active_tasks = get_transient('swsib_active_db_background_tasks');
+        
+        if ($active_tasks) {
+            wp_send_json_success(array(
+                'active_tasks' => $active_tasks
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'No active background tasks.'));
+        }
+    }
+    
+    /**
+     * Ensure background processing is continuing for a task
+     */
+    private function ensure_background_processing($task) {
+        $progress_file = $this->get_progress_file($task);
+        if (!file_exists($progress_file)) {
+            return false;
+        }
+        
+        $progress_data = json_decode(file_get_contents($progress_file), true);
+        if (!$progress_data || !isset($progress_data['status']) || $progress_data['status'] !== 'running') {
+            return false;
+        }
+        
+        // Check if the last update was less than 1 minute ago - if so, assume it's still running
+        if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) < 60) {
+            return true;
+        }
+        
+        // If it's been more than 1 minute, trigger a new loopback request
+        $this->log_message("Restarting background processing for task: $task");
+        $this->trigger_loopback_request($task);
+        
+        return true;
+    }
+    
+    /**
+     * Trigger a loopback request to continue processing in the background
+     */
+    private function trigger_loopback_request($task) {
+        // Create a specific persistent nonce key for the task
+        $nonce_action = 'swsib_db_cleanup_loopback_' . $task;
+        $nonce = wp_create_nonce($nonce_action);
+        
+        // Store the nonce in an option for validation later
+        update_option('swsib_db_loopback_nonce_' . $task, $nonce, false);
+        
+        $url = admin_url('admin-ajax.php?action=swsib_db_cleanup_loopback&task=' . urlencode($task) . '&nonce=' . $nonce);
+        
+        $args = array(
+            'timeout'   => 0.01,
+            'blocking'  => false,
+            'sslverify' => apply_filters('https_local_ssl_verify', false),
+            'headers'   => array('Cache-Control' => 'no-cache'),
+        );
+        
+        $this->log_message("Triggering loopback request for task: $task");
+        wp_remote_get($url, $args);
+    }
+    
+    /**
+     * Handle loopback request to continue processing batches
+     */
+    public function handle_loopback_request() {
+        // Get task
+        $task = isset($_GET['task']) ? sanitize_text_field($_GET['task']) : '';
+        
+        if (empty($task)) {
+            $this->log_message("No task specified in loopback request");
+            wp_die('No task specified.', 'Error', array('response' => 400));
+        }
+        
+        // Get and verify nonce
+        $nonce = isset($_GET['nonce']) ? sanitize_text_field($_GET['nonce']) : '';
+        $stored_nonce = get_option('swsib_db_loopback_nonce_' . $task);
+        
+        if (empty($nonce) || $nonce !== $stored_nonce) {
+            $this->log_message("Invalid nonce in loopback request");
+            // Don't die here - check if the task is valid and continue anyway
+            if (!$this->is_valid_running_task($task)) {
+                wp_die('Security check failed.', 'Security Error', array('response' => 403));
+            }
+        }
+        
+        $this->log_message("Handling loopback request for task: $task");
+        
+        // Set background processing flag
+        $this->is_background_processing = true;
+        
+        // Call handle_scheduled_task with the task
+        $this->handle_scheduled_task('db_cleanup', array('task' => $task));
+        
+        // Always die to prevent output
+        wp_die();
+    }
+    
+    /**
+     * Check if a task is valid and running
+     */
+    private function is_valid_running_task($task) {
+        $progress_file = $this->get_progress_file($task);
+        if (!file_exists($progress_file)) {
+            return false;
+        }
+        
+        $progress_data = json_decode(file_get_contents($progress_file), true);
+        if (!$progress_data || !isset($progress_data['status']) || $progress_data['status'] !== 'running') {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Handle scheduled task - Using optimized batch processing
      */
     public function handle_scheduled_task($task_type, $task_args) {
         $this->log_message("Handling scheduled db cleanup task: $task_type with args: " . print_r($task_args, true));
         
         try {
+            // Start timing the operation
+            $start_time = microtime(true);
+            
             // Ensure we have a database connection
             $connection = $this->get_db_connection();
             
@@ -314,170 +520,111 @@ class SwiftSpeed_Siberian_DB_Cleanup {
                 
                 $this->log_message("Processing batch $batch_index for task $task");
                 
-                // Process just a single batch in this run
-                $batch_result = $this->data->process_batch($task, $batch_index);
+                // Process multiple batches in this run, up to max_batches_per_run
+                $batches_processed = 0;
+                $continue_processing = true;
+                $task_completed = false;
                 
-                // Check if the task is now complete
-                if (isset($batch_result['completed']) && $batch_result['completed']) {
-                    $this->log_message("Task $task completed in this run");
+                while ($continue_processing && $batches_processed < $this->max_batches_per_run) {
+                    // Process the next batch
+                    $batch_result = $this->data->process_batch($task, $batch_index);
+                    $batches_processed++;
                     
-                    // Get final progress data for rich operation details
-                    $progress_data = json_decode(file_get_contents($progress_file), true);
-                    
-                    $operation_details = array(
-                        'task' => $task,
-                        'processed' => isset($progress_data['processed']) ? $progress_data['processed'] : 0,
-                        'total' => isset($progress_data['total']) ? $progress_data['total'] : 0,
-                        'timestamp' => time(),
-                        'timestamp_formatted' => date('Y-m-d H:i:s', time())
-                    );
-                    
-                    if ($task === 'sessions' || $task === 'mail_logs' || $task === 'source_queue' || $task === 'backoffice_alerts' || $task === 'cleanup_log') {
-                        $operation_details['deleted'] = $progress_data['deleted'];
-                        $operation_details['errors'] = $progress_data['errors'];
-                        $operation_details['skipped'] = isset($progress_data['skipped']) ? $progress_data['skipped'] : 0;
-                        $operation_details['summary'] = "Processed {$progress_data['processed']} out of {$progress_data['total']} items (100%).";
-                        
-                        // Include detailed information about deleted items if available
-                        if (isset($progress_data['deleted_items']) && !empty($progress_data['deleted_items'])) {
-                            $operation_details['deleted_items'] = $progress_data['deleted_items'];
-                            $operation_details['deleted_items_list'] = $progress_data['deleted_items'];
-                            
-                            // Format deleted items for display
-                            $formatted_items = array();
-                            foreach ($progress_data['deleted_items'] as $item) {
-                                $timestamp = isset($item['timestamp']) ? $item['timestamp'] : date('Y-m-d H:i:s');
-                                $id = isset($item['id']) ? $item['id'] : "unknown";
-                                $type_info = '';
-                                
-                                if (isset($item['title'])) {
-                                    $type_info = ' - ' . $item['title'];
-                                } elseif (isset($item['name'])) {
-                                    $type_info = ' - ' . $item['name'];
-                                } elseif (isset($item['modified'])) {
-                                    $type_info = ' - Modified: ' . $item['modified'];
-                                }
-                                
-                                $formatted_items[] = "$timestamp - <strong>$id</strong>$type_info";
-                            }
-                            
-                            $operation_details['deleted_items_formatted'] = $formatted_items;
-                        }
-                    } elseif ($task === 'optimize') {
-                        $operation_details['optimized'] = $progress_data['deleted']; // For optimize, 'deleted' counts as 'optimized'
-                        $operation_details['errors'] = $progress_data['errors'];
-                        $operation_details['skipped'] = isset($progress_data['skipped']) ? $progress_data['skipped'] : 0;
-                        $operation_details['summary'] = "Processed {$progress_data['processed']} out of {$progress_data['total']} tables (100%).";
-                        
-                        // Include detailed information about optimized tables if available
-                        if (isset($progress_data['optimized_tables']) && !empty($progress_data['optimized_tables'])) {
-                            $operation_details['optimized_tables'] = $progress_data['optimized_tables'];
-                            $operation_details['optimized_tables_list'] = $progress_data['optimized_tables'];
-                            
-                            // Format optimized tables for display
-                            $formatted_tables = array();
-                            foreach ($progress_data['optimized_tables'] as $table) {
-                                $timestamp = isset($table['timestamp']) ? $table['timestamp'] : date('Y-m-d H:i:s');
-                                $table_name = isset($table['table_name']) ? $table['table_name'] : "unknown";
-                                $size_info = isset($table['size_mb']) ? " - Size: {$table['size_mb']} MB" : "";
-                                
-                                $formatted_tables[] = "$timestamp - <strong>$table_name</strong>$size_info";
-                            }
-                            
-                            $operation_details['optimized_tables_formatted'] = $formatted_tables;
-                        }
+                    if (!$batch_result['success']) {
+                        $this->log_message("Error processing batch $batch_index: " . $batch_result['message']);
+                        $continue_processing = false;
                     }
                     
-                    // Close connection before returning result
-                    $this->close_connection();
-                    
-                    $success = true; // Consider it a success even with some errors
-                    $message = "All batches processed. Task completed.";
-                    
-                    // For compatibility with the action logs system
-                    global $swsib_last_task_result;
-                    $swsib_last_task_result = array(
-                        'success' => $success,
-                        'message' => $message,
-                        'operation_details' => $operation_details
-                    );
-                    
-                    return array(
-                        'success' => $success,
-                        'message' => $message,
-                        'operation_details' => $operation_details
-                    );
-                } else {
-                    // Task is not complete yet, we'll continue in the next scheduler run
-                    $this->log_message("Task $task not completed yet, will continue in next run at batch " . 
-                                      (isset($batch_result['next_batch']) ? $batch_result['next_batch'] : 'unknown'));
-                    
-                    // Return partial progress for logging purposes
-                    $progress_data = json_decode(file_get_contents($progress_file), true);
-                    
-                    $operation_details = array(
-                        'task' => $task,
-                        'processed' => isset($progress_data['processed']) ? $progress_data['processed'] : 0,
-                        'total' => isset($progress_data['total']) ? $progress_data['total'] : 0,
-                        'timestamp' => time(),
-                        'timestamp_formatted' => date('Y-m-d H:i:s', time()),
-                        'status' => 'in_progress',
-                        'progress_percentage' => isset($progress_data['progress']) ? $progress_data['progress'] : 0,
-                        'batch_index' => $batch_index,
-                        'next_batch' => isset($batch_result['next_batch']) ? $batch_result['next_batch'] : 0,
-                        'summary' => "Processed {$progress_data['processed']} out of {$progress_data['total']} items ({$progress_data['progress']}%)."
-                    );
-                    
-                    if ($task === 'sessions' || $task === 'mail_logs' || $task === 'source_queue' || $task === 'backoffice_alerts' || $task === 'cleanup_log') {
-                        $operation_details['deleted'] = isset($progress_data['deleted']) ? $progress_data['deleted'] : 0;
-                        $operation_details['errors'] = isset($progress_data['errors']) ? $progress_data['errors'] : 0;
-                        $operation_details['skipped'] = isset($progress_data['skipped']) ? $progress_data['skipped'] : 0;
+                    // Check if the task is now complete
+                    if ($batch_result['completed']) {
+                        $task_completed = true;
+                        $continue_processing = false;
+                        $this->log_message("Task $task completed after processing $batches_processed batches");
+                    } else {
+                        // Update batch index for next iteration
+                        $batch_index = $batch_result['next_batch'];
                         
-                        // Include details about deleted items if available
-                        if (isset($progress_data['deleted_items']) && !empty($progress_data['deleted_items'])) {
-                            // Format deleted items for display (similar to image cleanup)
-                            $formatted_items = array();
-                            $items_to_format = array_slice($progress_data['deleted_items'], -10); // Last 10 for display
+                        // Check if we've processed enough batches for this run
+                        if ($batches_processed >= $this->max_batches_per_run) {
+                            $this->log_message("Reached max batches per run ($this->max_batches_per_run), will continue via loopback");
                             
-                            foreach ($items_to_format as $item) {
-                                $timestamp = isset($item['timestamp']) ? $item['timestamp'] : date('Y-m-d H:i:s');
-                                $id = isset($item['id']) ? $item['id'] : "unknown";
-                                $type_info = '';
-                                
-                                if (isset($item['title'])) {
-                                    $type_info = ' - ' . $item['title'];
-                                } elseif (isset($item['name'])) {
-                                    $type_info = ' - ' . $item['name'];
-                                } elseif (isset($item['modified'])) {
-                                    $type_info = ' - Modified: ' . $item['modified'];
-                                }
-                                
-                                $formatted_items[] = "$timestamp - <strong>$id</strong>$type_info";
-                            }
-                            
-                            $operation_details['deleted_items_count'] = count($progress_data['deleted_items']);
-                            $operation_details['deleted_items_detail'] = "Deleted {$operation_details['deleted_items_count']} items in this batch";
-                            $operation_details['deleted_items'] = implode("<br>", $formatted_items);
+                            // Trigger a loopback request to continue processing in the background
+                            $this->trigger_loopback_request($task);
+                            $continue_processing = false;
                         }
-                    } elseif ($task === 'optimize') {
-                        $operation_details['optimized'] = isset($progress_data['deleted']) ? $progress_data['deleted'] : 0; // For optimize, 'deleted' counts as 'optimized'
-                        $operation_details['errors'] = isset($progress_data['errors']) ? $progress_data['errors'] : 0;
-                        $operation_details['skipped'] = isset($progress_data['skipped']) ? $progress_data['skipped'] : 0;
                     }
-                    
-                    // Close connection before returning result
-                    $this->close_connection();
-                    
-                    // Create the message for the progress report
-                    $message = sprintf(__('Batch %d processed. Processing will continue in the next run.', 'swiftspeed-siberian'), $batch_index);
-                    
-                    return array(
-                        'success' => true,
-                        'message' => $message,
-                        'operation_details' => $operation_details,
-                        'completed' => false
-                    );
                 }
+                
+                // Get final progress data
+                $progress_data = json_decode(file_get_contents($progress_file), true);
+                
+                // Prepare operation details
+                $operation_details = array(
+                    'task' => $task,
+                    'processed' => isset($progress_data['processed']) ? $progress_data['processed'] : 0,
+                    'total' => isset($progress_data['total']) ? $progress_data['total'] : 0,
+                    'timestamp' => time(),
+                    'timestamp_formatted' => date('Y-m-d H:i:s', time()),
+                    'execution_time' => number_format(microtime(true) - $start_time, 2) . ' seconds'
+                );
+                
+                if ($task === 'sessions' || $task === 'mail_logs' || $task === 'source_queue' || $task === 'backoffice_alerts' || $task === 'cleanup_log') {
+                    $operation_details['deleted'] = $progress_data['deleted'];
+                    $operation_details['errors'] = $progress_data['errors'];
+                    $operation_details['skipped'] = isset($progress_data['skipped']) ? $progress_data['skipped'] : 0;
+                    $operation_details['summary'] = "Processed {$progress_data['processed']} out of {$progress_data['total']} items " . 
+                                                  ($task_completed ? "(100%)." : "({$progress_data['progress']}%).");
+                    
+                    // Include detailed information about deleted items if available
+                    if (isset($progress_data['deleted_items']) && !empty($progress_data['deleted_items'])) {
+                        $operation_details['deleted_items'] = $progress_data['deleted_items'];
+                        $operation_details['deleted_items_list'] = $progress_data['deleted_items'];
+                    }
+                } elseif ($task === 'optimize') {
+                    $operation_details['optimized'] = $progress_data['deleted']; // For optimize, 'deleted' counts as 'optimized'
+                    $operation_details['errors'] = $progress_data['errors'];
+                    $operation_details['skipped'] = isset($progress_data['skipped']) ? $progress_data['skipped'] : 0;
+                    $operation_details['summary'] = "Processed {$progress_data['processed']} out of {$progress_data['total']} tables " . 
+                                                  ($task_completed ? "(100%)." : "({$progress_data['progress']}%).");
+                    
+                    // Include detailed information about optimized tables if available
+                    if (isset($progress_data['optimized_tables']) && !empty($progress_data['optimized_tables'])) {
+                        $operation_details['optimized_tables'] = $progress_data['optimized_tables'];
+                        $operation_details['optimized_tables_list'] = $progress_data['optimized_tables'];
+                    }
+                }
+                
+                // Add progress percentage explicitly for UI
+                $operation_details['progress_percentage'] = $task_completed ? 100 : $progress_data['progress'];
+                
+                // Add information about background processing
+                $operation_details['is_running'] = !$task_completed;
+                $operation_details['background_enabled'] = true;
+                $operation_details['heartbeat_age'] = isset($progress_data['last_update']) ? time() - $progress_data['last_update'] : 0;
+                
+                // Close connection before returning result
+                $this->close_connection();
+                
+                $success = true; // Consider it a success even with some errors
+                $message = $task_completed ? 
+                          "Task completed in " . $operation_details['execution_time'] : 
+                          "Processed $batches_processed batches. Processing will continue in the background.";
+                
+                // For compatibility with the action logs system
+                global $swsib_last_task_result;
+                $swsib_last_task_result = array(
+                    'success' => $success,
+                    'message' => $message,
+                    'operation_details' => $operation_details,
+                    'completed' => $task_completed
+                );
+                
+                return array(
+                    'success' => $success,
+                    'message' => $message,
+                    'operation_details' => $operation_details,
+                    'completed' => $task_completed
+                );
             }
             
             // Default response for unknown tasks
@@ -511,7 +658,7 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     
     /**
      * AJAX handler for cleaning up database
-     * Improved with better connection handling
+     * Improved with better connection handling and multi-batch processing
      */
     public function ajax_cleanup_database() {
         // Check nonce
@@ -535,6 +682,9 @@ class SwiftSpeed_Siberian_DB_Cleanup {
         }
         
         try {
+            // Start timing
+            $start_time = microtime(true);
+            
             // Ensure database connection
             $connection = $this->get_db_connection();
             
@@ -546,23 +696,66 @@ class SwiftSpeed_Siberian_DB_Cleanup {
             // Initialize the task for batch processing
             $this->data->initialize_task($task);
             
-            // Process the first batch directly - this will get things started
+            // Process the first batch
             $batch_result = $this->data->process_batch($task, 0);
+            $first_batch_time = microtime(true) - $start_time;
+            
+            $this->log_message("First batch processed in " . number_format($first_batch_time, 2) . " seconds");
+            
+            // If the first batch was quick and task is not completed, process more batches
+            $next_batch = $batch_result['next_batch'];
+            $current_duration = microtime(true) - $start_time;
+            
+            // Try to process more batches if we have time (limit to 2/3 of max execution time for UI responsiveness)
+            $max_ui_time = $this->max_execution_time * 0.67;
+            
+            while ($current_duration < $max_ui_time && !$batch_result['completed'] && $next_batch < 3) {
+                $this->log_message("Time remaining in AJAX, processing additional batch $next_batch");
+                
+                // Process next batch
+                $batch_result = $this->data->process_batch($task, $next_batch);
+                $next_batch = $batch_result['next_batch'];
+                $current_duration = microtime(true) - $start_time;
+                
+                // Break if completed
+                if ($batch_result['completed']) {
+                    break;
+                }
+            }
+            
+            // If more batches to process and not completed, trigger a loopback request
+            if (!$batch_result['completed']) {
+                $this->log_message("More batches to process, triggering loopback request");
+                $this->trigger_loopback_request($task);
+            }
             
             // Close connection before sending response
             $this->close_connection();
             
+            // Enhance message with timing information
+            $total_time = microtime(true) - $start_time;
+            $batches_processed = $next_batch - ($batch_result['completed'] ? 1 : 0);
+            $enhanced_message = $batch_result['message'] . " Processed $batches_processed batches in " . number_format($total_time, 2) . " seconds.";
+            
+            if (!$batch_result['completed']) {
+                $enhanced_message .= " Processing will continue in the background.";
+            }
+            
             // Return the result
             if ($batch_result['success']) {
                 wp_send_json_success(array(
-                    'message' => $batch_result['message'],
+                    'message' => $enhanced_message,
                     'progress' => $batch_result['progress'],
                     'next_batch' => $batch_result['next_batch'],
-                    'completed' => $batch_result['completed']
+                    'completed' => $batch_result['completed'],
+                    'execution_time' => number_format($total_time, 2) . ' seconds',
+                    'batches_processed' => $batches_processed,
+                    'background_enabled' => true
                 ));
             } else {
                 wp_send_json_error(array(
-                    'message' => $batch_result['message']
+                    'message' => $batch_result['message'],
+                    'execution_time' => number_format($total_time, 2) . ' seconds'
                 ));
             }
         } catch (Exception $e) {
@@ -573,8 +766,7 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     }
     
     /**
-     * AJAX handler for processing a batch
-     * Improved with better connection handling
+     * AJAX handler for processing a batch - multi-batch optimized
      */
     public function ajax_process_db_batch() {
         // Check nonce
@@ -598,6 +790,9 @@ class SwiftSpeed_Siberian_DB_Cleanup {
         }
         
         try {
+            // Start timing
+            $start_time = microtime(true);
+            
             // Ensure database connection
             $connection = $this->get_db_connection();
             
@@ -611,21 +806,37 @@ class SwiftSpeed_Siberian_DB_Cleanup {
             
             // Process the batch
             $batch_result = $this->data->process_batch($task, $batch_index);
+            $first_batch_time = microtime(true) - $start_time;
+            
+            $this->log_message("Batch $batch_index processed in " . number_format($first_batch_time, 2) . " seconds");
+            
+            // If more batches to process and not completed, trigger a loopback request
+            if (!$batch_result['completed'] && !$this->is_background_processing) {
+                $this->log_message("More batches to process, triggering loopback request");
+                $this->trigger_loopback_request($task);
+            }
             
             // Close connection before sending response
             $this->close_connection();
             
+            // Enhance message with timing information
+            $total_time = microtime(true) - $start_time;
+            $enhanced_message = $batch_result['message'] . " Processed batch in " . number_format($total_time, 2) . " seconds.";
+            
             // Return the result
             if ($batch_result['success']) {
                 wp_send_json_success(array(
-                    'message' => $batch_result['message'],
+                    'message' => $enhanced_message,
                     'progress' => $batch_result['progress'],
                     'next_batch' => $batch_result['next_batch'],
-                    'completed' => $batch_result['completed']
+                    'completed' => $batch_result['completed'],
+                    'execution_time' => number_format($total_time, 2) . ' seconds',
+                    'background_enabled' => true
                 ));
             } else {
                 wp_send_json_error(array(
-                    'message' => $batch_result['message']
+                    'message' => $batch_result['message'],
+                    'execution_time' => number_format($total_time, 2) . ' seconds'
                 ));
             }
         } catch (Exception $e) {
@@ -681,7 +892,45 @@ class SwiftSpeed_Siberian_DB_Cleanup {
             $this->log_message("Returning DB cleanup progress data: progress={$progress_data['progress']}, processed={$progress_data['processed']}, total={$progress_data['total']}, logs=" . count($progress_data['logs']));
         }
         
+        // Calculate duration if possible
+        if (isset($progress_data['start_time']) && isset($progress_data['last_update'])) {
+            $duration = $progress_data['last_update'] - $progress_data['start_time'];
+            $progress_data['duration'] = $duration;
+            $progress_data['duration_formatted'] = $this->format_duration($duration);
+        }
+        
+        // If the task is running but hasn't been updated recently, check if we need to restart
+        if (isset($progress_data['status']) && $progress_data['status'] === 'running' && 
+            isset($progress_data['last_update']) && (time() - $progress_data['last_update']) > 60) {
+            // Trigger a new loopback request
+            $this->ensure_background_processing($task_type);
+            $progress_data['is_running'] = true;
+            $progress_data['background_enabled'] = true;
+            $progress_data['heartbeat_age'] = time() - $progress_data['last_update'];
+        } else if (isset($progress_data['status']) && $progress_data['status'] === 'running') {
+            $progress_data['is_running'] = true;
+            $progress_data['background_enabled'] = true;
+            $progress_data['heartbeat_age'] = isset($progress_data['last_update']) ? time() - $progress_data['last_update'] : 0;
+        }
+        
         wp_send_json_success($progress_data);
+    }
+    
+    /**
+     * Format duration in seconds to a human-readable string
+     */
+    private function format_duration($seconds) {
+        if ($seconds < 60) {
+            return $seconds . ' seconds';
+        } elseif ($seconds < 3600) {
+            $minutes = floor($seconds / 60);
+            $secs = $seconds % 60;
+            return $minutes . ' minute' . ($minutes > 1 ? 's' : '') . ($secs > 0 ? ', ' . $secs . ' seconds' : '');
+        } else {
+            $hours = floor($seconds / 3600);
+            $minutes = floor(($seconds % 3600) / 60);
+            return $hours . ' hour' . ($hours > 1 ? 's' : '') . ($minutes > 0 ? ', ' . $minutes . ' minutes' : '');
+        }
     }
     
     /**
@@ -699,11 +948,13 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     }
     
     /**
-     * Clear sessions method for direct task execution
-     * Improved with better connection handling
+     * Clear sessions method for direct task execution - uses optimized batch processing
      */
     public function clear_sessions() {
         try {
+            // Start timing
+            $start_time = microtime(true);
+            
             // Ensure database connection
             $connection = $this->get_db_connection();
             
@@ -750,10 +1001,28 @@ class SwiftSpeed_Siberian_DB_Cleanup {
             
             // Process the batch
             $batch_result = $this->data->process_batch('sessions', $batch_index);
+            $first_batch_time = microtime(true) - $start_time;
+            
+            $this->log_message("First batch processed in " . number_format($first_batch_time, 2) . " seconds");
+            
+            // If not completed, trigger a loopback request to continue in the background
+            if (!$batch_result['completed']) {
+                $this->log_message("Task not completed, triggering loopback request");
+                $this->trigger_loopback_request('sessions');
+            }
+            
             $progress_data = json_decode(file_get_contents($this->get_progress_file('sessions')), true);
             
+            // Calculate how many batches we processed
+            $batches_processed = 1; // We processed at least one batch
+            
             // Create a proper message based on the batch result
-            $message = $batch_result['message'];
+            $total_time = microtime(true) - $start_time;
+            $message = $batch_result['message'] . " Processed batch in " . number_format($total_time, 2) . " seconds.";
+            
+            if (!$batch_result['completed']) {
+                $message .= " Processing will continue in the background.";
+            }
             
             // Format the result
             $result = array(
@@ -766,13 +1035,17 @@ class SwiftSpeed_Siberian_DB_Cleanup {
                     'processed' => isset($progress_data['processed']) ? $progress_data['processed'] : 0,
                     'total' => isset($progress_data['total']) ? $progress_data['total'] : 0,
                     'progress_percentage' => isset($progress_data['progress']) ? $progress_data['progress'] : 0,
-                    'batch_index' => $batch_index,
+                    'batch_index' => $batch_index, 
                     'next_batch' => isset($batch_result['next_batch']) ? $batch_result['next_batch'] : ($batch_index + 1),
+                    'batches_processed' => $batches_processed,
+                    'execution_time' => number_format($total_time, 2) . ' seconds',
                     'summary' => isset($progress_data['processed']) && isset($progress_data['total']) && isset($progress_data['progress']) ? 
                         "Processed {$progress_data['processed']} out of {$progress_data['total']} sessions ({$progress_data['progress']}%)." : 
                         "Processing sessions...",
                     'timestamp' => time(),
-                    'timestamp_formatted' => date('Y-m-d H:i:s', time())
+                    'timestamp_formatted' => date('Y-m-d H:i:s', time()),
+                    'completed' => $batch_result['completed'],
+                    'background_enabled' => true
                 )
             );
             
@@ -814,11 +1087,13 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     }
     
     /**
-     * Clear mail logs method for direct task execution
-     * Improved with better connection handling
+     * Clear mail logs method for direct task execution - uses optimized batch processing
      */
     public function clear_mail_logs() {
         try {
+            // Start timing
+            $start_time = microtime(true);
+            
             // Ensure database connection
             $connection = $this->get_db_connection();
             
@@ -862,10 +1137,28 @@ class SwiftSpeed_Siberian_DB_Cleanup {
             
             // Process the batch
             $batch_result = $this->data->process_batch('mail_logs', $batch_index);
+            $first_batch_time = microtime(true) - $start_time;
+            
+            $this->log_message("First batch processed in " . number_format($first_batch_time, 2) . " seconds");
+            
+            // If not completed, trigger a loopback request to continue in the background
+            if (!$batch_result['completed']) {
+                $this->log_message("Task not completed, triggering loopback request");
+                $this->trigger_loopback_request('mail_logs');
+            }
+            
             $progress_data = json_decode(file_get_contents($this->get_progress_file('mail_logs')), true);
             
+            // Calculate how many batches we processed
+            $batches_processed = 1; // We processed at least one batch
+            
             // Create a proper message based on the batch result
-            $message = $batch_result['message'];
+            $total_time = microtime(true) - $start_time;
+            $message = $batch_result['message'] . " Processed batch in " . number_format($total_time, 2) . " seconds.";
+            
+            if (!$batch_result['completed']) {
+                $message .= " Processing will continue in the background.";
+            }
             
             // Format the result
             $result = array(
@@ -880,11 +1173,15 @@ class SwiftSpeed_Siberian_DB_Cleanup {
                     'progress_percentage' => isset($progress_data['progress']) ? $progress_data['progress'] : 0,
                     'batch_index' => $batch_index,
                     'next_batch' => isset($batch_result['next_batch']) ? $batch_result['next_batch'] : ($batch_index + 1),
+                    'batches_processed' => $batches_processed,
+                    'execution_time' => number_format($total_time, 2) . ' seconds',
                     'summary' => isset($progress_data['processed']) && isset($progress_data['total']) && isset($progress_data['progress']) ? 
                         "Processed {$progress_data['processed']} out of {$progress_data['total']} mail logs ({$progress_data['progress']}%)." : 
                         "Processing mail logs...",
                     'timestamp' => time(),
-                    'timestamp_formatted' => date('Y-m-d H:i:s', time())
+                    'timestamp_formatted' => date('Y-m-d H:i:s', time()),
+                    'completed' => $batch_result['completed'],
+                    'background_enabled' => true
                 )
             );
             
@@ -927,11 +1224,13 @@ class SwiftSpeed_Siberian_DB_Cleanup {
     }
     
     /**
-     * Clear source queue method for direct task execution
-     * Improved with better connection handling
+     * Clear source queue method for direct task execution - uses optimized batch processing
      */
     public function clear_source_queue() {
         try {
+            // Start timing
+            $start_time = microtime(true);
+            
             // Ensure database connection
             $connection = $this->get_db_connection();
             
@@ -975,10 +1274,28 @@ class SwiftSpeed_Siberian_DB_Cleanup {
             
             // Process the batch
             $batch_result = $this->data->process_batch('source_queue', $batch_index);
+            $first_batch_time = microtime(true) - $start_time;
+            
+            $this->log_message("First batch processed in " . number_format($first_batch_time, 2) . " seconds");
+            
+            // If not completed, trigger a loopback request to continue in the background
+            if (!$batch_result['completed']) {
+                $this->log_message("Task not completed, triggering loopback request");
+                $this->trigger_loopback_request('source_queue');
+            }
+            
             $progress_data = json_decode(file_get_contents($this->get_progress_file('source_queue')), true);
             
+            // Calculate how many batches we processed
+            $batches_processed = 1; // We processed at least one batch
+            
             // Create a proper message based on the batch result
-            $message = $batch_result['message'];
+            $total_time = microtime(true) - $start_time;
+            $message = $batch_result['message'] . " Processed batch in " . number_format($total_time, 2) . " seconds.";
+            
+            if (!$batch_result['completed']) {
+                $message .= " Processing will continue in the background.";
+            }
             
             // Format the result
             $result = array(
@@ -993,11 +1310,15 @@ class SwiftSpeed_Siberian_DB_Cleanup {
                     'progress_percentage' => isset($progress_data['progress']) ? $progress_data['progress'] : 0,
                     'batch_index' => $batch_index,
                     'next_batch' => isset($batch_result['next_batch']) ? $batch_result['next_batch'] : ($batch_index + 1),
+                    'batches_processed' => $batches_processed,
+                    'execution_time' => number_format($total_time, 2) . ' seconds',
                     'summary' => isset($progress_data['processed']) && isset($progress_data['total']) && isset($progress_data['progress']) ? 
                         "Processed {$progress_data['processed']} out of {$progress_data['total']} source queue items ({$progress_data['progress']}%)." : 
                         "Processing source queue items...",
                     'timestamp' => time(),
-                    'timestamp_formatted' => date('Y-m-d H:i:s', time())
+                    'timestamp_formatted' => date('Y-m-d H:i:s', time()),
+                    'completed' => $batch_result['completed'],
+                    'background_enabled' => true
                 )
             );
             

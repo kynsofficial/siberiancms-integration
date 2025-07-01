@@ -18,6 +18,8 @@
     let currentBatch = 0; // Current batch being processed
     let previewModal = null; // Preview modal reference
     let currentPage = 1; // Current page for data preview
+    let progressUpdateInterval = 3000; // Time between progress updates (3 seconds)
+    let resumptionMessageShown = false; // Flag to track if resumption message has been shown
     
     // Initialize the DB cleanup module
     function initDbCleanup() {
@@ -62,7 +64,7 @@
         $('.close-progress').on('click', function() {
             $('#task-progress-container').hide();
             
-            // Stop progress tracking
+            // Don't stop the task, just hide the progress
             if (taskRunning && taskProgressInterval) {
                 clearInterval(taskProgressInterval);
                 taskProgressInterval = null;
@@ -90,6 +92,7 @@
             logHashes = {};
             batchProcessing = false;
             currentBatch = 0;
+            resumptionMessageShown = false;
             
             // Store original text and disable button
             $button.data('original-text', originalText);
@@ -129,26 +132,10 @@
                 success: function(response) {
                     if (response.success) {
                         addLocalLog('Task initialized successfully on server', 'success');
+                        addLocalLog('Processing will continue in the background even if you leave this page', 'info');
                         
-                        // If there are batches to process, start batch processing
-                        if (response.data && response.data.next_batch !== undefined) {
-                            batchProcessing = true;
-                            currentBatch = response.data.next_batch;
-                            
-                            // Check if we need to process more batches
-                            if (!response.data.completed) {
-                                // Process the next batch after a short delay
-                                setTimeout(function() {
-                                    processNextBatch(task, currentBatch);
-                                }, 500);
-                            } else {
-                                // Task is already complete (no batches to process)
-                                completeTask();
-                            }
-                        } else {
-                            // No batch information, fall back to progress tracking
-                            trackDbCleanupProgress(task);
-                        }
+                        // Start tracking progress
+                        startProgressTracking(task);
                     } else {
                         addLocalLog('Error: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                         failTask();
@@ -160,10 +147,10 @@
                 error: function(xhr, status, error) {
                     // For timeout or errors, the task might still be running in the background
                     addLocalLog('Error starting task: ' + error, 'error');
-                    failTask();
+                    addLocalLog('Task may be running in background, continuing to monitor...', 'info');
                     
-                    // Reset button
-                    $button.prop('disabled', false).text(originalText);
+                    // Start tracking progress anyway
+                    startProgressTracking(task);
                 }
             });
         });
@@ -256,10 +243,177 @@
             loadDataPreview(dataType, currentPage);
         });
         
+        // Check if a task is currently running on page load
+        checkForRunningTasks();
+        
         // Load task counts - delay to prevent jerky UI when switching tabs
         setTimeout(function() {
             loadTaskCounts();
         }, 300);
+    }
+    
+    /**
+     * Check if a task is currently running on page load
+     */
+    function checkForRunningTasks() {
+        console.log("Checking for running database cleanup tasks...");
+        
+        // Check for all possible tasks
+        checkTaskStatus('sessions');
+        checkTaskStatus('mail_logs');
+        checkTaskStatus('source_queue');
+        checkTaskStatus('optimize');
+        checkTaskStatus('backoffice_alerts');
+        checkTaskStatus('cleanup_log');
+    }
+    
+    /**
+     * Check if a specific task is running
+     */
+    function checkTaskStatus(task) {
+        console.log("Checking status for task:", task);
+        
+        $.ajax({
+            url: swsib_automate.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swsib_get_db_cleanup_progress',
+                nonce: swsib_automate.nonce,
+                task_type: task
+            },
+            success: function(response) {
+                if (response.success) {
+                    const progressData = response.data;
+                    console.log("Got progress data for task:", task, progressData);
+                    
+                    // Check if the task is running
+                    if (progressData.status === 'running') {
+                        console.log('Found running task:', task);
+                        
+                        // Resume progress tracking
+                        resumeTaskTracking(task, progressData);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log("Error checking task status for " + task + ":", error);
+                // Don't show any visible error to the user
+            }
+        });
+    }
+    
+    /**
+     * Resume tracking a task that was already running
+     */
+    function resumeTaskTracking(task, progressData) {
+        // Set task as running
+        const taskId = 'db_cleanup_' + task;
+        taskRunning = true;
+        currentTaskId = taskId;
+        
+        // Update UI
+        const $button = $('.run-db-cleanup[data-task="' + task + '"]');
+        $button.prop('disabled', true).text(swsib_automate.task_running);
+        
+        // Show progress container
+        $('#task-progress-container').show();
+        
+        // Update progress bar
+        const progress = progressData.progress || 0;
+        $('#task-progress-container .task-progress-bar').css('width', progress + '%');
+        $('#task-progress-container .task-progress-percentage').text(progress + '%');
+        
+        // Update processed/total
+        if (progressData.total > 0) {
+            $('#task-progress-container .task-processed').text(progressData.processed || 0);
+            $('#task-progress-container .task-total').text(progressData.total);
+        }
+        
+        // Update current item
+        if (progressData.current_item) {
+            $('#task-progress-container .task-current-item').text(progressData.current_item);
+        }
+        
+        // Update title
+        $('#task-progress-container .task-title').text('Task in Progress: ' + getTaskTitle(taskId));
+        
+        // Only add resumption log once
+        if (!resumptionMessageShown) {
+            // Add resumption log
+            const timestamp = new Date().toLocaleTimeString();
+            const $log = $('#task-progress-container .task-progress-log');
+            const $entry = $('<div class="log-entry info"></div>');
+            $entry.text('[' + timestamp + '] Resumed task tracking after page reload');
+            $log.append($entry);
+            resumptionMessageShown = true;
+        }
+        
+        // Clear existing logs to avoid duplicates
+        logHashes[task] = {};
+        
+        // Display existing logs if any
+        if (progressData.logs && progressData.logs.length > 0) {
+            const $log = $('#task-progress-container .task-progress-log');
+            
+            progressData.logs.forEach(function(log) {
+                if (!log.message) return; // Skip empty messages
+                
+                // Create a unique hash for this log
+                const logHash = log.time + '-' + log.message.substring(0, 50);
+                
+                // Only add if we haven't shown this exact log yet
+                if (!logHashes[task] || !logHashes[task][logHash]) {
+                    const timestamp = new Date(log.time * 1000).toLocaleTimeString();
+                    const $entry = $('<div class="log-entry ' + (log.type || 'info') + '"></div>');
+                    $entry.text('[' + timestamp + '] ' + log.message);
+                    $log.append($entry);
+                    
+                    // Store this log hash
+                    if (!logHashes[task]) {
+                        logHashes[task] = {};
+                    }
+                    logHashes[task][logHash] = true;
+                }
+            });
+            
+            // Auto-scroll to bottom
+            $log.scrollTop($log[0].scrollHeight);
+        }
+        
+        // Start progress tracking with a delay to avoid immediate hammering
+        setTimeout(function() {
+            startProgressTracking(task);
+        }, 1000);
+    }
+    
+    /**
+     * Start tracking progress for a task
+     */
+    function startProgressTracking(task) {
+        // Set task start time
+        taskStartTime = new Date().getTime();
+        
+        // Start elapsed time counter
+        if (taskProgressInterval) {
+            clearInterval(taskProgressInterval);
+        }
+        
+        taskProgressInterval = setInterval(function() {
+            if (taskRunning) {
+                // Update elapsed time
+                updateElapsedTime();
+                
+                // Fetch progress updates
+                trackDbCleanupProgress(task);
+            } else {
+                // Stop interval if task is no longer running
+                clearInterval(taskProgressInterval);
+                taskProgressInterval = null;
+            }
+        }, progressUpdateInterval);
+        
+        // Fetch initial progress update immediately
+        trackDbCleanupProgress(task);
     }
     
     /**
@@ -491,6 +645,8 @@
     function trackDbCleanupProgress(task) {
         if (!taskRunning) return;
         
+        console.log("Tracking progress for task:", task);
+        
         // Make AJAX call to get progress
         $.ajax({
             url: swsib_automate.ajax_url,
@@ -503,8 +659,22 @@
             timeout: 10000, // 10-second timeout
             success: function(response) {
                 if (response.success) {
+                    // Reset retry counter on success
+                    retryCount = 0;
+                    
                     // Get progress data
                     const progressData = response.data;
+                    console.log("Progress data:", progressData);
+                    
+                    // Check if task is completed or cancelled
+                    if (progressData.status === 'completed') {
+                        completeTask();
+                        return;
+                    } else if (progressData.status === 'cancelled') {
+                        addLocalLog('Task was cancelled', 'warning');
+                        failTask();
+                        return;
+                    }
                     
                     // Update progress with real data
                     const progress = progressData.progress || 0;
@@ -514,6 +684,32 @@
                     if (progressData.total > 0) {
                         $('.task-processed').text(progressData.processed || 0);
                         $('.task-total').text(progressData.total);
+                    }
+                    
+                    // Show details about deleted/optimized items if available
+                    if ($('.task-details').length === 0) {
+                        // Create details element if it doesn't exist
+                        const $details = $('<div class="task-details"></div>');
+                        $('.task-progress-info').append($details);
+                    }
+                    
+                    let detailsText = '';
+                    if (progressData.deleted !== undefined) {
+                        if (task === 'optimize') {
+                            detailsText += 'Optimized: ' + progressData.deleted;
+                        } else {
+                            detailsText += 'Deleted: ' + progressData.deleted;
+                        }
+                    }
+                    if (progressData.skipped !== undefined) {
+                        detailsText += (detailsText ? ' | ' : '') + 'Skipped: ' + progressData.skipped;
+                    }
+                    if (progressData.errors !== undefined) {
+                        detailsText += (detailsText ? ' | ' : '') + 'Errors: ' + progressData.errors;
+                    }
+                    
+                    if (detailsText) {
+                        $('.task-details').text(detailsText);
                     }
                     
                     // Update current item
@@ -544,30 +740,48 @@
                         });
                     }
                     
-                    // If task is completed and we're not batch processing, complete task
+                    // Check if the task is actually running (has a recent heartbeat)
+                    if (progressData.last_update && (Date.now() / 1000 - progressData.last_update > 300)) {
+                        // More than 5 minutes since the last update - task might be stalled
+                        addLocalLog('Task appears to be stalled (no updates for more than 5 minutes)', 'warning');
+                    }
+                    
+                    // Check if task is completed and we're not batch processing
                     if (progressData.status === 'completed' && !batchProcessing) {
                         completeTask();
-                    } else if (progressData.status === 'failed') {
+                        return;
+                    }
+                } else {
+                    console.log("Error getting progress:", response.data ? response.data.message : 'Unknown error');
+                    
+                    // Increment retry counter
+                    retryCount++;
+                    
+                    if (retryCount >= maxRetries) {
+                        // Too many failures, assume task is no longer running
+                        addLocalLog('Failed to get progress updates after multiple attempts. Task may have stopped.', 'error');
                         failTask();
                     }
                 }
                 
-                // If we're not batch processing and task is still running, check progress again after a delay
+                // If task is still running and not batch processing, check progress again after delay
                 if (taskRunning && !batchProcessing && response.data.status === 'running') {
-                    setTimeout(function() {
-                        trackDbCleanupProgress(task);
-                    }, 3000);
+                    // Progress tracking will continue via interval timer
                 }
             },
             error: function(xhr, status, error) {
                 console.log("Error getting progress:", error);
                 
-                // If we're not batch processing and task is still running, check progress again after a delay
-                if (taskRunning && !batchProcessing) {
-                    setTimeout(function() {
-                        trackDbCleanupProgress(task);
-                    }, 5000);
+                // Increment retry counter
+                retryCount++;
+                
+                if (retryCount >= maxRetries) {
+                    // Too many failures, assume task is no longer running
+                    addLocalLog('Failed to get progress updates after multiple attempts. Task may have stopped.', 'error');
+                    failTask();
                 }
+                
+                // If task is still running and not batch processing, continue to check progress via interval
             }
         });
     }
@@ -680,6 +894,7 @@
         notificationShown = {};
         localTaskLogs = {};
         logHashes = {};
+        resumptionMessageShown = false;
         
         // Reset progress UI
         $('.task-progress-bar').css('width', '0%');
@@ -689,6 +904,9 @@
         $('.task-time-elapsed').text('00:00:00');
         $('.task-current-item').text('');
         $('.task-progress-log').empty();
+        
+        // Reset progress bar color
+        $('.task-progress-bar').css('background-color', '#2271b1');
         
         // Update title
         $('.task-title').text('Task in Progress: ' + getTaskTitle(taskId));
@@ -1090,6 +1308,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         .task-card-actions button {
             margin: 0 0 10px 0;
+        }
+        
+        /* Task details display */
+        .task-details {
+            margin-top: 5px;
+            font-size: 13px;
+            color: #666;
+            background-color: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
         }
         `;
         document.head.appendChild(style);

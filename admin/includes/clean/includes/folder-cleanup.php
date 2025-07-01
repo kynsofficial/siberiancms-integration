@@ -700,7 +700,8 @@ jQuery(document).ready(function($) {
             
             confirmMessage += ' This action cannot be undone!';
 
-            showModal(
+            // Use the folder cleanup specific confirmation modal
+            showFolderCleanupModal(
                 'Delete Selected Items',
                 confirmMessage,
                 function() {
@@ -1329,8 +1330,8 @@ jQuery(document).ready(function($) {
             const type = $(this).data('type');
             const name = $(this).data('name');
             
-            // Show confirmation modal
-            showModal(
+            // Show confirmation modal - use folder cleanup specific modal
+            showFolderCleanupModal(
                 `Delete ${type === 'folder' ? 'Folder' : 'File'}`,
                 `Are you sure you want to delete ${type === 'folder' ? 'folder' : 'file'} "${name}"? This action cannot be undone!`,
                 function() {
@@ -1888,13 +1889,14 @@ jQuery(document).ready(function($) {
     }
 
     /**
-     * Show a modal with the given title, message and callbacks
+     * Show a modal with the given title, message and callbacks for folder cleanup tab
+     * This uses a separate modal ID to avoid conflicts with other tabs
      */
-    function showModal(title, message, confirmCallback) {
+    function showFolderCleanupModal(title, message, confirmCallback) {
         // Create modal if it doesn't exist
-        if ($('.swsib-clean-modal-overlay.confirmation-modal').length === 0) {
+        if ($('.swsib-clean-modal-overlay.folder-cleanup-confirmation-modal').length === 0) {
             const modalHTML = `
-                <div class="swsib-clean-modal-overlay confirmation-modal">
+                <div class="swsib-clean-modal-overlay folder-cleanup-confirmation-modal">
                     <div class="swsib-clean-modal">
                         <div class="swsib-clean-modal-header">
                             <h3></h3>
@@ -1912,30 +1914,30 @@ jQuery(document).ready(function($) {
             $('body').append(modalHTML);
             
             // Bind close events
-            $('.confirmation-modal .swsib-clean-modal-close, .confirmation-modal .swsib-clean-modal-cancel').on('click', function() {
-                $('.confirmation-modal').removeClass('active');
+            $('.folder-cleanup-confirmation-modal .swsib-clean-modal-close, .folder-cleanup-confirmation-modal .swsib-clean-modal-cancel').on('click', function() {
+                $('.folder-cleanup-confirmation-modal').removeClass('active');
             });
             
             // Close modal when clicking on the overlay
-            $('.confirmation-modal').on('click', function(e) {
+            $('.folder-cleanup-confirmation-modal').on('click', function(e) {
                 if ($(e.target).hasClass('swsib-clean-modal-overlay')) {
-                    $('.confirmation-modal').removeClass('active');
+                    $('.folder-cleanup-confirmation-modal').removeClass('active');
                 }
             });
         }
         
         // Set modal content
-        $('.confirmation-modal .swsib-clean-modal-header h3').text(title);
-        $('.confirmation-modal .swsib-clean-modal-body').html(message);
+        $('.folder-cleanup-confirmation-modal .swsib-clean-modal-header h3').text(title);
+        $('.folder-cleanup-confirmation-modal .swsib-clean-modal-body').html(message);
         
         // Set confirm button callback
-        $('.confirmation-modal .swsib-clean-modal-confirm').off('click').on('click', function() {
-            $('.confirmation-modal').removeClass('active');
+        $('.folder-cleanup-confirmation-modal .swsib-clean-modal-confirm').off('click').on('click', function() {
+            $('.folder-cleanup-confirmation-modal').removeClass('active');
             if (confirmCallback) confirmCallback();
         });
         
         // Show modal
-        $('.confirmation-modal').addClass('active');
+        $('.folder-cleanup-confirmation-modal').addClass('active');
     }
 
     /**

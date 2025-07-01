@@ -1,8 +1,8 @@
 <?php
 /**
  * Full backup functionality for Siberian CMS (files + database).
- * OPTIMIZED VERSION 3.0: Improved performance, proper component delegation,
- * better memory management and large file support
+ * FIXED VERSION 5.0: Proper consolidation, single ZIP creation, 
+ * correct storage handling, and unified history tracking
  */
 class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
     /**
@@ -50,6 +50,13 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         'last_gc_time' => 0,
         'gc_interval' => 30, // Run GC every 30 seconds
     ];
+    
+    /**
+     * Flag to prevent duplicate history entries
+     * 
+     * @var bool
+     */
+    private $history_added = false;
     
     /**
      * Constructor.
@@ -131,8 +138,9 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
      * @return array|WP_Error Backup status or error.
      */
     public function start_backup($params = []) {
-        // Increase memory limit and execution time for backup process
-        @ini_set('memory_limit', '2048M');
+        // Set memory limit based on max_steps
+        $memory_mb = round(512 + ($this->max_steps * 30)); // 512MB to 1262MB
+        @ini_set('memory_limit', $memory_mb . 'M');
         @set_time_limit(0);
         
         // Default parameters
@@ -147,6 +155,8 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             'max_steps' => $this->max_steps,
             'scheduled' => false,
             'auto_lock' => false,
+            'schedule_id' => null,
+            'schedule_name' => null,
         ];
         
         $params = wp_parse_args($params, $default_params);
@@ -156,7 +166,7 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             $this->max_steps = min(25, max(2, (int)$params['max_steps']));
         }
         
-        $this->log_message('Starting backup with params: ' . json_encode([
+        $this->log_message('Starting full backup with params: ' . json_encode([
             'storage' => $params['storage'],
             'storage_providers' => $params['storage_providers'],
             'include_db' => $params['include_db'] ? 'yes' : 'no',
@@ -164,7 +174,7 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             'scheduled' => $params['scheduled'] ? 'yes' : 'no',
             'auto_lock' => $params['auto_lock'] ? 'yes' : 'no',
             'max_steps' => $this->max_steps,
-            'memory_limit' => ini_get('memory_limit'),
+            'memory_limit' => $memory_mb . 'M',
         ]));
         
         // Verify that at least one type of backup is enabled
@@ -204,8 +214,8 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             'params' => $params,
             'started' => time(),
             'start_time' => microtime(true),
-            'status' => 'phase_db',
-            'message' => __('Starting database backup...', 'swiftspeed-siberian'),
+            'status' => 'processing',
+            'message' => __('Starting backup...', 'swiftspeed-siberian'),
             'progress' => 0,
             'db_status' => null,
             'file_status' => null,
@@ -221,24 +231,34 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             'critical_errors' => [],
             'max_steps' => $this->max_steps,
             'memory_stats' => $this->memory_stats,
+            
+            // Consolidated tracking for final archive
+            'processed_files' => [],
+            'processed_dirs' => [],
+            'files_backed_up' => 0,
+            'dirs_backed_up' => 0,
+            'total_files' => 0,
+            'current_file' => '',
+            'current_file_index' => 0,
+            'failed_files' => [],
+            'total_tables' => 0,
+            'total_rows' => 0,
         ];
         
-        // Skip DB phase if not included
+        // Set initial phase
         if (!$params['include_db']) {
-            $status['status'] = 'phase_files';
-            $status['message'] = __('Starting file backup...', 'swiftspeed-siberian');
             $status['current_phase'] = 'files';
-        }
-        
-        // Skip files phase if not included
-        if (!$params['include_files'] && $params['include_db']) {
-            $status['status'] = 'phase_db';
-            $status['message'] = __('Starting database backup...', 'swiftspeed-siberian');
+            $status['message'] = __('Starting file backup...', 'swiftspeed-siberian');
+        } elseif (!$params['include_files']) {
             $status['current_phase'] = 'db';
+            $status['message'] = __('Starting database backup...', 'swiftspeed-siberian');
+        } else {
+            $status['current_phase'] = 'db';
+            $status['message'] = __('Starting database backup...', 'swiftspeed-siberian');
         }
         
         $this->update_status($status);
-        $this->log_message('Backup started: ' . $backup_id . ' (Type: ' . $backup_type . ')');
+        $this->log_message('Full backup started: ' . $backup_id . ' (Type: ' . $backup_type . ')');
         $this->log_memory_usage('Backup initialization');
         
         // Process the first phase
@@ -256,8 +276,9 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             return new WP_Error('process_error', __('Invalid backup status', 'swiftspeed-siberian'));
         }
         
-        // Increase memory limit and execution time for backup process
-        @ini_set('memory_limit', '2048M');
+        // Set memory limit based on max_steps
+        $memory_mb = round(512 + ($this->max_steps * 30));
+        @ini_set('memory_limit', $memory_mb . 'M');
         @set_time_limit(600);
         
         // Update time elapsed
@@ -265,23 +286,20 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         
         // Track memory usage
         $status['memory_usage'][] = [
-            'phase' => $status['status'],
+            'phase' => $status['current_phase'],
             'memory' => memory_get_usage(true),
             'time' => microtime(true)
         ];
         
         // Process based on current phase
-        switch ($status['status']) {
-            case 'phase_db':
-                $this->log_message('Processing DB phase');
+        switch ($status['current_phase']) {
+            case 'db':
                 return $this->process_db_phase($status);
                 
-            case 'phase_files':
-                $this->log_message('Processing Files phase');
+            case 'files':
                 return $this->process_files_phase($status);
                 
-            case 'phase_finalize':
-                $this->log_message('Finalizing backup');
+            case 'finalize':
                 return $this->finalize_backup($status);
                 
             case 'completed':
@@ -289,7 +307,7 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
                 return $status;
                 
             default:
-                $this->log_message('Unknown backup phase: ' . $status['status']);
+                $this->log_message('Unknown backup phase: ' . $status['current_phase']);
                 $status['status'] = 'error';
                 $status['message'] = __('Unknown backup phase', 'swiftspeed-siberian');
                 $this->update_status($status);
@@ -306,11 +324,7 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
     private function process_db_phase($status) {
         // Skip DB phase if not included
         if (!$status['params']['include_db']) {
-            $status['status'] = 'phase_files';
-            $status['message'] = __('Starting file backup...', 'swiftspeed-siberian');
-            $status['current_phase'] = 'files';
-            $this->update_status($status);
-            return $this->process_next($status);
+            return $this->transition_to_files_phase($status);
         }
         
         // Create DB directory in temp dir if not exists
@@ -327,22 +341,20 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         
         // If DB backup not started yet, start it
         if (empty($status['db_status'])) {
-            // Delete any existing current_backup option to avoid conflicts
-            delete_option('swsib_current_backup');
-            
-            // Start DB backup
+            // Start DB backup with special params to prevent history addition
             $db_params = [
                 'temp_dir' => $db_dir,
                 'full_backup' => true,
                 'id' => $status['id'] . '-db',
                 'allow_background' => $status['allow_background'],
                 'max_steps' => $this->max_steps,
+                'parent_backup_id' => $status['id'], // Mark as part of full backup
+                'prevent_history_add' => true, // Prevent individual history entry
             ];
             
             $this->log_message('Starting DB backup step');
             $this->log_memory_usage('Before DB backup start');
             
-            // Start the DB backup using the DB backup class
             $db_status = $this->db_backup->start_backup($db_params);
             
             if (is_wp_error($db_status)) {
@@ -355,7 +367,11 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             
             $status['db_status'] = $db_status;
             $status['message'] = __('Processing database backup...', 'swiftspeed-siberian');
-            $status['progress'] = $db_status['progress'] * 0.5;
+            
+            // Calculate progress (DB is 30% if files included, 100% if DB-only)
+            $db_weight = $status['params']['include_files'] ? 0.3 : 1.0;
+            $status['progress'] = $db_status['progress'] * $db_weight;
+            
             $this->update_status($status);
             
             // If DB backup completed in one go
@@ -370,7 +386,6 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         // Otherwise, process next DB backup step
         $db_status = $status['db_status'];
         
-        // Process next table
         $this->log_message('Processing next DB table');
         $db_status = $this->db_backup->process_next($db_status);
         
@@ -385,7 +400,10 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         // Update status with new DB status
         $status['db_status'] = $db_status;
         $status['message'] = $db_status['message'];
-        $status['progress'] = $db_status['progress'] * 0.5;
+        
+        // Calculate progress (DB is 30% if files included, 100% if DB-only)
+        $db_weight = $status['params']['include_files'] ? 0.3 : 1.0;
+        $status['progress'] = $db_status['progress'] * $db_weight;
         
         // Update DB size tracking
         if (isset($db_status['db_size'])) {
@@ -396,16 +414,6 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         // Update speed metrics if available
         if (isset($db_status['bytes_per_second'])) {
             $status['bytes_per_second'] = $db_status['bytes_per_second'];
-            
-            // Add speed to message
-            if ($status['bytes_per_second'] > 0) {
-                $speed_text = size_format($status['bytes_per_second'], 2) . '/s';
-                $size_text = isset($status['db_size']) ? size_format($status['db_size'], 2) : '';
-                
-                if (!empty($size_text)) {
-                    $status['message'] .= ' (' . $size_text . ' at ' . $speed_text . ')';
-                }
-            }
         }
         
         $this->update_status($status);
@@ -426,7 +434,7 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
      * @return array Updated backup status.
      */
     private function handle_db_phase_completed($status) {
-        // Copy DB fields to main status
+        // Copy DB fields to main status for final archive
         if (!empty($status['db_status'])) {
             $status['total_tables'] = $status['db_status']['total_tables'];
             $status['total_rows'] = $status['db_status']['total_rows'];
@@ -456,15 +464,28 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         
         // Move to files phase or finalize
         if ($status['params']['include_files']) {
-            $this->log_message('Moving to files phase after DB completion');
-            $status['status'] = 'phase_files';
-            $status['message'] = __('Starting file backup...', 'swiftspeed-siberian');
-            $status['current_phase'] = 'files';
+            return $this->transition_to_files_phase($status);
         } else {
-            $this->log_message('Moving to finalize phase (DB-only backup)');
-            $status['status'] = 'phase_finalize';
-            $status['message'] = __('Finalizing backup...', 'swiftspeed-siberian');
-            $status['current_phase'] = 'finalize';
+            return $this->transition_to_finalize_phase($status);
+        }
+    }
+    
+    /**
+     * Transition to files phase.
+     *
+     * @param array $status Current backup status.
+     * @return array Updated backup status.
+     */
+    private function transition_to_files_phase($status) {
+        $this->log_message('Moving to files phase');
+        $status['current_phase'] = 'files';
+        $status['message'] = __('Starting file backup...', 'swiftspeed-siberian');
+        
+        // Set progress based on whether DB was included
+        if ($status['params']['include_db']) {
+            $status['progress'] = 30; // DB completed, now starting files
+        } else {
+            $status['progress'] = 0; // Files-only backup
         }
         
         $this->update_status($status);
@@ -480,19 +501,15 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
     private function process_files_phase($status) {
         // Skip files phase if not included
         if (!$status['params']['include_files']) {
-            $status['status'] = 'phase_finalize';
-            $status['message'] = __('Finalizing backup...', 'swiftspeed-siberian');
-            $status['current_phase'] = 'finalize';
-            $this->update_status($status);
-            return $this->process_next($status);
+            return $this->transition_to_finalize_phase($status);
         }
         
         // If file backup not started yet, start it
         if (empty($status['file_status'])) {
-            // Delete any existing current_backup option to avoid conflicts
-            delete_option('swsib_current_backup');
+            $this->log_memory_usage('Before file backup start');
+            $this->log_message('Starting file backup step');
             
-            // Create files directory
+            // Create files directory in main temp directory for consolidation
             $files_dir = $status['temp_dir'] . 'files/';
             if (!file_exists($files_dir)) {
                 if (!wp_mkdir_p($files_dir)) {
@@ -504,20 +521,19 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
                 }
             }
             
-            $this->log_memory_usage('Before file backup start');
-            $this->log_message('Starting file backup step');
-            
-            // Start file backup with improved parameters
+            // Start file backup with special params to prevent history addition
             $file_params = [
-                'storage' => 'none',
-                'storage_providers' => $status['params']['storage_providers'],
+                'storage' => 'none', // Don't upload files individually
+                'storage_providers' => ['local'], // Store locally for consolidation
                 'include_paths' => $status['params']['include_paths'],
                 'exclude_paths' => $status['params']['exclude_paths'],
-                'temp_dir' => $files_dir,
+                'temp_dir' => $files_dir, // Use files subdirectory
                 'full_backup' => true,
                 'id' => $status['id'] . '-files',
                 'allow_background' => $status['allow_background'],
-                'max_steps' => $this->max_steps, // Pass through max_steps to file backup
+                'max_steps' => $this->max_steps,
+                'parent_backup_id' => $status['id'], // Mark as part of full backup
+                'prevent_history_add' => true, // Prevent individual history entry
             ];
             
             $file_status = $this->file_backup->start_backup($file_params);
@@ -533,23 +549,13 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             $status['file_status'] = $file_status;
             $status['message'] = __('Processing file backup...', 'swiftspeed-siberian');
             
-            // Calculate progress: DB was 50%, files start at 50%
-            $file_progress = $status['params']['include_db'] ? 50 : 0;
-            $file_progress += $file_status['progress'] * ($status['params']['include_db'] ? 0.5 : 1);
-            // FIX: Explicit cast to integer using round()
-            $status['progress'] = round($file_progress);
+            // Calculate progress: DB was 30% (if included), files are 70%
+            $file_progress_base = $status['params']['include_db'] ? 30 : 0;
+            $file_weight = $status['params']['include_db'] ? 0.7 : 1.0;
+            $status['progress'] = $file_progress_base + ($file_status['progress'] * $file_weight);
             
-            // Update file size tracking
-            if (isset($file_status['total_size'])) {
-                $status['files_size'] = $file_status['total_size'];
-                $status['total_size'] = (isset($status['db_size']) ? $status['db_size'] : 0) + $status['files_size'];
-            }
-            
-            // Check for large file processing
-            if (isset($file_status['is_processing_large_file']) && $file_status['is_processing_large_file']) {
-                $status['is_processing_large_file'] = true;
-                $this->log_message('Processing large file in file backup');
-            }
+            // Copy file tracking info to main status
+            $this->copy_file_status_to_main($status, $file_status);
             
             $this->update_status($status);
             
@@ -567,7 +573,6 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         
         $this->log_memory_usage('Before processing file batch');
         
-        // Process next batch of files
         $this->log_message('Processing next file batch');
         $file_status = $this->file_backup->process_next($file_status);
         
@@ -583,36 +588,13 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         $status['file_status'] = $file_status;
         $status['message'] = $file_status['message'];
         
-        // Calculate progress: DB was 50%, files are another 50%
-        $file_progress = $status['params']['include_db'] ? 50 : 0;
-        $file_progress += $file_status['progress'] * ($status['params']['include_db'] ? 0.5 : 1);
-        // FIX: Explicit cast to integer using round()
-        $status['progress'] = round($file_progress);
+        // Calculate progress: DB was 30% (if included), files are 70%
+        $file_progress_base = $status['params']['include_db'] ? 30 : 0;
+        $file_weight = $status['params']['include_db'] ? 0.7 : 1.0;
+        $status['progress'] = $file_progress_base + ($file_status['progress'] * $file_weight);
         
-        // Update current file info
-        if (!empty($file_status['current_file'])) {
-            $status['current_file'] = $file_status['current_file'];
-        }
-        
-        // Pass through large file processing flag
-        if (isset($file_status['is_processing_large_file'])) {
-            $status['is_processing_large_file'] = $file_status['is_processing_large_file'];
-            
-            if ($status['is_processing_large_file']) {
-                $this->log_message('Processing large file: ' . (isset($file_status['current_file']) ? $file_status['current_file'] : 'unknown'));
-            }
-        }
-        
-        // Update file size tracking
-        if (isset($file_status['total_size'])) {
-            $status['files_size'] = $file_status['total_size'];
-            $status['total_size'] = (isset($status['db_size']) ? $status['db_size'] : 0) + $status['files_size'];
-        }
-        
-        // Update speed metrics
-        if (isset($file_status['bytes_per_second'])) {
-            $status['bytes_per_second'] = $file_status['bytes_per_second'];
-        }
+        // Copy file tracking info to main status
+        $this->copy_file_status_to_main($status, $file_status);
         
         $this->update_status($status);
         
@@ -626,17 +608,66 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
     }
     
     /**
+     * Copy file status information to main status for UI compatibility.
+     *
+     * @param array $status Main backup status.
+     * @param array $file_status File backup status.
+     * @return void
+     */
+    private function copy_file_status_to_main(&$status, $file_status) {
+        // Copy file tracking fields
+        if (isset($file_status['files_backed_up'])) {
+            $status['files_backed_up'] = $file_status['files_backed_up'];
+        }
+        if (isset($file_status['dirs_backed_up'])) {
+            $status['dirs_backed_up'] = $file_status['dirs_backed_up'];
+        }
+        if (isset($file_status['total_files'])) {
+            $status['total_files'] = $file_status['total_files'];
+        }
+        if (isset($file_status['current_file'])) {
+            $status['current_file'] = $file_status['current_file'];
+        }
+        if (isset($file_status['current_file_index'])) {
+            $status['current_file_index'] = $file_status['current_file_index'];
+        }
+        if (isset($file_status['processed_files'])) {
+            $status['processed_files'] = $file_status['processed_files'];
+        }
+        if (isset($file_status['processed_dirs'])) {
+            $status['processed_dirs'] = $file_status['processed_dirs'];
+        }
+        if (isset($file_status['failed_files'])) {
+            $status['failed_files'] = $file_status['failed_files'];
+        }
+        
+        // Update file size tracking
+        if (isset($file_status['total_size'])) {
+            $status['files_size'] = $file_status['total_size'];
+            $status['total_size'] = (isset($status['db_size']) ? $status['db_size'] : 0) + $status['files_size'];
+        }
+        
+        // Update speed metrics
+        if (isset($file_status['bytes_per_second'])) {
+            $status['bytes_per_second'] = $file_status['bytes_per_second'];
+        }
+        
+        // Pass through large file processing flag
+        if (isset($file_status['is_processing_large_file'])) {
+            $status['is_processing_large_file'] = $file_status['is_processing_large_file'];
+        }
+    }
+    
+    /**
      * Handle completion of the files backup phase.
      *
      * @param array $status Current backup status.
      * @return array Updated backup status.
      */
     private function handle_files_phase_completed($status) {
-        // Copy file fields to main status
+        // Final copy of file fields to main status
         if (!empty($status['file_status'])) {
-            $status['processed_files'] = $status['file_status']['processed_files'];
-            $status['files_size'] = isset($status['file_status']['total_size']) ? $status['file_status']['total_size'] : 0;
-            $status['total_size'] = (isset($status['db_size']) ? $status['db_size'] : 0) + $status['files_size'];
+            $this->copy_file_status_to_main($status, $status['file_status']);
             
             // Copy any errors
             if (!empty($status['file_status']['errors'])) {
@@ -653,15 +684,6 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
                     $status['file_status']['critical_errors']
                 );
             }
-            
-            // Copy any other important metrics
-            if (isset($status['file_status']['files_backed_up'])) {
-                $status['files_backed_up'] = $status['file_status']['files_backed_up'];
-            }
-            
-            if (isset($status['file_status']['dirs_backed_up'])) {
-                $status['dirs_backed_up'] = $status['file_status']['dirs_backed_up'];
-            }
         }
         
         // Clean up memory
@@ -672,10 +694,21 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         $this->log_memory_usage('After file backup completion');
         
         // Move to finalize phase
-        $status['status'] = 'phase_finalize';
-        $status['message'] = __('Finalizing backup...', 'swiftspeed-siberian');
+        return $this->transition_to_finalize_phase($status);
+    }
+    
+    /**
+     * Transition to finalize phase.
+     *
+     * @param array $status Current backup status.
+     * @return array Updated backup status.
+     */
+    private function transition_to_finalize_phase($status) {
         $status['current_phase'] = 'finalize';
+        $status['progress'] = 95;
+        $status['message'] = __('Finalizing backup...', 'swiftspeed-siberian');
         
+        $this->log_message('Moving to finalize phase');
         $this->update_status($status);
         return $this->process_next($status);
     }
@@ -699,13 +732,13 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
     }
     
     /**
-     * Finalize the backup by creating the archive.
+     * Finalize the backup by creating the consolidated archive.
      *
      * @param array $status Current backup status.
      * @return array|WP_Error Updated backup status or error.
      */
     private function finalize_backup($status) {
-        $this->log_message('Creating final archive');
+        $this->log_message('Creating consolidated final archive for full backup');
         $this->log_memory_usage('Before creating archive');
         
         // Check for critical errors that would make the backup unusable
@@ -722,7 +755,7 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         }
         
         // Validate that we have something to backup
-        $has_files = !empty($status['processed_files']);
+        $has_files = !empty($status['processed_files']) || $status['files_backed_up'] > 0;
         $has_db = !empty($status['total_tables']);
         
         if ((!$has_files && $status['params']['include_files']) && 
@@ -740,8 +773,21 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             $status['bytes_per_second_avg'] = $status['total_size'] / $status['time_elapsed'];
         }
         
-        // Use parent class's create_final_archive method to ensure consistent backup history handling
-        return parent::create_final_archive($status);
+        $this->log_message('Full backup summary: files=' . $status['files_backed_up'] . 
+                          ', dirs=' . $status['dirs_backed_up'] . 
+                          ', tables=' . (isset($status['total_tables']) ? $status['total_tables'] : 0) . 
+                          ', size=' . size_format($status['total_size']));
+        
+        // Use parent class's create_final_archive method with consolidated approach
+        $result = parent::create_final_archive($status);
+        
+        // Ensure only one history entry is created for full backup
+        if (!is_wp_error($result) && $result['status'] === 'completed' && !$this->history_added) {
+            $this->history_added = true;
+            $this->log_message('Full backup completed and added to history: ' . $result['id']);
+        }
+        
+        return $result;
     }
     
     /**
@@ -792,7 +838,7 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             $readme .= "Total backup size: " . size_format($status['total_size'], 2) . "\n";
         }
         
-        // CRITICAL: Add error information prominently
+        // Add error information prominently
         if (!empty($status['critical_errors'])) {
             $readme .= "\n**CRITICAL ERRORS OCCURRED**\n";
             $readme .= "WARNING: " . count($status['critical_errors']) . " critical errors occurred during backup.\n";
@@ -820,66 +866,28 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
             $readme .= "Peak memory usage: " . size_format($this->memory_stats['peak_usage'], 2) . "\n";
         }
         
+        // Add storage provider information
+        if (isset($status['params']['storage_providers']) && is_array($status['params']['storage_providers'])) {
+            $readme .= "Storage providers: " . implode(', ', $status['params']['storage_providers']) . "\n";
+        }
+        
+        // Add scheduled backup info
+        if (!empty($status['params']['scheduled'])) {
+            $readme .= "Backup source: Scheduled backup\n";
+            if (!empty($status['params']['schedule_name'])) {
+                $readme .= "Schedule name: " . $status['params']['schedule_name'] . "\n";
+            }
+        } else {
+            $readme .= "Backup source: Manual backup\n";
+        }
+        
+        // Add auto-lock info
+        if (!empty($status['params']['auto_lock'])) {
+            $readme .= "Auto-locked: Yes\n";
+        }
+        
         $readme .= "\nCreated by SwiftSpeed Siberian Integration Plugin\n";
         return $readme;
-    }
-    
-    /**
-     * Clean up temporary files.
-     *
-     * @param string $dir Directory to clean up.
-     * @return void
-     */
-    protected function cleanup_temp_files($dir) {
-        if (empty($dir) || !file_exists($dir)) {
-            return;
-        }
-        
-        $this->log_message('Cleaning up temporary files in: ' . $dir);
-        
-        try {
-            $it = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::CHILD_FIRST
-            );
-            
-            foreach ($it as $file) {
-                if ($file->isDir()) {
-                    @rmdir($file->getPathname());
-                } else {
-                    @unlink($file->getPathname());
-                }
-            }
-            
-            @rmdir($dir);
-        } catch (Exception $e) {
-            $this->log_message('Error cleaning up temp files: ' . $e->getMessage());
-        }
-    }
-    
-    /**
-     * Recursively delete a directory and its contents.
-     *
-     * @param string $dir Directory to delete.
-     */
-    private function recursive_delete($dir) {
-        if (!file_exists($dir)) {
-            return;
-        }
-        
-        $files = array_diff(scandir($dir), ['.', '..']);
-        
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            
-            if (is_dir($path)) {
-                $this->recursive_delete($path);
-            } else {
-                @unlink($path);
-            }
-        }
-        
-        @rmdir($dir);
     }
     
     /**
@@ -895,126 +903,20 @@ class SwiftSpeed_Siberian_Full_Backup extends SwiftSpeed_Siberian_Base_Backup {
         
         $this->log_message('Canceling backup: ' . $status['id']);
         
+        // Cancel sub-backups if they exist
+        if (!empty($status['db_status'])) {
+            $this->db_backup->cancel_backup($status['db_status']);
+        }
+        
+        if (!empty($status['file_status'])) {
+            $this->file_backup->cancel_backup($status['file_status']);
+        }
+        
         // Clean up temp directory
         if (!empty($status['temp_dir']) && file_exists($status['temp_dir'])) {
             $this->cleanup_temp_files($status['temp_dir']);
         }
         
         return true;
-    }
-    
-    /**
-     * Cleanup old backups based on backup type.
-     *
-     * @param string $backup_type Type of backup (db, file, full).
-     * @return void
-     */
-    protected function cleanup_old_backups($backup_type) {
-        $this->log_message('Running cleanup for old backups of type: ' . $backup_type);
-        
-        // Get backup history
-        $history = get_option('swsib_backup_history', array());
-        
-        if (empty($history)) {
-            return;
-        }
-        
-        // Get backup settings
-        $backup_settings = isset($this->options['backup_restore']) ? $this->options['backup_restore'] : array();
-        
-        // Get maximum number of backups to keep
-        $max_backups = 10; // Default
-        
-        if ($backup_type === 'db') {
-            $max_backups = isset($backup_settings['max_backups_db']) ? intval($backup_settings['max_backups_db']) : 10;
-        } elseif ($backup_type === 'file') {
-            $max_backups = isset($backup_settings['max_backups_file']) ? intval($backup_settings['max_backups_file']) : 5;
-        } elseif ($backup_type === 'full') {
-            $max_backups = isset($backup_settings['max_backups_full']) ? intval($backup_settings['max_backups_full']) : 3;
-        }
-        
-        $this->log_message('Maximum ' . $backup_type . ' backups to keep: ' . $max_backups);
-        
-        // Get backups of this type
-        $backups = array();
-        
-        foreach ($history as $id => $backup) {
-            if ($backup['backup_type'] === $backup_type) {
-                $backups[$id] = $backup;
-            }
-        }
-        
-        // If we don't have more than the maximum, return
-        if (count($backups) <= $max_backups) {
-            return;
-        }
-        
-        // Sort backups by creation date (oldest first)
-        uasort($backups, function($a, $b) {
-            return $a['created'] - $b['created'];
-        });
-        
-        // Get the number to delete
-        $to_delete = count($backups) - $max_backups;
-        
-        $this->log_message('Need to delete ' . $to_delete . ' old ' . $backup_type . ' backups');
-        
-        // Delete the oldest backups
-        $deleted = 0;
-        
-        foreach ($backups as $id => $backup) {
-            if ($deleted >= $to_delete) {
-                break;
-            }
-            
-            // Skip locked backups
-            if (!empty($backup['locked'])) {
-                $this->log_message('Skipping locked backup: ' . $id);
-                continue;
-            }
-            
-            $this->log_message('Deleting old backup: ' . $id);
-            
-            // Delete the backup file
-            if (isset($backup['path']) && file_exists($backup['path'])) {
-                @unlink($backup['path']);
-                $this->log_message('Deleted local file: ' . $backup['path']);
-            }
-            
-            // Delete from external storage if applicable
-            if (isset($backup['storage']) && $backup['storage'] !== 'local' && !empty($backup['storage_info'])) {
-                $storage_type = $backup['storage'];
-                $provider = $this->get_storage_provider($storage_type);
-                
-                if ($provider) {
-                    $provider->initialize();
-                    
-                    // Determine file ID or path to delete
-                    $file_id = '';
-                    
-                    if (isset($backup['storage_info']['file_id'])) {
-                        $file_id = $backup['storage_info']['file_id'];
-                    } elseif (isset($backup['storage_info']['file'])) {
-                        $file_id = $backup['storage_info']['file'];
-                    } elseif (isset($backup['file'])) {
-                        $file_id = $backup['file'];
-                    }
-                    
-                    if (!empty($file_id)) {
-                        $provider->delete_file($file_id);
-                        $this->log_message('Deleted from ' . $storage_type . ': ' . $file_id);
-                    }
-                }
-            }
-            
-            // Remove from history
-            unset($history[$id]);
-            $deleted++;
-        }
-        
-        if ($deleted > 0) {
-            update_option('swsib_backup_history', $history);
-            $this->log_message('Updated backup history after deleting ' . $deleted . ' old backups');
-        }
     }
 }

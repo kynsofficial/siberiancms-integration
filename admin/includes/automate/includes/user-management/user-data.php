@@ -1,6 +1,6 @@
 <?php
 /**
- * User Management - Data Operations
+ * User Management - Data Operations (Optimized for Speed with Full Functionality)
  * 
  * @package SwiftSpeed_Siberian
  */
@@ -25,9 +25,8 @@ class SwiftSpeed_Siberian_User_Data {
     /**
      * Chunk size for processing large datasets
      */
-    private $chunk_size = 20;
+    private $chunk_size = 50; // Increased from 10 to 50
 
-    
     /**
      * Constructor
      */
@@ -35,39 +34,41 @@ class SwiftSpeed_Siberian_User_Data {
         $this->db_connection = $db_connection;
         $this->db_name = $db_name;
     }
+    
     /**
- * Set database name
- * 
- * @param string $db_name The database name
- */
-public function set_db_name($db_name) {
-    $this->db_name = $db_name;
-}
+     * Set database name
+     * 
+     * @param string $db_name The database name
+     */
+    public function set_db_name($db_name) {
+        $this->db_name = $db_name;
+    }
 
- /*** Check if database connection is valid and reconnect if needed
- * @return boolean True if connection is valid
- */
-private function ensure_valid_connection() {
-    // Check if connection exists and is valid
-    if (!$this->db_connection || $this->db_connection->connect_errno) {
-        $this->log_message("Database connection is invalid or not established. Attempting to reconnect...");
+    /**
+     * Check if database connection is valid and reconnect if needed
+     * @return boolean True if connection is valid
+     */
+    private function ensure_valid_connection() {
+        // Check if connection exists and is valid
+        if (!$this->db_connection || $this->db_connection->connect_errno) {
+            $this->log_message("Database connection is invalid or not established. Attempting to reconnect...");
+            return $this->reconnect_to_database();
+        }
+        
+        // Test connection with a simple query instead of using ping()
+        try {
+            $result = @$this->db_connection->query("SELECT 1");
+            if ($result) {
+                $result->free();
+                return true;
+            }
+        } catch (Exception $e) {
+            $this->log_message("Connection test failed: " . $e->getMessage());
+        }
+        
+        $this->log_message("Database connection is no longer active. Attempting to reconnect...");
         return $this->reconnect_to_database();
     }
-    
-    // Test connection with a simple query instead of using ping()
-    try {
-        $result = @$this->db_connection->query("SELECT 1");
-        if ($result) {
-            $result->free();
-            return true;
-        }
-    } catch (Exception $e) {
-        $this->log_message("Connection test failed: " . $e->getMessage());
-    }
-    
-    $this->log_message("Database connection is no longer active. Attempting to reconnect...");
-    return $this->reconnect_to_database();
-}
     
     /**
      * Reconnect to the database
@@ -378,9 +379,9 @@ private function ensure_valid_connection() {
     }
     
     /**
-     * Get inactive users for processing
+     * Get inactive users for processing (OPTIMIZED with batching)
      */
-    public function get_inactive_users($inactive_seconds) {
+    public function get_inactive_users($inactive_seconds, $limit = 200, $offset = 0) {
         if (!$this->ensure_valid_connection()) {
             return array();
         }
@@ -389,15 +390,16 @@ private function ensure_valid_connection() {
             // Calculate threshold date
             $threshold_date = date('Y-m-d H:i:s', time() - $inactive_seconds);
             
-            $this->log_message("Looking for users inactive since: " . $threshold_date);
+            $this->log_message("Looking for users inactive since: " . $threshold_date . " (limit: $limit, offset: $offset)");
             
-            // Get inactive users
+            // Get inactive users with limit and offset for batching
             $query = "SELECT admin_id, email, firstname, lastname, last_action 
                      FROM admin 
                      WHERE last_action < ? AND is_active = 1 
-                     ORDER BY last_action ASC";
+                     ORDER BY last_action ASC
+                     LIMIT ? OFFSET ?";
             
-            $stmt = $this->safe_prepared_query($query, 's', array($threshold_date), 'get_inactive_users');
+            $stmt = $this->safe_prepared_query($query, 'sii', array($threshold_date, $limit, $offset), 'get_inactive_users');
             
             if (!$stmt) {
                 return array();
@@ -421,9 +423,9 @@ private function ensure_valid_connection() {
     }
     
     /**
-     * Get users without apps for processing
+     * Get users without apps for processing (OPTIMIZED with batching)
      */
-    public function get_users_without_apps($grace_seconds, $check_inactivity = false, $inactivity_seconds = 0) {
+    public function get_users_without_apps($grace_seconds, $check_inactivity = false, $inactivity_seconds = 0, $limit = 200, $offset = 0) {
         if (!$this->ensure_valid_connection()) {
             return array();
         }
@@ -432,7 +434,7 @@ private function ensure_valid_connection() {
             // Calculate grace period threshold date
             $threshold_date = date('Y-m-d H:i:s', time() - $grace_seconds);
             
-            $this->log_message("Looking for users without apps registered before: " . $threshold_date);
+            $this->log_message("Looking for users without apps registered before: " . $threshold_date . " (limit: $limit, offset: $offset)");
             
             // Add inactivity filter if enabled and period is set
             if ($check_inactivity && $inactivity_seconds > 0) {
@@ -446,9 +448,10 @@ private function ensure_valid_connection() {
                         AND a.created_at < ? 
                         AND a.last_action < ?
                         AND a.is_active = 1
-                        ORDER BY a.created_at ASC";
+                        ORDER BY a.created_at ASC
+                        LIMIT ? OFFSET ?";
                 
-                $stmt = $this->safe_prepared_query($query, 'ss', array($threshold_date, $inactivity_threshold_date), 'get_users_without_apps');
+                $stmt = $this->safe_prepared_query($query, 'ssii', array($threshold_date, $inactivity_threshold_date, $limit, $offset), 'get_users_without_apps');
                 
                 $this->log_message("Also filtering users who haven't logged in since: " . $inactivity_threshold_date);
             } else {
@@ -460,9 +463,10 @@ private function ensure_valid_connection() {
                         )
                         AND a.created_at < ? 
                         AND a.is_active = 1
-                        ORDER BY a.created_at ASC";
+                        ORDER BY a.created_at ASC
+                        LIMIT ? OFFSET ?";
                 
-                $stmt = $this->safe_prepared_query($query, 's', array($threshold_date), 'get_users_without_apps');
+                $stmt = $this->safe_prepared_query($query, 'sii', array($threshold_date, $limit, $offset), 'get_users_without_apps');
             }
             
             if (!$stmt) {

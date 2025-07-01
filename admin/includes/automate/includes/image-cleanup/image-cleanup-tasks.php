@@ -28,6 +28,16 @@ class SwiftSpeed_Siberian_Image_Tasks {
     private $data;
     
     /**
+     * Is background processing
+     */
+    private $is_background_processing = false;
+    
+    /**
+     * Maximum batches to process in a single run
+     */
+    private $max_batches_per_run = 10;
+    
+    /**
      * Constructor
      */
     public function __construct($db_connection = null, $db_name = null, $data = null) {
@@ -81,12 +91,19 @@ class SwiftSpeed_Siberian_Image_Tasks {
             // Process the first batch to get things started
             $batch_result = $this->data->process_batch('cleanup', 0);
             
+            // Trigger a loopback request to continue processing in the background if not completed
+            if ($batch_result['success'] && !$batch_result['completed']) {
+                $this->trigger_loopback_request('cleanup');
+            }
+            
             if ($batch_result['success']) {
                 wp_send_json_success(array(
                     'message' => 'Image cleanup task started',
                     'progress' => $batch_result['progress'],
                     'next_batch' => $batch_result['next_batch'],
-                    'completed' => $batch_result['completed']
+                    'completed' => $batch_result['completed'],
+                    'background_enabled' => true,
+                    'is_running' => !$batch_result['completed']
                 ));
             } else {
                 wp_send_json_error(array('message' => $batch_result['message']));
@@ -125,6 +142,20 @@ class SwiftSpeed_Siberian_Image_Tasks {
         
         $this->log_message("Received image cleanup progress request for task_type: {$task_type}");
         
+        // Add background processing information
+        if (isset($progress_data['status']) && $progress_data['status'] === 'running') {
+            $progress_data['is_running'] = true;
+            $progress_data['background_enabled'] = true;
+            $progress_data['heartbeat_age'] = isset($progress_data['last_update']) ? time() - $progress_data['last_update'] : 0;
+        }
+        
+        // If the task is running but hasn't been updated recently, check if we need to restart
+        if (isset($progress_data['status']) && $progress_data['status'] === 'running' && 
+            isset($progress_data['last_update']) && (time() - $progress_data['last_update']) > 60) {
+            // Trigger a new loopback request
+            $this->ensure_background_processing($task_type);
+        }
+        
         if (isset($progress_data['progress']) && isset($progress_data['processed']) && isset($progress_data['total'])) {
             $this->log_message("Returning image cleanup progress data: progress={$progress_data['progress']}, processed={$progress_data['processed']}, total={$progress_data['total']}, logs=" . count($progress_data['logs']));
         }
@@ -157,17 +188,74 @@ class SwiftSpeed_Siberian_Image_Tasks {
         // Process the batch
         $batch_result = $this->data->process_batch($task, $batch_index);
         
+        // Trigger a loopback request to continue processing in the background if not completed and not a background process
+        if ($batch_result['success'] && !$batch_result['completed'] && !$this->is_background_processing) {
+            $this->trigger_loopback_request($task);
+        }
+        
         // Return the result
         if ($batch_result['success']) {
             wp_send_json_success(array(
                 'message' => 'Batch processed',
                 'progress' => $batch_result['progress'],
                 'next_batch' => $batch_result['next_batch'],
-                'completed' => $batch_result['completed']
+                'completed' => $batch_result['completed'],
+                'background_enabled' => true,
+                'is_running' => !$batch_result['completed']
             ));
         } else {
             wp_send_json_error(array('message' => $batch_result['message']));
         }
+    }
+    
+    /**
+     * Ensure background processing is continuing for a task
+     */
+    private function ensure_background_processing($task) {
+        $progress_file = $this->data->get_progress_file($task);
+        if (!file_exists($progress_file)) {
+            return false;
+        }
+        
+        $progress_data = json_decode(file_get_contents($progress_file), true);
+        if (!$progress_data || !isset($progress_data['status']) || $progress_data['status'] !== 'running') {
+            return false;
+        }
+        
+        // Check if the last update was less than 1 minute ago - if so, assume it's still running
+        if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) < 60) {
+            return true;
+        }
+        
+        // If it's been more than 1 minute, trigger a new loopback request
+        $this->log_message("Restarting background processing for task: $task");
+        $this->trigger_loopback_request($task);
+        
+        return true;
+    }
+    
+    /**
+     * Trigger a loopback request to continue processing in the background
+     */
+    private function trigger_loopback_request($task) {
+        // Create a specific persistent nonce key for the task
+        $nonce_action = 'swsib_image_cleanup_loopback_' . $task;
+        $nonce = wp_create_nonce($nonce_action);
+        
+        // Store the nonce in an option for validation later
+        update_option('swsib_image_loopback_nonce_' . $task, $nonce, false);
+        
+        $url = admin_url('admin-ajax.php?action=swsib_image_cleanup_loopback&task=' . urlencode($task) . '&nonce=' . $nonce);
+        
+        $args = array(
+            'timeout'   => 0.01,
+            'blocking'  => false,
+            'sslverify' => apply_filters('https_local_ssl_verify', false),
+            'headers'   => array('Cache-Control' => 'no-cache'),
+        );
+        
+        $this->log_message("Triggering loopback request for task: $task");
+        wp_remote_get($url, $args);
     }
     
     /**
@@ -256,9 +344,17 @@ class SwiftSpeed_Siberian_Image_Tasks {
     
     /**
      * Handle scheduled task (called from cron)
+     * Now delegates to the main class for batch processing
      */
     public function handle_scheduled_task($args = array()) {
         $this->log_message("Running scheduled image cleanup task");
+        
+        // For compatibility with the scheduler, we'll call the handle_scheduled_task method in the main class
+        if (function_exists('swsib') && isset(swsib()->image_cleanup)) {
+            return swsib()->image_cleanup->handle_scheduled_task('image_cleanup', array('task' => 'cleanup'));
+        }
+        
+        $this->log_message("Main image cleanup class not found, using direct task execution");
         
         // Initialize the task
         $result = $this->data->initialize_task('cleanup');

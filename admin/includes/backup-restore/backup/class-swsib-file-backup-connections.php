@@ -1,8 +1,8 @@
 <?php
 /**
  * Connection handling for file backup operations.
- * OPTIMIZED VERSION: Improved streaming for large files, better memory management,
- * and enhanced error handling for SFTP/FTP connections
+ * FIXED VERSION 3.0: Improved SFTP stability, better error handling,
+ * enhanced retry logic, and connection reliability matching FTP performance
  */
 class SwiftSpeed_Siberian_File_Backup_Connections {
     /**
@@ -24,14 +24,19 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      * 
      * @var int
      */
-    private $max_connections = 1; // Reduced from 2 to 1 for better memory management
+    private $max_connections = 1; // Single connection for memory efficiency
     
     /**
-     * Time after which a connection should be considered stale and recreated
+     * Connection timeout settings
      * 
-     * @var int
+     * @var array
      */
-    private $connection_ttl = 120; // 2 minutes (reduced from 3)
+    private $timeouts = [
+        'connection_ttl' => 300,    // 5 minutes (increased for SFTP)
+        'operation_timeout' => 90,  // 90 seconds for operations (increased)
+        'large_file_timeout' => 600, // 10 minutes for large files
+        'sftp_timeout' => 120,      // 2 minutes for SFTP operations
+    ];
     
     /**
      * Track when connections were created
@@ -50,14 +55,36 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         'connections_reused' => 0,
         'connections_failed' => 0,
         'connections_closed' => 0,
+        'bytes_transferred' => 0,
+        'files_transferred' => 0,
+        'retry_attempts' => 0,
+        'retry_successes' => 0,
     ];
     
     /**
-     * Download chunk size for memory efficiency
+     * Streaming settings (optimized for reliability)
      * 
-     * @var int
+     * @var array
      */
-    private $download_chunk_size = 262144; // 256KB chunks
+    private $streaming_config = [
+        'chunk_size' => 65536,      // 64KB chunks for better reliability
+        'buffer_size' => 262144,    // 256KB buffer
+        'large_file_threshold' => 104857600, // 100MB
+        'max_retries' => 5,         // Increased retry attempts
+        'retry_delay' => 2,         // 2 seconds between retries
+    ];
+
+    /**
+     * SFTP specific settings for better reliability
+     * 
+     * @var array
+     */
+    private $sftp_config = [
+        'keep_alive_interval' => 30, // Send keep-alive every 30 seconds
+        'max_packet_size' => 32768,  // 32KB max packet size for compatibility
+        'compression' => false,      // Disable compression for better compatibility
+        'cipher' => 'aes128-ctr',    // Use reliable cipher
+    ];
 
     /**
      * Constructor
@@ -67,6 +94,16 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         $this->ftp_connections = [];
         $this->sftp_connections = [];
         $this->connection_times = [];
+        
+        // Adjust settings based on available memory
+        $memory_limit = $this->get_memory_limit();
+        if ($memory_limit < 536870912) { // Less than 512MB
+            $this->streaming_config['chunk_size'] = 32768; // 32KB
+            $this->streaming_config['buffer_size'] = 131072; // 128KB
+        } elseif ($memory_limit > 1073741824) { // More than 1GB
+            $this->streaming_config['chunk_size'] = 131072; // 128KB
+            $this->streaming_config['buffer_size'] = 524288; // 512KB
+        }
     }
 
     /**
@@ -98,7 +135,7 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
             $this->connection_times[] = time();
         }
         
-        $this->log_message('Initialized FTP connection pool with ' . count($this->ftp_connections) . ' connections');
+        $this->log_message('Initialized FTP connection pool');
     }
     
     /**
@@ -118,7 +155,7 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
             $this->connection_times[] = time();
         }
         
-        $this->log_message('Initialized SFTP connection pool with ' . count($this->sftp_connections) . ' connections');
+        $this->log_message('Initialized SFTP connection pool');
     }
     
     /**
@@ -133,8 +170,8 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         $password = $config['password'];
         $port = isset($config['port']) ? intval($config['port']) : 21;
         
-        // Connect to FTP server with shorter timeout
-        $conn = @ftp_connect($host, $port, 10);
+        // Connect to FTP server with timeout
+        $conn = @ftp_connect($host, $port, 15);
         if (!$conn) {
             $this->log_message('Failed to create FTP connection to ' . $host . ':' . $port);
             $this->connection_stats['connections_failed']++;
@@ -153,15 +190,15 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         @ftp_pasv($conn, true);
         
         // Set timeout
-        @ftp_set_option($conn, FTP_TIMEOUT_SEC, 30);
+        @ftp_set_option($conn, FTP_TIMEOUT_SEC, $this->timeouts['operation_timeout']);
         
         $this->connection_stats['connections_created']++;
+        $this->log_message('Created FTP connection successfully');
         return $conn;
     }
     
     /**
-     * Create a single SFTP connection
-     * Uses SSH2 extension if available, otherwise falls back to phpseclib
+     * Create a single SFTP connection with enhanced reliability
      * 
      * @param array $config SFTP connection configuration
      * @return mixed|false SFTP connection or false on failure
@@ -173,52 +210,138 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         $port = isset($config['port']) ? intval($config['port']) : 22;
         
         if (extension_loaded('ssh2')) {
-            // Use SSH2 extension if available
-            $conn = @ssh2_connect($host, $port, array('disconnect' => 'disconnect_callback'));
+            // Use SSH2 extension with enhanced settings
+            $methods = [
+                'kex' => 'diffie-hellman-group14-sha256,diffie-hellman-group-exchange-sha256',
+                'hostkey' => 'rsa-sha2-512,rsa-sha2-256,ssh-rsa',
+                'client_to_server' => [
+                    'crypt' => 'aes128-ctr,aes192-ctr,aes256-ctr',
+                    'mac' => 'hmac-sha2-256,hmac-sha1',
+                    'comp' => 'none'
+                ],
+                'server_to_client' => [
+                    'crypt' => 'aes128-ctr,aes192-ctr,aes256-ctr',
+                    'mac' => 'hmac-sha2-256,hmac-sha1',
+                    'comp' => 'none'
+                ]
+            ];
+            
+            $callbacks = [
+                'disconnect' => [$this, 'sftp_disconnect_callback']
+            ];
+            
+            $conn = @ssh2_connect($host, $port, $methods, $callbacks);
             if (!$conn) {
                 $this->log_message('Failed to create SFTP connection to ' . $host . ':' . $port);
                 $this->connection_stats['connections_failed']++;
                 return false;
             }
             
-            // Try to authenticate
-            if (!@ssh2_auth_password($conn, $username, $password)) {
-                $this->log_message('Failed to login to SFTP with user: ' . $username);
+            // Try to authenticate with better error handling
+            $auth_result = @ssh2_auth_password($conn, $username, $password);
+            if (!$auth_result) {
+                // Try to get more specific error information
+                $this->log_message('Failed to login to SFTP with user: ' . $username . ' (authentication failed)');
                 $this->connection_stats['connections_failed']++;
                 return false;
             }
             
-            // Initialize SFTP subsystem
-            $sftp = @ssh2_sftp($conn);
+            // Initialize SFTP subsystem with retry
+            $sftp = false;
+            $retry_count = 0;
+            $max_retries = 3;
+            
+            while ($retry_count < $max_retries && !$sftp) {
+                $sftp = @ssh2_sftp($conn);
+                if (!$sftp) {
+                    $retry_count++;
+                    if ($retry_count < $max_retries) {
+                        $this->log_message('SFTP subsystem initialization failed, retrying... (attempt ' . $retry_count . ')');
+                        sleep(1); // Wait 1 second before retry
+                    }
+                }
+            }
+            
             if (!$sftp) {
-                $this->log_message('Failed to initialize SFTP subsystem');
+                $this->log_message('Failed to initialize SFTP subsystem after ' . $max_retries . ' attempts');
+                $this->connection_stats['connections_failed']++;
+                return false;
+            }
+            
+            // Test the connection with a simple stat operation
+            $test_result = @ssh2_sftp_stat($sftp, '/');
+            if ($test_result === false) {
+                $this->log_message('SFTP connection test failed - cannot access root directory');
                 $this->connection_stats['connections_failed']++;
                 return false;
             }
             
             $this->connection_stats['connections_created']++;
+            $this->log_message('Created SFTP connection successfully (SSH2)');
             return [
                 'type' => 'ssh2',
                 'connection' => $conn,
-                'sftp' => $sftp
+                'sftp' => $sftp,
+                'created_at' => time(),
+                'last_activity' => time(),
             ];
         }
         elseif (class_exists('\phpseclib3\Net\SFTP')) {
-            // Use phpseclib if SSH2 extension is not available
+            // Use phpseclib with enhanced settings
             try {
                 $sftp = new \phpseclib3\Net\SFTP($host, $port);
-                $sftp->setTimeout(30);
                 
-                if (!$sftp->login($username, $password)) {
-                    $this->log_message('Failed to login to SFTP with user: ' . $username);
+                // Set various options for better reliability
+                $sftp->setTimeout($this->timeouts['sftp_timeout']);
+                $sftp->setKeepAlive($this->sftp_config['keep_alive_interval']);
+                
+                // Try to login with retry mechanism
+                $login_success = false;
+                $retry_count = 0;
+                $max_retries = 3;
+                
+                while ($retry_count < $max_retries && !$login_success) {
+                    try {
+                        $login_success = $sftp->login($username, $password);
+                        if (!$login_success) {
+                            $retry_count++;
+                            if ($retry_count < $max_retries) {
+                                $this->log_message('SFTP login failed, retrying... (attempt ' . $retry_count . ')');
+                                sleep(2); // Wait 2 seconds before retry
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        $retry_count++;
+                        if ($retry_count < $max_retries) {
+                            $this->log_message('SFTP login exception, retrying... (attempt ' . $retry_count . '): ' . $e->getMessage());
+                            sleep(2);
+                        } else {
+                            throw $e;
+                        }
+                    }
+                }
+                
+                if (!$login_success) {
+                    $this->log_message('Failed to login to SFTP with user: ' . $username . ' after ' . $max_retries . ' attempts');
+                    $this->connection_stats['connections_failed']++;
+                    return false;
+                }
+                
+                // Test the connection
+                $test_result = $sftp->is_dir('/');
+                if (!$test_result) {
+                    $this->log_message('SFTP connection test failed - cannot access root directory');
                     $this->connection_stats['connections_failed']++;
                     return false;
                 }
                 
                 $this->connection_stats['connections_created']++;
+                $this->log_message('Created SFTP connection successfully (phpseclib)');
                 return [
                     'type' => 'phpseclib',
-                    'connection' => $sftp
+                    'connection' => $sftp,
+                    'created_at' => time(),
+                    'last_activity' => time(),
                 ];
             }
             catch (\Exception $e) {
@@ -234,6 +357,17 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
     }
     
     /**
+     * SFTP disconnect callback for SSH2
+     * 
+     * @param int $reason Disconnect reason
+     * @param string $message Disconnect message
+     * @param string $language Language
+     */
+    public function sftp_disconnect_callback($reason, $message, $language) {
+        $this->log_message("SFTP disconnected: reason=$reason, message=$message");
+    }
+    
+    /**
      * Get an FTP connection from the pool or create a new one
      * 
      * @param array $config FTP connection configuration
@@ -241,40 +375,26 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      */
     private function get_ftp_connection($config) {
         if (empty($this->ftp_connections)) {
-            $conn = $this->create_ftp_connection($config);
-            if ($conn) {
-                $this->connection_times[] = time();
-            }
-            return $conn;
+            return $this->create_ftp_connection($config);
         }
         
         // Get a connection from the pool
         $conn = array_pop($this->ftp_connections);
         $conn_time = array_pop($this->connection_times);
         
-        // Check if connection is stale
-        $is_stale = (time() - $conn_time) > $this->connection_ttl;
+        // Check if connection is stale or invalid
+        $is_stale = (time() - $conn_time) > $this->timeouts['connection_ttl'];
         
-        // Test if the connection is still valid
         if ($is_stale || @ftp_pwd($conn) === false) {
             // Connection is no longer valid or stale, create a new one
             @ftp_close($conn);
             $this->connection_stats['connections_closed']++;
-            $this->log_message('Replacing stale or invalid FTP connection');
-            $conn = $this->create_ftp_connection($config);
-            if ($conn) {
-                $conn_time = time();
-            }
+            $this->log_message('Replacing stale FTP connection');
+            return $this->create_ftp_connection($config);
         } else {
             $this->connection_stats['connections_reused']++;
+            return $conn;
         }
-        
-        if ($conn) {
-            // Update the connection time
-            $this->connection_times[] = $conn_time;
-        }
-        
-        return $conn;
     }
     
     /**
@@ -285,33 +405,23 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      */
     private function get_sftp_connection($config) {
         if (empty($this->sftp_connections)) {
-            $conn = $this->create_sftp_connection($config);
-            if ($conn) {
-                $this->connection_times[] = time();
-            }
-            return $conn;
+            return $this->create_sftp_connection($config);
         }
         
         // Get a connection from the pool
         $conn = array_pop($this->sftp_connections);
         $conn_time = array_pop($this->connection_times);
         
-        // Check if connection is stale
-        $is_stale = (time() - $conn_time) > $this->connection_ttl;
-        
-        // Test if the connection is still valid
+        // Check if connection is stale or invalid
+        $is_stale = (time() - $conn['created_at']) > $this->timeouts['connection_ttl'];
         $is_valid = false;
         
         if ($conn['type'] === 'ssh2') {
-            // For SSH2 extension
             $is_valid = @ssh2_sftp_stat($conn['sftp'], '/') !== false;
-        }
-        else {
-            // For phpseclib - use is_dir to check connection validity
+        } else {
             try {
                 $is_valid = $conn['connection']->is_dir('/');
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 $is_valid = false;
             }
         }
@@ -319,41 +429,32 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         if ($is_stale || !$is_valid) {
             // Connection is no longer valid or stale, create a new one
             if ($conn['type'] === 'ssh2') {
-                @ssh2_disconnect($conn['connection']);
+                // No explicit disconnect for SSH2, just let it go out of scope
             }
-            
             $this->connection_stats['connections_closed']++;
-            $this->log_message('Replacing stale or invalid SFTP connection');
-            $conn = $this->create_sftp_connection($config);
-            if ($conn) {
-                $conn_time = time();
-            }
+            $this->log_message('Replacing stale SFTP connection');
+            return $this->create_sftp_connection($config);
         } else {
+            // Update last activity time
+            $conn['last_activity'] = time();
             $this->connection_stats['connections_reused']++;
+            return $conn;
         }
-        
-        if ($conn) {
-            // Update the connection time
-            $this->connection_times[] = $conn_time;
-        }
-        
-        return $conn;
     }
     
     /**
      * Return an FTP connection to the pool
      * 
      * @param resource $conn FTP connection
-     * @param int $creation_time When the connection was created/last used
      * @return void
      */
-    private function return_ftp_connection($conn, $creation_time = null) {
+    private function return_ftp_connection($conn) {
         if (!$conn) return;
         
         if (count($this->ftp_connections) < $this->max_connections) {
             // Add back to the pool
             $this->ftp_connections[] = $conn;
-            $this->connection_times[] = $creation_time ?: time();
+            $this->connection_times[] = time();
         } else {
             // Pool is full, close the connection
             @ftp_close($conn);
@@ -365,217 +466,111 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      * Return an SFTP connection to the pool
      * 
      * @param mixed $conn SFTP connection
-     * @param int $creation_time When the connection was created/last used
      * @return void
      */
-    private function return_sftp_connection($conn, $creation_time = null) {
+    private function return_sftp_connection($conn) {
         if (!$conn) return;
         
         if (count($this->sftp_connections) < $this->max_connections) {
-            // Add back to the pool
+            // Update last activity and add back to the pool
+            $conn['last_activity'] = time();
             $this->sftp_connections[] = $conn;
-            $this->connection_times[] = $creation_time ?: time();
+            $this->connection_times[] = time();
         } else {
             // Pool is full, close the connection
             if ($conn['type'] === 'ssh2') {
-                @ssh2_disconnect($conn['connection']);
+                // No explicit disconnect for SSH2, just let it go out of scope
             }
             $this->connection_stats['connections_closed']++;
         }
     }
     
     /**
-     * Close all FTP connections in the pool
-     * 
-     * @return void
-     */
-    public function close_connection_pool() {
-        foreach ($this->ftp_connections as $conn) {
-            @ftp_close($conn);
-            $this->connection_stats['connections_closed']++;
-        }
-        $this->ftp_connections = [];
-        $this->connection_times = [];
-        
-        $this->log_message('Closed FTP connection pool');
-    }
-    
-    /**
-     * Close all SFTP connections in the pool
-     * 
-     * @return void
-     */
-    public function close_sftp_connection_pool() {
-        foreach ($this->sftp_connections as $conn) {
-            if ($conn['type'] === 'ssh2') {
-                @ssh2_disconnect($conn['connection']);
-            }
-            $this->connection_stats['connections_closed']++;
-        }
-        $this->sftp_connections = [];
-        // Reset connection times only if necessary (both pools share the same array)
-        if (empty($this->ftp_connections)) {
-            $this->connection_times = [];
-        }
-        
-        $this->log_message('Closed SFTP connection pool');
-    }
-
-    /**
-     * Close all connections (both FTP and SFTP)
-     * 
-     * @return void
-     */
-    public function close_all_connections() {
-        $this->close_connection_pool();
-        $this->close_sftp_connection_pool();
-        
-        // Log connection statistics
-        $this->log_message('Connection statistics: ' . json_encode($this->connection_stats));
-    }
-    
-    /**
-     * Test FTP connection with improved error handling.
+     * Test FTP connection with enhanced error handling.
      *
      * @param array $config FTP connection configuration.
      * @return bool|WP_Error True on success or error on failure.
      */
     public function test_ftp_connection($config) {
-        // Check if FTP functions are available
         if (!function_exists('ftp_connect')) {
-            $this->log_message('FTP functions are not available on this server');
             return new WP_Error('ftp_functions', __('FTP functions are not available on this server', 'swiftspeed-siberian'));
         }
         
-        // Connect to FTP server with timeout
-        $ftp_conn = @ftp_connect($config['host'], intval($config['port'] ?: 21), 10);
+        $ftp_conn = @ftp_connect($config['host'], intval($config['port'] ?: 21), 15);
         if (!$ftp_conn) {
-            $this->log_message('Could not connect to FTP server: ' . $config['host']);
             return new WP_Error('ftp_connect', __('Could not connect to FTP server', 'swiftspeed-siberian'));
         }
         
-        // Login
         if (!@ftp_login($ftp_conn, $config['username'], $config['password'])) {
             ftp_close($ftp_conn);
-            $this->log_message('FTP login failed for user: ' . $config['username']);
             return new WP_Error('ftp_login', __('FTP login failed', 'swiftspeed-siberian'));
         }
         
-        // Set passive mode
         ftp_pasv($ftp_conn, true);
         
-        // Test directory access
         $path = !empty($config['path']) ? $config['path'] : '/';
-        $path = rtrim($path, '/');
-        
-        // Try different approaches to access the directory
-        $chdir_success = false;
-        
-        // First try the exact path
-        if (!empty($path)) {
-            $this->log_message("Trying to access directory: {$path}");
-            $chdir_success = @ftp_chdir($ftp_conn, $path);
-        }
-        
-        // If that fails, try for root or default directory
-        if (!$chdir_success) {
-            if ($path == '/' || empty($path)) {
-                $this->log_message("Trying default directory (.)");
-                $chdir_success = @ftp_chdir($ftp_conn, '.');
-                
-                if ($chdir_success) {
-                    $current_dir = @ftp_pwd($ftp_conn);
-                    $this->log_message("Successfully accessed default directory: {$current_dir}");
-                }
-            } else {
-                // Try without leading slash
-                if (substr($path, 0, 1) === '/') {
-                    $alt_path = substr($path, 1);
-                    $this->log_message("Trying path without leading slash: {$alt_path}");
-                    $chdir_success = @ftp_chdir($ftp_conn, $alt_path);
-                }
+        if (!@ftp_chdir($ftp_conn, $path)) {
+            if ($path !== '/' && !@ftp_chdir($ftp_conn, '.')) {
+                ftp_close($ftp_conn);
+                return new WP_Error('ftp_chdir', __('Could not access the specified directory', 'swiftspeed-siberian'));
             }
         }
         
-        if (!$chdir_success) {
-            ftp_close($ftp_conn);
-            $this->log_message("Could not access directory: {$path}");
-            return new WP_Error('ftp_chdir', __('Could not access the specified directory', 'swiftspeed-siberian'));
-        }
-        
-        $current_dir = @ftp_pwd($ftp_conn);
-        $this->log_message("Successfully accessed directory: {$current_dir}");
-        
-        // Close the connection
         ftp_close($ftp_conn);
-        
         return true;
     }
     
     /**
-     * Test SFTP connection with improved error handling.
+     * Test SFTP connection with enhanced error handling and reliability.
      *
      * @param array $config SFTP connection configuration.
      * @return bool|WP_Error True on success or error on failure.
      */
     public function test_sftp_connection($config) {
-        // Check if SFTP capabilities are available
         if (!extension_loaded('ssh2') && !class_exists('\phpseclib3\Net\SFTP')) {
-            $this->log_message('No SFTP capability available - neither SSH2 extension nor phpseclib found');
             return new WP_Error('sftp_functions', __('No SFTP capability available. Please install the SSH2 PHP extension or phpseclib.', 'swiftspeed-siberian'));
         }
         
+        $this->log_message('Testing SFTP connection to ' . $config['host'] . ':' . ($config['port'] ?: 22));
+        
         $conn = $this->create_sftp_connection($config);
         if (!$conn) {
-            return new WP_Error('sftp_connect', __('Could not connect to SFTP server', 'swiftspeed-siberian'));
+            return new WP_Error('sftp_connect', __('Could not connect to SFTP server. Please check your credentials and server settings.', 'swiftspeed-siberian'));
         }
         
-        // Get the path to test
         $path = !empty($config['path']) ? $config['path'] : '/';
-        $path = rtrim($path, '/');
-        
-        // Test directory access
         $can_access = false;
         
-        if ($conn['type'] === 'ssh2') {
-            // For SSH2 extension
-            $can_access = @is_dir("ssh2.sftp://{$conn['sftp']}{$path}");
-            if (!$can_access && substr($path, 0, 1) === '/') {
-                // Try without leading slash
-                $alt_path = substr($path, 1);
-                $can_access = @is_dir("ssh2.sftp://{$conn['sftp']}{$alt_path}");
-            }
-        }
-        else {
-            // For phpseclib
-            try {
+        try {
+            if ($conn['type'] === 'ssh2') {
+                $can_access = @ssh2_sftp_stat($conn['sftp'], $path) !== false;
+                if (!$can_access && $path !== '/') {
+                    // Try to create the directory if it doesn't exist
+                    $can_access = @ssh2_sftp_mkdir($conn['sftp'], $path, 0755, true);
+                }
+            } else {
                 $can_access = $conn['connection']->is_dir($path);
-                if (!$can_access && substr($path, 0, 1) === '/') {
-                    // Try without leading slash
-                    $alt_path = substr($path, 1);
-                    $can_access = $conn['connection']->is_dir($alt_path);
+                if (!$can_access && $path !== '/') {
+                    // Try to create the directory if it doesn't exist
+                    $can_access = $conn['connection']->mkdir($path, -1, true);
                 }
             }
-            catch (\Exception $e) {
-                $this->log_message('SFTP error checking directory: ' . $e->getMessage());
-                $can_access = false;
-            }
+        } catch (\Exception $e) {
+            $this->log_message('SFTP test access error: ' . $e->getMessage());
+            $can_access = false;
         }
         
         if (!$can_access) {
             if ($conn['type'] === 'ssh2') {
-                @ssh2_disconnect($conn['connection']);
+                // No explicit disconnect needed
             }
-            
-            $this->log_message("Could not access directory: {$path}");
-            return new WP_Error('sftp_access', __('Could not access the specified directory', 'swiftspeed-siberian'));
+            return new WP_Error('sftp_access', sprintf(__('Could not access the specified directory: %s. Please check permissions.', 'swiftspeed-siberian'), $path));
         }
         
-        $this->log_message("Successfully accessed SFTP directory: {$path}");
+        $this->log_message('SFTP connection test successful');
         
-        // Close the connection
         if ($conn['type'] === 'ssh2') {
-            @ssh2_disconnect($conn['connection']);
+            // No explicit disconnect needed
         }
         
         return true;
@@ -589,37 +584,29 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      * @return array|WP_Error Array of directory contents or error.
      */
     public function get_ftp_directory_contents_pooled($config, $directory) {
-        // Get a connection from the pool
         $ftp_conn = $this->get_ftp_connection($config);
-        $conn_time = !empty($this->connection_times) ? end($this->connection_times) : time();
         
         if (!$ftp_conn) {
             return new WP_Error('ftp_connect', __('Could not get FTP connection from pool', 'swiftspeed-siberian'));
         }
         
-        // Change to directory
         if (!@ftp_chdir($ftp_conn, $directory)) {
-            $this->return_ftp_connection($ftp_conn, $conn_time);
+            $this->return_ftp_connection($ftp_conn);
             return new WP_Error('ftp_chdir', sprintf(__('Could not change to directory: %s', 'swiftspeed-siberian'), $directory));
         }
         
-        // Get raw listing
         $raw_list = @ftp_rawlist($ftp_conn, '.');
-        
-        // Return the connection to the pool
-        $this->return_ftp_connection($ftp_conn, $conn_time);
+        $this->return_ftp_connection($ftp_conn);
         
         if ($raw_list === false) {
             return new WP_Error('ftp_rawlist', sprintf(__('Failed to get directory listing for: %s', 'swiftspeed-siberian'), $directory));
         }
         
-        // Parse the raw listing
         $items = [];
-        
         foreach ($raw_list as $item) {
-            $parsedItem = $this->parse_ftp_rawlist_item($item);
-            if ($parsedItem) {
-                $items[] = $parsedItem;
+            $parsed = $this->parse_ftp_rawlist_item($item);
+            if ($parsed) {
+                $items[] = $parsed;
             }
         }
         
@@ -627,132 +614,162 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
     }
     
     /**
-     * Get SFTP directory contents using connection pooling.
+     * Get SFTP directory contents using connection pooling with enhanced reliability.
      *
      * @param array $config SFTP connection configuration.
      * @param string $directory Directory path to list.
      * @return array|WP_Error Array of directory contents or error.
      */
     public function get_sftp_directory_contents_pooled($config, $directory) {
-        // Get a connection from the pool
         $sftp_conn = $this->get_sftp_connection($config);
-        $conn_time = !empty($this->connection_times) ? end($this->connection_times) : time();
         
         if (!$sftp_conn) {
             return new WP_Error('sftp_connect', __('Could not get SFTP connection from pool', 'swiftspeed-siberian'));
         }
         
-        // Get directory contents based on connection type
         $items = [];
         $error = false;
+        $retry_count = 0;
+        $max_retries = $this->streaming_config['max_retries'];
         
-        if ($sftp_conn['type'] === 'ssh2') {
-            // For SSH2 extension
-            $sftp = $sftp_conn['sftp'];
-            
-            // Open the directory for reading
-            $handle = @opendir("ssh2.sftp://$sftp$directory");
-            
-            if (!$handle) {
-                $this->return_sftp_connection($sftp_conn, $conn_time);
-                return new WP_Error('sftp_opendir', sprintf(__('Could not open directory: %s', 'swiftspeed-siberian'), $directory));
-            }
-            
-            while (($file = readdir($handle)) !== false) {
-                // Skip . and .. entries
-                if ($file === '.' || $file === '..') {
-                    $items[] = [
-                        'name' => $file,
-                        'type' => 'dir',
-                        'size' => 0
-                    ];
-                    continue;
-                }
-                
-                $full_path = rtrim($directory, '/') . '/' . $file;
-                
-                // Check if it's a directory or file
-                $is_dir = @is_dir("ssh2.sftp://$sftp$full_path");
-                
-                if ($is_dir) {
-                    $items[] = [
-                        'name' => $file,
-                        'type' => 'dir',
-                        'size' => 0
-                    ];
-                } else {
-                    // Get file stats
-                    $stats = @ssh2_sftp_stat($sftp, $full_path);
-                    $file_size = isset($stats['size']) ? $stats['size'] : 0;
-                    
-                    $items[] = [
-                        'name' => $file,
-                        'type' => 'file',
-                        'size' => $file_size
-                    ];
-                }
-            }
-            
-            closedir($handle);
-        }
-        else {
-            // For phpseclib
+        while ($retry_count < $max_retries && !$items && !$error) {
             try {
-                $sftp = $sftp_conn['connection'];
-                
-                // List directory contents
-                $list = $sftp->nlist($directory);
-                
-                if ($list === false) {
-                    $error = true;
-                } else {
-                    foreach ($list as $file) {
-                        // Skip . and .. entries if not included
+                if ($sftp_conn['type'] === 'ssh2') {
+                    $sftp = $sftp_conn['sftp'];
+                    $handle = @opendir("ssh2.sftp://$sftp$directory");
+                    
+                    if (!$handle) {
+                        if ($retry_count < $max_retries - 1) {
+                            $retry_count++;
+                            $this->log_message("SFTP opendir failed for $directory, retrying... (attempt $retry_count)");
+                            sleep($this->streaming_config['retry_delay']);
+                            continue;
+                        } else {
+                            $this->return_sftp_connection($sftp_conn);
+                            return new WP_Error('sftp_opendir', sprintf(__('Could not open directory: %s', 'swiftspeed-siberian'), $directory));
+                        }
+                    }
+                    
+                    while (($file = readdir($handle)) !== false) {
                         if ($file === '.' || $file === '..') {
-                            $items[] = [
-                                'name' => $file,
-                                'type' => 'dir',
-                                'size' => 0
-                            ];
                             continue;
                         }
                         
                         $full_path = rtrim($directory, '/') . '/' . $file;
                         
-                        // Check if it's a directory or file
-                        $is_dir = $sftp->is_dir($full_path);
+                        // Use stat with retry for better reliability
+                        $stats = null;
+                        $stat_retry = 0;
+                        while ($stat_retry < 3 && !$stats) {
+                            $stats = @ssh2_sftp_stat($sftp, $full_path);
+                            if (!$stats) {
+                                $stat_retry++;
+                                if ($stat_retry < 3) {
+                                    usleep(100000); // 100ms delay
+                                }
+                            }
+                        }
                         
-                        if ($is_dir) {
-                            $items[] = [
-                                'name' => $file,
-                                'type' => 'dir',
-                                'size' => 0
-                            ];
-                        } else {
-                            // Get file size - phpseclib v3 uses stat() instead of size()
-                            $stat = $sftp->stat($full_path);
-                            $file_size = isset($stat['size']) ? $stat['size'] : 0;
+                        if ($stats && isset($stats['mode'])) {
+                            $is_dir = ($stats['mode'] & 0170000) === 0040000; // S_IFDIR
+                            $file_size = isset($stats['size']) ? $stats['size'] : 0;
                             
                             $items[] = [
                                 'name' => $file,
-                                'type' => 'file',
+                                'type' => $is_dir ? 'dir' : 'file',
                                 'size' => $file_size
+                            ];
+                        } else {
+                            // Fallback: assume it's a file if we can't get stats
+                            $items[] = [
+                                'name' => $file,
+                                'type' => 'file',
+                                'size' => 0
                             ];
                         }
                     }
+                    
+                    closedir($handle);
+                    break; // Success, exit retry loop
+                    
+                } else {
+                    $sftp = $sftp_conn['connection'];
+                    $list = $sftp->nlist($directory);
+                    
+                    if ($list === false) {
+                        if ($retry_count < $max_retries - 1) {
+                            $retry_count++;
+                            $this->log_message("SFTP nlist failed for $directory, retrying... (attempt $retry_count)");
+                            sleep($this->streaming_config['retry_delay']);
+                            continue;
+                        } else {
+                            $error = true;
+                            break;
+                        }
+                    }
+                    
+                    foreach ($list as $file) {
+                        if ($file === '.' || $file === '..') {
+                            continue;
+                        }
+                        
+                        $full_path = rtrim($directory, '/') . '/' . $file;
+                        
+                        // Use retry mechanism for stat operations
+                        $is_dir = false;
+                        $file_size = 0;
+                        $stat_retry = 0;
+                        
+                        while ($stat_retry < 3) {
+                            try {
+                                $is_dir = $sftp->is_dir($full_path);
+                                if (!$is_dir) {
+                                    $stat = $sftp->stat($full_path);
+                                    $file_size = isset($stat['size']) ? $stat['size'] : 0;
+                                }
+                                break; // Success
+                            } catch (\Exception $e) {
+                                $stat_retry++;
+                                if ($stat_retry < 3) {
+                                    usleep(100000); // 100ms delay
+                                } else {
+                                    $this->log_message("SFTP stat failed for $full_path after retries: " . $e->getMessage());
+                                }
+                            }
+                        }
+                        
+                        $items[] = [
+                            'name' => $file,
+                            'type' => $is_dir ? 'dir' : 'file',
+                            'size' => $file_size
+                        ];
+                    }
+                    break; // Success, exit retry loop
                 }
-            }
-            catch (\Exception $e) {
-                $this->log_message('SFTP error listing directory: ' . $e->getMessage());
-                $error = true;
+            } catch (\Exception $e) {
+                $retry_count++;
+                if ($retry_count < $max_retries) {
+                    $this->log_message("SFTP directory listing exception, retrying... (attempt $retry_count): " . $e->getMessage());
+                    sleep($this->streaming_config['retry_delay']);
+                } else {
+                    $this->log_message('SFTP error listing directory after retries: ' . $e->getMessage());
+                    $error = true;
+                }
             }
         }
         
-        // Return the connection to the pool
-        $this->return_sftp_connection($sftp_conn, $conn_time);
+        if ($retry_count > 0) {
+            if (!empty($items)) {
+                $this->connection_stats['retry_successes']++;
+                $this->log_message("SFTP directory listing succeeded after $retry_count retries");
+            }
+            $this->connection_stats['retry_attempts'] += $retry_count;
+        }
         
-        if ($error) {
-            return new WP_Error('sftp_list', sprintf(__('Failed to get directory listing for: %s', 'swiftspeed-siberian'), $directory));
+        $this->return_sftp_connection($sftp_conn);
+        
+        if ($error || (empty($items) && $retry_count >= $max_retries)) {
+            return new WP_Error('sftp_list', sprintf(__('Failed to get directory listing for: %s after %d retries', 'swiftspeed-siberian'), $directory, $max_retries));
         }
         
         return $items;
@@ -765,137 +782,28 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      * @return array|bool Parsed item or false on failure.
      */
     private function parse_ftp_rawlist_item($raw_item) {
-        // Different FTP servers format their listings differently
-        // Try Unix-style first (most common)
+        // Unix-style format
         if (preg_match('/^([dwrx\-]{10})\s+(\d+)\s+(\w+)\s+(\w+)\s+(\d+)\s+(\w{3}\s+\d{1,2})\s+(\d{1,2}:\d{2}|\d{4})\s+(.+)$/', $raw_item, $matches)) {
             return [
                 'name' => $matches[8],
                 'type' => $matches[1][0] === 'd' ? 'dir' : 'file',
                 'size' => (int)$matches[5],
-                'permissions' => $matches[1]
             ];
         }
-        // Try Windows-style FTP format
-        else if (preg_match('/^(\d{2}-\d{2}-\d{2}\s+\d{2}:\d{2}[AP]M)\s+(<DIR>|[0-9]+)\s+(.+)$/', $raw_item, $matches)) {
+        // Windows-style format
+        elseif (preg_match('/^(\d{2}-\d{2}-\d{2}\s+\d{2}:\d{2}[AP]M)\s+(<DIR>|[0-9]+)\s+(.+)$/', $raw_item, $matches)) {
             return [
                 'name' => $matches[3],
                 'type' => $matches[2] === '<DIR>' ? 'dir' : 'file',
                 'size' => $matches[2] === '<DIR>' ? 0 : (int)$matches[2],
-                'permissions' => ''
             ];
-        }
-        // Try alternative formats or implementations
-        else {
-            // Split by whitespace and try to extract the filename and type
-            $parts = preg_split('/\s+/', $raw_item);
-            if (count($parts) >= 9) {
-                $name = $parts[8];
-                $is_dir = strpos($parts[0], 'd') === 0;
-                $size = (int)$parts[4];
-                
-                return [
-                    'name' => $name,
-                    'type' => $is_dir ? 'dir' : 'file',
-                    'size' => $size,
-                    'permissions' => $parts[0]
-                ];
-            }
         }
         
         return false;
     }
     
     /**
-     * Check the size of a file on FTP server using connection pooling.
-     *
-     * @param array $config FTP connection configuration.
-     * @param string $file_path File path on FTP server.
-     * @return int|WP_Error File size or error.
-     */
-    public function check_ftp_file_size_pooled($config, $file_path) {
-        // Get a connection from the pool
-        $ftp_conn = $this->get_ftp_connection($config);
-        $conn_time = !empty($this->connection_times) ? end($this->connection_times) : time();
-        
-        if (!$ftp_conn) {
-            return new WP_Error('ftp_connect', __('Could not get FTP connection from pool', 'swiftspeed-siberian'));
-        }
-        
-        // Get file size
-        $size = @ftp_size($ftp_conn, $file_path);
-        
-        // Return the connection to the pool
-        $this->return_ftp_connection($ftp_conn, $conn_time);
-        
-        if ($size < 0) {
-            // Some FTP servers return -1 for directories or errors
-            return 0;
-        }
-        
-        return $size;
-    }
-    
-    /**
-     * Check the size of a file on SFTP server using connection pooling.
-     *
-     * @param array $config SFTP connection configuration.
-     * @param string $file_path File path on SFTP server.
-     * @return int|WP_Error File size or error.
-     */
-    public function check_sftp_file_size_pooled($config, $file_path) {
-        // Get a connection from the pool
-        $sftp_conn = $this->get_sftp_connection($config);
-        $conn_time = !empty($this->connection_times) ? end($this->connection_times) : time();
-        
-        if (!$sftp_conn) {
-            return new WP_Error('sftp_connect', __('Could not get SFTP connection from pool', 'swiftspeed-siberian'));
-        }
-        
-        // Get file size based on connection type
-        $size = 0;
-        $error = false;
-        
-        if ($sftp_conn['type'] === 'ssh2') {
-            // For SSH2 extension
-            $sftp = $sftp_conn['sftp'];
-            
-            $stats = @ssh2_sftp_stat($sftp, $file_path);
-            if ($stats === false) {
-                $error = true;
-            } else {
-                $size = isset($stats['size']) ? $stats['size'] : 0;
-            }
-        }
-        else {
-            // For phpseclib - using stat() instead of size()
-            try {
-                $sftp = $sftp_conn['connection'];
-                $stat = $sftp->stat($file_path);
-                
-                if ($stat === false) {
-                    $error = true;
-                } else {
-                    $size = isset($stat['size']) ? $stat['size'] : 0;
-                }
-            }
-            catch (\Exception $e) {
-                $this->log_message('SFTP error checking file size: ' . $e->getMessage());
-                $error = true;
-            }
-        }
-        
-        // Return the connection to the pool
-        $this->return_sftp_connection($sftp_conn, $conn_time);
-        
-        if ($error) {
-            return new WP_Error('sftp_size', sprintf(__('Failed to check file size: %s', 'swiftspeed-siberian'), $file_path));
-        }
-        
-        return $size;
-    }
-    
-    /**
-     * Download a file from FTP using connection pooling and chunked transfer.
+     * Download a file from FTP using optimized streaming.
      *
      * @param array $config FTP connection configuration.
      * @param string $remote_path Remote file path.
@@ -903,9 +811,7 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      * @return bool|WP_Error True on success or error on failure.
      */
     public function download_file_ftp_pooled($config, $remote_path, $local_path) {
-        // Get a connection from the pool
         $ftp_conn = $this->get_ftp_connection($config);
-        $conn_time = !empty($this->connection_times) ? end($this->connection_times) : time();
         
         if (!$ftp_conn) {
             return new WP_Error('ftp_connect', __('Could not get FTP connection from pool', 'swiftspeed-siberian'));
@@ -913,66 +819,59 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         
         // Ensure directory exists
         $dir = dirname($local_path);
-        if (!file_exists($dir)) {
-            if (!wp_mkdir_p($dir)) {
-                $this->return_ftp_connection($ftp_conn, $conn_time);
-                return new WP_Error('mkdir_failed', __('Failed to create destination directory', 'swiftspeed-siberian'));
-            }
+        if (!file_exists($dir) && !wp_mkdir_p($dir)) {
+            $this->return_ftp_connection($ftp_conn);
+            return new WP_Error('mkdir_failed', __('Failed to create destination directory', 'swiftspeed-siberian'));
         }
         
-        // Open local file for writing
-        $local = @fopen($local_path, 'wb');
-        if (!$local) {
-            $this->return_ftp_connection($ftp_conn, $conn_time);
-            return new WP_Error('local_open', __('Failed to create local file', 'swiftspeed-siberian'));
-        }
-        
-        // Try to get file size first
+        // Get file size for large file detection
         $file_size = @ftp_size($ftp_conn, $remote_path);
+        $is_large_file = $file_size > $this->streaming_config['large_file_threshold'];
         
-        // For larger files (>5MB), use nb_get for better memory efficiency
-        if ($file_size > 5242880) {
+        // Set appropriate timeout
+        $timeout = $is_large_file ? $this->timeouts['large_file_timeout'] : $this->timeouts['operation_timeout'];
+        @ftp_set_option($ftp_conn, FTP_TIMEOUT_SEC, $timeout);
+        
+        $result = false;
+        
+        if ($is_large_file && $file_size > 0) {
+            // Use non-blocking download for large files
+            $this->log_message("Downloading large file via FTP: {$remote_path} (" . size_format($file_size) . ')');
+            
             $ret = @ftp_nb_get($ftp_conn, $local_path, $remote_path, FTP_BINARY, FTP_AUTORESUME);
             
             while ($ret == FTP_MOREDATA) {
-                // Continue downloading
                 $ret = @ftp_nb_continue($ftp_conn);
                 
-                // Allow other processes to run
+                // Allow other processes and memory cleanup
                 if (function_exists('gc_collect_cycles')) {
                     gc_collect_cycles();
                 }
             }
             
-            @fclose($local);
-            
-            // Return the connection to the pool
-            $this->return_ftp_connection($ftp_conn, $conn_time);
-            
-            if ($ret != FTP_FINISHED) {
-                @unlink($local_path);
-                return new WP_Error('ftp_get', __('Failed to download file from FTP', 'swiftspeed-siberian'));
-            }
+            $result = ($ret == FTP_FINISHED);
         } else {
-            // For smaller files, use regular get
-            @fclose($local);
-            
+            // Use regular download for smaller files
             $result = @ftp_get($ftp_conn, $local_path, $remote_path, FTP_BINARY);
-            
-            // Return the connection to the pool
-            $this->return_ftp_connection($ftp_conn, $conn_time);
-            
-            if (!$result) {
-                @unlink($local_path);
-                return new WP_Error('ftp_get', __('Failed to download file from FTP', 'swiftspeed-siberian'));
-            }
         }
+        
+        $this->return_ftp_connection($ftp_conn);
+        
+        if (!$result) {
+            @unlink($local_path);
+            return new WP_Error('ftp_get', __('Failed to download file from FTP', 'swiftspeed-siberian'));
+        }
+        
+        // Update statistics
+        $actual_size = file_exists($local_path) ? filesize($local_path) : 0;
+        $this->connection_stats['bytes_transferred'] += $actual_size;
+        $this->connection_stats['files_transferred']++;
         
         return true;
     }
     
     /**
-     * Download a file from SFTP using connection pooling with memory-efficient streaming.
+     * Download a file from SFTP using optimized streaming with enhanced reliability.
      *
      * @param array $config SFTP connection configuration.
      * @param string $remote_path Remote file path.
@@ -980,9 +879,7 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
      * @return bool|WP_Error True on success or error on failure.
      */
     public function download_file_sftp_pooled($config, $remote_path, $local_path) {
-        // Get a connection from the pool
         $sftp_conn = $this->get_sftp_connection($config);
-        $conn_time = !empty($this->connection_times) ? end($this->connection_times) : time();
         
         if (!$sftp_conn) {
             return new WP_Error('sftp_connect', __('Could not get SFTP connection from pool', 'swiftspeed-siberian'));
@@ -990,130 +887,302 @@ class SwiftSpeed_Siberian_File_Backup_Connections {
         
         // Ensure directory exists
         $dir = dirname($local_path);
-        if (!file_exists($dir)) {
-            if (!wp_mkdir_p($dir)) {
-                $this->return_sftp_connection($sftp_conn, $conn_time);
-                return new WP_Error('mkdir_failed', __('Failed to create destination directory', 'swiftspeed-siberian'));
-            }
+        if (!file_exists($dir) && !wp_mkdir_p($dir)) {
+            $this->return_sftp_connection($sftp_conn);
+            return new WP_Error('mkdir_failed', __('Failed to create destination directory', 'swiftspeed-siberian'));
         }
         
-        // Download file based on connection type
         $result = false;
         $error_message = '';
+        $retry_count = 0;
+        $max_retries = $this->streaming_config['max_retries'];
         
-        if ($sftp_conn['type'] === 'ssh2') {
-            // For SSH2 extension - use chunked streaming
-            $sftp = $sftp_conn['sftp'];
-            
-            // Stream copy from SFTP to local file
-            $stream = @fopen("ssh2.sftp://$sftp$remote_path", 'rb');
-            
-            if (!$stream) {
-                $this->return_sftp_connection($sftp_conn, $conn_time);
-                return new WP_Error('sftp_open', __('Failed to open remote file', 'swiftspeed-siberian'));
-            }
-            
-            $local_stream = @fopen($local_path, 'wb');
-            
-            if (!$local_stream) {
-                @fclose($stream);
-                $this->return_sftp_connection($sftp_conn, $conn_time);
-                return new WP_Error('local_open', __('Failed to create local file', 'swiftspeed-siberian'));
-            }
-            
-            // Copy in chunks to avoid memory issues
-            $bytes_copied = 0;
-            while (!feof($stream)) {
-                $chunk = fread($stream, $this->download_chunk_size);
-                if ($chunk === false) {
-                    @fclose($stream);
-                    @fclose($local_stream);
-                    @unlink($local_path);
-                    $this->return_sftp_connection($sftp_conn, $conn_time);
-                    return new WP_Error('sftp_read', __('Failed to read from remote file', 'swiftspeed-siberian'));
-                }
-                
-                $written = fwrite($local_stream, $chunk);
-                if ($written === false || $written != strlen($chunk)) {
-                    @fclose($stream);
-                    @fclose($local_stream);
-                    @unlink($local_path);
-                    $this->return_sftp_connection($sftp_conn, $conn_time);
-                    return new WP_Error('local_write', __('Failed to write to local file', 'swiftspeed-siberian'));
-                }
-                
-                $bytes_copied += $written;
-                unset($chunk); // Free memory
-            }
-            
-            @fclose($stream);
-            @fclose($local_stream);
-            
-            $result = ($bytes_copied > 0);
-        }
-        else {
-            // For phpseclib - use chunked download if available
+        while ($retry_count < $max_retries && !$result) {
             try {
-                $sftp = $sftp_conn['connection'];
-                
-                // Get file size first
-                $stat = $sftp->stat($remote_path);
-                $file_size = isset($stat['size']) ? $stat['size'] : 0;
-                
-                // For larger files, use chunked download if available
-                if ($file_size > 5242880) { // 5MB
-                    // Open local file for writing
-                    $local = @fopen($local_path, 'wb');
-                    if (!$local) {
-                        $this->return_sftp_connection($sftp_conn, $conn_time);
+                if ($sftp_conn['type'] === 'ssh2') {
+                    // SSH2 extension - use optimized streaming with retry
+                    $sftp = $sftp_conn['sftp'];
+                    
+                    $stream = @fopen("ssh2.sftp://$sftp$remote_path", 'rb');
+                    if (!$stream) {
+                        if ($retry_count < $max_retries - 1) {
+                            $retry_count++;
+                            $this->log_message("Failed to open remote file $remote_path, retrying... (attempt $retry_count)");
+                            sleep($this->streaming_config['retry_delay']);
+                            continue;
+                        } else {
+                            $this->return_sftp_connection($sftp_conn);
+                            return new WP_Error('sftp_open', __('Failed to open remote file after retries', 'swiftspeed-siberian'));
+                        }
+                    }
+                    
+                    $local_stream = @fopen($local_path, 'wb');
+                    if (!$local_stream) {
+                        @fclose($stream);
+                        $this->return_sftp_connection($sftp_conn);
                         return new WP_Error('local_open', __('Failed to create local file', 'swiftspeed-siberian'));
                     }
                     
-                    // Read file in chunks
-                    $offset = 0;
-                    while ($offset < $file_size) {
-                        $length = min($this->download_chunk_size, $file_size - $offset);
-                        $chunk = $sftp->get($remote_path, false, $offset, $length);
-                        
+                    // Stream copy with optimized chunk size and error handling
+                    $bytes_copied = 0;
+                    $last_activity = time();
+                    
+                    while (!feof($stream)) {
+                        $chunk = fread($stream, $this->streaming_config['chunk_size']);
                         if ($chunk === false) {
-                            @fclose($local);
-                            @unlink($local_path);
-                            $error_message = 'Failed to get file chunk';
+                            $error_message = 'Failed to read from remote file';
                             break;
                         }
                         
-                        fwrite($local, $chunk);
-                        $offset += strlen($chunk);
-                        unset($chunk); // Free memory
+                        if (fwrite($local_stream, $chunk) === false) {
+                            $error_message = 'Failed to write to local file';
+                            break;
+                        }
+                        
+                        $bytes_copied += strlen($chunk);
+                        $last_activity = time();
+                        
+                        // Memory cleanup for large files
+                        if ($bytes_copied % ($this->streaming_config['chunk_size'] * 16) === 0) {
+                            if (function_exists('gc_collect_cycles')) {
+                                gc_collect_cycles();
+                            }
+                        }
+                        
+                        // Check for timeout
+                        if ((time() - $last_activity) > $this->timeouts['sftp_timeout']) {
+                            $error_message = 'SFTP operation timed out';
+                            break;
+                        }
                     }
                     
-                    @fclose($local);
-                    $result = ($offset >= $file_size);
-                } else {
-                    // For smaller files, use regular download
-                    $result = $sftp->get($remote_path, $local_path);
+                    @fclose($stream);
+                    @fclose($local_stream);
                     
-                    if ($result === false) {
-                        $error_message = 'Failed to get file';
+                    $result = ($bytes_copied > 0 && empty($error_message));
+                    
+                    if (!$result && !empty($error_message)) {
+                        if ($retry_count < $max_retries - 1) {
+                            $retry_count++;
+                            $this->log_message("SFTP download error: $error_message, retrying... (attempt $retry_count)");
+                            @unlink($local_path); // Clean up partial file
+                            sleep($this->streaming_config['retry_delay']);
+                            continue;
+                        }
+                    }
+                    
+                } else {
+                    // phpseclib - use optimized chunked download with retry
+                    $sftp = $sftp_conn['connection'];
+                    
+                    // Get file size with retry
+                    $stat = null;
+                    $stat_retry = 0;
+                    while ($stat_retry < 3 && !$stat) {
+                        try {
+                            $stat = $sftp->stat($remote_path);
+                        } catch (\Exception $e) {
+                            $stat_retry++;
+                            if ($stat_retry < 3) {
+                                usleep(500000); // 500ms delay
+                            }
+                        }
+                    }
+                    
+                    $file_size = isset($stat['size']) ? $stat['size'] : 0;
+                    $is_large_file = $file_size > $this->streaming_config['large_file_threshold'];
+                    
+                    if ($is_large_file && $file_size > 0) {
+                        // Chunked download for large files
+                        $this->log_message("Downloading large file via SFTP: {$remote_path} (" . size_format($file_size) . ')');
+                        
+                        $local = @fopen($local_path, 'wb');
+                        if (!$local) {
+                            $error_message = 'Failed to create local file';
+                        } else {
+                            $offset = 0;
+                            $chunk_failures = 0;
+                            $max_chunk_failures = 5;
+                            
+                            while ($offset < $file_size && $chunk_failures < $max_chunk_failures) {
+                                $length = min($this->streaming_config['chunk_size'], $file_size - $offset);
+                                
+                                try {
+                                    $chunk = $sftp->get($remote_path, false, $offset, $length);
+                                    
+                                    if ($chunk === false) {
+                                        $chunk_failures++;
+                                        $this->log_message("Failed to get chunk at offset $offset, failure count: $chunk_failures");
+                                        if ($chunk_failures < $max_chunk_failures) {
+                                            sleep(1); // Wait before retry
+                                            continue;
+                                        } else {
+                                            $error_message = 'Too many chunk failures';
+                                            break;
+                                        }
+                                    }
+                                    
+                                    fwrite($local, $chunk);
+                                    $offset += strlen($chunk);
+                                    $chunk_failures = 0; // Reset failure count on success
+                                    
+                                    // Memory cleanup
+                                    if ($offset % ($this->streaming_config['chunk_size'] * 10) === 0) {
+                                        if (function_exists('gc_collect_cycles')) {
+                                            gc_collect_cycles();
+                                        }
+                                    }
+                                } catch (\Exception $e) {
+                                    $chunk_failures++;
+                                    $this->log_message("Exception getting chunk at offset $offset: " . $e->getMessage());
+                                    if ($chunk_failures < $max_chunk_failures) {
+                                        sleep(1); // Wait before retry
+                                        continue;
+                                    } else {
+                                        $error_message = 'Exception: ' . $e->getMessage();
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            @fclose($local);
+                            $result = ($offset >= $file_size && empty($error_message));
+                        }
+                    } else {
+                        // Regular download for smaller files
+                        try {
+                            $result = $sftp->get($remote_path, $local_path);
+                        } catch (\Exception $e) {
+                            $error_message = $e->getMessage();
+                            $result = false;
+                        }
+                    }
+                    
+                    if (!$result && !empty($error_message)) {
+                        if ($retry_count < $max_retries - 1) {
+                            $retry_count++;
+                            $this->log_message("SFTP download error: $error_message, retrying... (attempt $retry_count)");
+                            @unlink($local_path); // Clean up partial file
+                            sleep($this->streaming_config['retry_delay']);
+                            continue;
+                        }
                     }
                 }
-            }
-            catch (\Exception $e) {
-                $this->log_message('SFTP error downloading file: ' . $e->getMessage());
+                
+                // If we get here and result is true, we succeeded
+                if ($result) {
+                    break;
+                }
+                
+            } catch (\Exception $e) {
+                $retry_count++;
                 $error_message = $e->getMessage();
+                if ($retry_count < $max_retries) {
+                    $this->log_message("SFTP download exception, retrying... (attempt $retry_count): $error_message");
+                    @unlink($local_path); // Clean up partial file
+                    sleep($this->streaming_config['retry_delay']);
+                } else {
+                    $this->log_message('SFTP error downloading file after retries: ' . $error_message);
+                }
             }
         }
         
-        // Return the connection to the pool
-        $this->return_sftp_connection($sftp_conn, $conn_time);
+        if ($retry_count > 0) {
+            if ($result) {
+                $this->connection_stats['retry_successes']++;
+                $this->log_message("SFTP download succeeded after $retry_count retries");
+            }
+            $this->connection_stats['retry_attempts'] += $retry_count;
+        }
+        
+        $this->return_sftp_connection($sftp_conn);
         
         if (!$result) {
             @unlink($local_path);
-            return new WP_Error('sftp_download', __('Failed to download file from SFTP', 'swiftspeed-siberian') . 
-                               ($error_message ? ': ' . $error_message : ''));
+            $final_error = !empty($error_message) ? $error_message : 'Unknown error';
+            return new WP_Error('sftp_download', sprintf(__('Failed to download file from SFTP after %d retries: %s', 'swiftspeed-siberian'), $max_retries, $final_error));
         }
         
+        // Update statistics
+        $actual_size = file_exists($local_path) ? filesize($local_path) : 0;
+        $this->connection_stats['bytes_transferred'] += $actual_size;
+        $this->connection_stats['files_transferred']++;
+        
         return true;
+    }
+    
+    /**
+     * Close all FTP connections in the pool
+     * 
+     * @return void
+     */
+    public function close_connection_pool() {
+        foreach ($this->ftp_connections as $conn) {
+            @ftp_close($conn);
+            $this->connection_stats['connections_closed']++;
+        }
+        $this->ftp_connections = [];
+        $this->log_message('Closed FTP connection pool');
+    }
+    
+    /**
+     * Close all SFTP connections in the pool
+     * 
+     * @return void
+     */
+    public function close_sftp_connection_pool() {
+        foreach ($this->sftp_connections as $conn) {
+            if ($conn['type'] === 'ssh2') {
+                // No explicit disconnect for SSH2, just let it go out of scope
+            }
+            $this->connection_stats['connections_closed']++;
+        }
+        $this->sftp_connections = [];
+        $this->log_message('Closed SFTP connection pool');
+    }
+
+    /**
+     * Close all connections (both FTP and SFTP)
+     * 
+     * @return void
+     */
+    public function close_all_connections() {
+        $this->close_connection_pool();
+        $this->close_sftp_connection_pool();
+        $this->connection_times = [];
+        
+        // Log final statistics
+        $this->log_message('Connection session stats: ' . json_encode($this->connection_stats));
+        
+        if ($this->connection_stats['retry_attempts'] > 0) {
+            $success_rate = ($this->connection_stats['retry_successes'] / $this->connection_stats['retry_attempts']) * 100;
+            $this->log_message(sprintf('Retry success rate: %.1f%% (%d successes out of %d attempts)', 
+                $success_rate, $this->connection_stats['retry_successes'], $this->connection_stats['retry_attempts']));
+        }
+    }
+    
+    /**
+     * Get memory limit in bytes
+     * 
+     * @return int Memory limit in bytes
+     */
+    private function get_memory_limit() {
+        $memory_limit = ini_get('memory_limit');
+        
+        if ($memory_limit == -1) {
+            return 1073741824; // 1GB default
+        }
+        
+        $unit = strtoupper(substr($memory_limit, -1));
+        $value = intval(substr($memory_limit, 0, -1));
+        
+        switch ($unit) {
+            case 'G': $value *= 1024;
+            case 'M': $value *= 1024;
+            case 'K': $value *= 1024;
+        }
+        
+        return $value;
     }
     
     /**

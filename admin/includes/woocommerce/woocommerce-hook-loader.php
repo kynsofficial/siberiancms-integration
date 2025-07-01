@@ -1,17 +1,7 @@
 <?php
 /**
  * WooCommerce Hook Loader – Consolidated File
- *
- * This file now combines the functionality of:
- *   1. WooCommerce hook loader (subscription status hooks, payment complete handling, etc.)
- *   2. Mapping functionality (formerly in class-swsib-woocommerce-mapping.php)
- *   3. Role management functionality (formerly in class-swsib-woocommerce-role-manager.php)
- *   4. Additional WooCommerce integration features previously in the main plugin file:
- *      - CORS headers
- *      - AJAX handlers for token-based subscription order creation
- *      - Cart rebuild on token
- *      - Custom data transfer to order/subscription
- *      - Frontend popups for product access and post-purchase
+ * Fixed to handle subscription statuses correctly
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -31,6 +21,11 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
     private static $options = null;
 
     /**
+     * Track processed subscriptions to prevent duplicate processing
+     */
+    private static $processed_subscriptions = array();
+
+    /**
      * Initialize hooks.
      */
     public static function init() {
@@ -46,7 +41,6 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
         // Core integration hooks.
         add_action('plugins_loaded', array(__CLASS__, 'register_hooks'), 20);
         add_action('init', array(__CLASS__, 'register_subscription_hooks'), 999);
-        add_action('woocommerce_payment_complete', array(__CLASS__, 'handle_payment_complete'), 999);
         add_action('wp_ajax_swsib_woocommerce_update_mapping', array(__CLASS__, 'ajax_update_mapping'));
         add_action('wp_ajax_swsib_woocommerce_delete_mapping', array(__CLASS__, 'ajax_delete_mapping'));
         add_action('wp_ajax_swsib_toggle_woocommerce_integration', array(__CLASS__, 'ajax_toggle_integration'));
@@ -60,7 +54,6 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
         add_action('woocommerce_checkout_create_order', array(__CLASS__, 'ensure_custom_data_transfer'), 20, 2);
         add_action('woocommerce_checkout_subscription_created', array(__CLASS__, 'transfer_custom_data_to_subscription'), 10, 3);
         add_action('woocommerce_checkout_create_order_line_item', array(__CLASS__, 'save_custom_data_to_order_items'), 10, 4);
-        add_action('woocommerce_payment_complete', array(__CLASS__, 'activate_subscription_on_payment'), 10, 1);
         add_action('wp_footer', array(__CLASS__, 'enqueue_product_popup'));
         add_action('wp_footer', array(__CLASS__, 'enqueue_purchase_success_popup'));
     }
@@ -147,12 +140,100 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
         if ( ! class_exists('WooCommerce') || ! class_exists('WC_Subscriptions') ) {
             return;
         }
+        
+        // Subscription status hooks - only for statuses we want to handle
         add_action('woocommerce_subscription_status_active', array(__CLASS__, 'subscription_activated'), 999);
         add_action('woocommerce_subscription_status_cancelled', array(__CLASS__, 'subscription_cancelled'), 999);
         add_action('woocommerce_subscription_status_expired', array(__CLASS__, 'subscription_expired'), 999);
-        add_action('woocommerce_subscription_status_on-hold', array(__CLASS__, 'subscription_cancelled'), 999);
-        add_action('woocommerce_subscription_status_changed', array(__CLASS__, 'subscription_status_changed'), 999, 3);
-        // Removed subscription_status_updated hook to prevent duplicates.
+        add_action('woocommerce_subscription_status_switched', array(__CLASS__, 'subscription_switched'), 999);
+        
+        // Payment-related hooks for refunds and failures
+        add_action('woocommerce_subscription_payment_failed', array(__CLASS__, 'subscription_payment_failed'), 10, 2);
+        add_action('woocommerce_order_status_refunded', array(__CLASS__, 'order_refunded'), 10, 2);
+        
+        // General status change hook for logging all changes
+        add_action('woocommerce_subscription_status_changed', array(__CLASS__, 'log_subscription_status_change'), 10, 3);
+        
+        // Payment complete hook - but only for proper validation, no forced activation
+        add_action('woocommerce_payment_complete', array(__CLASS__, 'validate_payment_complete'), 999);
+    }
+
+    /**
+     * Log subscription status changes
+     */
+    public static function log_subscription_status_change($subscription_id, $old_status, $new_status) {
+        self::log_message("Subscription #{$subscription_id} status changed from {$old_status} to {$new_status}");
+        
+        // Handle specific status transitions that we don't have dedicated hooks for
+        if ($new_status === 'on-hold') {
+            self::log_message("Subscription #{$subscription_id} is now on-hold - no action taken");
+        } elseif ($new_status === 'pending') {
+            self::log_message("Subscription #{$subscription_id} is now pending - no action taken");
+        } elseif ($new_status === 'pending-cancel') {
+            self::log_message("Subscription #{$subscription_id} is pending cancellation - no action taken");
+        }
+    }
+
+    /**
+     * Validate payment complete - don't force activation, just log
+     */
+    public static function validate_payment_complete($order_id) {
+        if ( ! function_exists('wcs_get_subscriptions_for_order') ) {
+            return;
+        }
+        
+        self::log_message("Payment complete for order #{$order_id} - validating subscriptions");
+        $subscriptions = wcs_get_subscriptions_for_order($order_id);
+        
+        if ( empty($subscriptions) ) {
+            self::log_message("No subscriptions found for order #{$order_id}");
+            return;
+        }
+        
+        foreach ($subscriptions as $subscription) {
+            $subscription_id = $subscription->get_id();
+            $status = $subscription->get_status();
+            self::log_message("Subscription #{$subscription_id} status after payment: {$status}");
+            
+            // Only log - don't force any status changes
+            // Let WooCommerce and WooCommerce Subscriptions handle the status logic
+        }
+    }
+
+    /**
+     * Handle subscription payment failure
+     */
+    public static function subscription_payment_failed($subscription, $last_order) {
+        $subscription_id = is_object($subscription) ? $subscription->get_id() : $subscription;
+        self::log_message("Payment failed for subscription #{$subscription_id} - no action taken (subscription may go on-hold)");
+        
+        // Don't take any action here - let WooCommerce handle the status change
+        // The subscription will likely go to on-hold status, which we explicitly don't handle
+    }
+
+    /**
+     * Handle order refunds
+     */
+    public static function order_refunded($order_id, $refund_id) {
+        if ( ! function_exists('wcs_get_subscriptions_for_order') ) {
+            return;
+        }
+        
+        self::log_message("Order #{$order_id} refunded (refund #{$refund_id}) - checking for subscriptions");
+        $subscriptions = wcs_get_subscriptions_for_order($order_id);
+        
+        if ( empty($subscriptions) ) {
+            self::log_message("No subscriptions found for refunded order #{$order_id}");
+            return;
+        }
+        
+        foreach ($subscriptions as $subscription) {
+            $subscription_id = $subscription->get_id();
+            self::log_message("Processing refund for subscription #{$subscription_id}");
+            
+            // Treat refund as cancellation
+            self::process_subscription_cancellation($subscription, 'refund');
+        }
     }
 
     /**
@@ -248,112 +329,75 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
     }
 
     /**
-     * Handle WooCommerce payment complete – check for subscriptions.
-     */
-    public static function handle_payment_complete($order_id) {
-        self::log_message("Payment complete for order #{$order_id}, checking for subscriptions");
-        if ( ! function_exists('wcs_get_subscriptions_for_order') ) {
-            return;
-        }
-        $subscriptions = wcs_get_subscriptions_for_order($order_id);
-        if ( empty($subscriptions) ) {
-            self::log_message("No subscriptions found for order #{$order_id}");
-            return;
-        }
-        foreach ($subscriptions as $subscription) {
-            $subscription_id = $subscription->get_id();
-            self::log_message("Force processing subscription #{$subscription_id} after payment");
-            self::subscription_activated($subscription);
-        }
-    }
-
-    /**
-     * Handle general subscription status changes.
-     */
-    public static function subscription_status_changed($subscription_id, $old_status, $new_status) {
-        self::log_message("Subscription #{$subscription_id} status changed from {$old_status} to {$new_status}");
-        $subscription = wcs_get_subscription($subscription_id);
-        if ( ! $subscription ) {
-            self::log_message("Could not find subscription #{$subscription_id}");
-            return;
-        }
-        if ($new_status === 'active') {
-            self::subscription_activated($subscription);
-        } else if (in_array($new_status, array('cancelled', 'expired', 'on-hold'))) {
-            self::subscription_cancelled($subscription);
-        }
-    }
-
-    /**
      * Handle subscription activation.
-     * 
-     * Added a guard so that if the subscription was already processed,
-     * the function will exit early.
      */
     public static function subscription_activated($subscription) {
         $subscription_id = is_object($subscription) ? $subscription->get_id() : $subscription;
         
-        // Guard: if already processed for activation, exit.
-        if ($subscription->get_meta('_swsib_processed_activation') === '1') {
-            self::log_message("Subscription #{$subscription_id} already activated. Skipping duplicate processing.");
+        // Get the subscription object if we only have the ID
+        if (!is_object($subscription)) {
+            $subscription = wcs_get_subscription($subscription_id);
+            if (!$subscription) {
+                self::log_message("Could not load subscription object for ID #{$subscription_id}");
+                return;
+            }
+        }
+        
+        // Create a unique processing key for this activation
+        $processing_key = 'activation_' . $subscription_id . '_' . time();
+        
+        // Check if we've already processed this subscription activation recently
+        if (isset(self::$processed_subscriptions[$subscription_id]['activation'])) {
+            $last_processed = self::$processed_subscriptions[$subscription_id]['activation'];
+            if ((time() - $last_processed) < 10) { // Within 10 seconds
+                self::log_message("Subscription #{$subscription_id} activation already processed within last 10 seconds. Skipping.");
+                return;
+            }
+        }
+        
+        // Also check persistent meta flag
+        if ($subscription->get_meta('_swsib_activation_processed') === 'yes') {
+            self::log_message("Subscription #{$subscription_id} already marked as activated. Skipping duplicate processing.");
             return;
         }
         
+        // Mark as being processed
+        self::$processed_subscriptions[$subscription_id]['activation'] = time();
+        
         self::log_message("=== Processing activation for subscription #{$subscription_id} ===");
+        
         if ( ! function_exists('swsib') ) {
             self::log_message("Error: swsib() function not available for subscription activation");
             return;
         }
+        
         $custom_data = self::extract_custom_data($subscription);
         if (empty($custom_data)) {
             self::log_message("No custom data found for subscription #{$subscription_id}");
             return;
         }
-        self::log_message("Found custom data: " . print_r($custom_data, true));
-        if ($subscription->get_status() !== 'active') {
-            $subscription->update_status('active');
-            self::log_message("Forced subscription to active status");
-        }
-        $success = self::update_siberian_subscription($subscription, $custom_data, 'activate');
-        self::log_message("Siberian integration " . ($success ? "completed successfully" : "failed") . " for subscription #{$subscription_id}");
         
-        // Mark this subscription as processed for activation.
-        $subscription->update_meta_data('_swsib_processed_activation', '1');
-        $subscription->save();
+        self::log_message("Found custom data: " . print_r($custom_data, true));
+        
+        $success = self::update_siberian_subscription($subscription, $custom_data, 'activate');
+        
+        if ($success) {
+            // Mark this subscription as processed for activation
+            $subscription->update_meta_data('_swsib_activation_processed', 'yes');
+            $subscription->save();
+            self::log_message("Siberian integration completed successfully for subscription #{$subscription_id}");
+        } else {
+            self::log_message("Siberian integration failed for subscription #{$subscription_id}");
+            // Remove from processed list so it can be retried
+            unset(self::$processed_subscriptions[$subscription_id]['activation']);
+        }
     }
 
     /**
      * Handle subscription cancellation.
-     * 
-     * Added a guard so that if the subscription was already processed for cancellation,
-     * the function will exit early.
      */
     public static function subscription_cancelled($subscription) {
-        $subscription_id = is_object($subscription) ? $subscription->get_id() : $subscription;
-        
-        // Guard: if already processed for cancellation, exit.
-        if ($subscription->get_meta('_swsib_processed_cancellation') === '1') {
-            self::log_message("Subscription #{$subscription_id} already cancelled. Skipping duplicate processing.");
-            return;
-        }
-        
-        self::log_message("=== Processing cancellation for subscription #{$subscription_id} ===");
-        if ( ! function_exists('swsib') ) {
-            self::log_message("Error: swsib() function not available for subscription cancellation");
-            return;
-        }
-        $custom_data = self::extract_custom_data($subscription);
-        if (empty($custom_data)) {
-            self::log_message("No custom data found for subscription #{$subscription_id}");
-            return;
-        }
-        self::log_message("Found custom data: " . print_r($custom_data, true));
-        $success = self::update_siberian_subscription($subscription, $custom_data, 'cancel');
-        self::log_message("Siberian integration " . ($success ? "completed successfully" : "failed") . " for subscription #{$subscription_id}");
-        
-        // Mark as processed for cancellation.
-        $subscription->update_meta_data('_swsib_processed_cancellation', '1');
-        $subscription->save();
+        self::process_subscription_cancellation($subscription, 'cancelled');
     }
 
     /**
@@ -361,7 +405,83 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
      */
     public static function subscription_expired($subscription) {
         self::log_message("Subscription expired – handling as cancellation");
-        self::subscription_cancelled($subscription);
+        self::process_subscription_cancellation($subscription, 'expired');
+    }
+
+    /**
+     * Handle subscription switched (upgraded/downgraded)
+     */
+    public static function subscription_switched($subscription) {
+        $subscription_id = is_object($subscription) ? $subscription->get_id() : $subscription;
+        self::log_message("Subscription #{$subscription_id} has been switched - treating as reactivation");
+        
+        // Treat switch as a new activation
+        self::subscription_activated($subscription);
+    }
+
+    /**
+     * Process subscription cancellation (unified method)
+     */
+    private static function process_subscription_cancellation($subscription, $reason = 'cancelled') {
+        $subscription_id = is_object($subscription) ? $subscription->get_id() : $subscription;
+        
+        // Get the subscription object if we only have the ID
+        if (!is_object($subscription)) {
+            $subscription = wcs_get_subscription($subscription_id);
+            if (!$subscription) {
+                self::log_message("Could not load subscription object for ID #{$subscription_id}");
+                return;
+            }
+        }
+        
+        // Check if we've already processed this subscription cancellation recently
+        $cancellation_key = $reason . '_' . $subscription_id;
+        if (isset(self::$processed_subscriptions[$subscription_id]['cancellation'])) {
+            $last_processed = self::$processed_subscriptions[$subscription_id]['cancellation'];
+            if ((time() - $last_processed) < 10) { // Within 10 seconds
+                self::log_message("Subscription #{$subscription_id} cancellation already processed within last 10 seconds. Skipping.");
+                return;
+            }
+        }
+        
+        // Also check persistent meta flag
+        if ($subscription->get_meta('_swsib_cancellation_processed') === 'yes') {
+            self::log_message("Subscription #{$subscription_id} already marked as cancelled. Skipping duplicate processing.");
+            return;
+        }
+        
+        // Mark as being processed
+        self::$processed_subscriptions[$subscription_id]['cancellation'] = time();
+        
+        self::log_message("=== Processing {$reason} for subscription #{$subscription_id} ===");
+        
+        if ( ! function_exists('swsib') ) {
+            self::log_message("Error: swsib() function not available for subscription {$reason}");
+            return;
+        }
+        
+        $custom_data = self::extract_custom_data($subscription);
+        if (empty($custom_data)) {
+            self::log_message("No custom data found for subscription #{$subscription_id}");
+            return;
+        }
+        
+        self::log_message("Found custom data: " . print_r($custom_data, true));
+        
+        $success = self::update_siberian_subscription($subscription, $custom_data, 'cancel');
+        
+        if ($success) {
+            // Mark this subscription as processed for cancellation
+            $subscription->update_meta_data('_swsib_cancellation_processed', 'yes');
+            // Clear the activation flag so it can be reactivated if needed
+            $subscription->delete_meta_data('_swsib_activation_processed');
+            $subscription->save();
+            self::log_message("Siberian integration completed successfully for subscription #{$subscription_id} {$reason}");
+        } else {
+            self::log_message("Siberian integration failed for subscription #{$subscription_id} {$reason}");
+            // Remove from processed list so it can be retried
+            unset(self::$processed_subscriptions[$subscription_id]['cancellation']);
+        }
     }
 
     /**
@@ -1036,10 +1156,9 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
             }
             $subscription->save();
             self::log_message("Successfully saved custom data to subscription #{$subscription->get_id()}");
-            if ($subscription->get_status() !== 'active') {
-                self::log_message("Setting subscription #{$subscription->get_id()} status to active");
-                $subscription->update_status('active');
-            }
+            
+            // Don't force activation here - let WooCommerce handle the subscription status based on payment
+            self::log_message("Subscription #{$subscription->get_id()} created with custom data - status will be handled by WooCommerce based on payment result");
         } else {
             self::log_message("No custom data found to transfer to subscription #{$subscription->get_id()}");
         }
@@ -1056,29 +1175,6 @@ class SwiftSpeed_Siberian_Woocommerce_Hook_Loader {
             foreach ($values['custom_data'] as $key => $value) {
                 $item->add_meta_data('_' . $key, $value, true);
                 self::log_message("Added meta data to order item: _{$key} = {$value}");
-            }
-        }
-    }
-
-    /**
-     * Activate subscription on payment (ensure status is active).
-     */
-    public static function activate_subscription_on_payment($order_id) {
-        if ( ! function_exists('wcs_get_subscriptions_for_order') ) {
-            return;
-        }
-        self::log_message("Payment complete for order #{$order_id}, processing subscriptions...");
-        $subscriptions = wcs_get_subscriptions_for_order($order_id);
-        if (empty($subscriptions)) {
-            self::log_message("No subscriptions found for order #{$order_id}");
-            return;
-        }
-        foreach ($subscriptions as $subscription) {
-            $subscription_id = $subscription->get_id();
-            self::log_message("Processing subscription #{$subscription_id} after payment");
-            if ($subscription->get_status() !== 'active') {
-                self::log_message("Setting subscription #{$subscription_id} to active status");
-                $subscription->update_status('active');
             }
         }
     }

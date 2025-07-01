@@ -23,9 +23,19 @@ class SwiftSpeed_Siberian_DB_Data {
     private $db_name;
     
     /**
-     * Chunk size for processing large datasets
+     * Chunk size for processing large datasets - SIGNIFICANTLY INCREASED for performance
      */
-    private $chunk_size = 5;
+    private $chunk_size = 50;
+    
+    /**
+     * Maximum number of retries for database operations
+     */
+    private $max_retries = 3;
+    
+    /**
+     * Delay between retries in microseconds
+     */
+    private $retry_delay = 500000; // 0.5 seconds
     
     /**
      * Constructor
@@ -37,30 +47,30 @@ class SwiftSpeed_Siberian_DB_Data {
     
 
     /**
- * Check if database connection is valid and reconnect if needed
- * @return boolean True if connection is valid
- */
-private function ensure_valid_connection() {
-    // Check if connection exists and is valid
-    if (!$this->db_connection || $this->db_connection->connect_errno) {
-        $this->log_message("Database connection is invalid or not established. Attempting to reconnect...");
+     * Check if database connection is valid and reconnect if needed
+     * @return boolean True if connection is valid
+     */
+    private function ensure_valid_connection() {
+        // Check if connection exists and is valid
+        if (!$this->db_connection || $this->db_connection->connect_errno) {
+            $this->log_message("Database connection is invalid or not established. Attempting to reconnect...");
+            return $this->reconnect_to_database();
+        }
+        
+        // Test connection with a simple query instead of using ping()
+        try {
+            $result = @$this->db_connection->query("SELECT 1");
+            if ($result) {
+                $result->free();
+                return true;
+            }
+        } catch (Exception $e) {
+            $this->log_message("Connection test failed: " . $e->getMessage());
+        }
+        
+        $this->log_message("Database connection is no longer active. Attempting to reconnect...");
         return $this->reconnect_to_database();
     }
-    
-    // Test connection with a simple query instead of using ping()
-    try {
-        $result = @$this->db_connection->query("SELECT 1");
-        if ($result) {
-            $result->free();
-            return true;
-        }
-    } catch (Exception $e) {
-        $this->log_message("Connection test failed: " . $e->getMessage());
-    }
-    
-    $this->log_message("Database connection is no longer active. Attempting to reconnect...");
-    return $this->reconnect_to_database();
-}
     
     /**
      * Reconnect to the database
@@ -129,43 +139,84 @@ private function ensure_valid_connection() {
     }
     
     /**
-     * Safely execute a database query with connection validation
+     * Safely execute a database query with connection validation and retry logic
      * 
      * @param string $query The SQL query to execute
      * @param string $context Context for error logging
+     * @param bool $use_transaction Whether to use transaction for this query
      * @return mixed Query result or false on failure
      */
-    private function safe_query($query, $context = 'query') {
-        try {
-            // Ensure we have a valid connection
-            if (!$this->ensure_valid_connection()) {
-                $this->log_message("Cannot execute $context: Invalid database connection");
+    private function safe_query($query, $context = 'query', $use_transaction = false) {
+        $attempts = 0;
+        $success = false;
+        $result = false;
+        
+        while (!$success && $attempts < $this->max_retries) {
+            try {
+                $attempts++;
+                
+                // Ensure we have a valid connection
+                if (!$this->ensure_valid_connection()) {
+                    $this->log_message("Cannot execute $context: Invalid database connection (attempt $attempts)");
+                    
+                    if ($attempts < $this->max_retries) {
+                        usleep($this->retry_delay);
+                        continue;
+                    }
+                    return false;
+                }
+                
+                // Begin transaction if requested
+                if ($use_transaction) {
+                    $this->db_connection->begin_transaction();
+                }
+                
+                // Execute the query
+                $result = $this->db_connection->query($query);
+                
+                if (!$result) {
+                    $this->log_message("Failed to execute $context: " . $this->db_connection->error . " (attempt $attempts)");
+                    
+                    // If using transaction, roll it back
+                    if ($use_transaction) {
+                        $this->db_connection->rollback();
+                    }
+                    
+                    // If the connection was lost, try reconnecting and retrying
+                    if ($this->db_connection->errno == 2006 || $this->db_connection->errno == 2013) {
+                        $this->log_message("Connection lost, attempting to reconnect and retry $context");
+                        if ($this->reconnect_to_database() && $attempts < $this->max_retries) {
+                            usleep($this->retry_delay);
+                            continue;
+                        }
+                    } else if ($attempts < $this->max_retries) {
+                        usleep($this->retry_delay);
+                        continue;
+                    }
+                } else {
+                    // If using transaction, commit it
+                    if ($use_transaction) {
+                        $this->db_connection->commit();
+                    }
+                    $success = true;
+                }
+            } catch (Exception $e) {
+                $this->log_message("Exception in $context: " . $e->getMessage() . " (attempt $attempts)");
+                
+                // If using transaction, roll it back
+                if ($use_transaction) {
+                    $this->db_connection->rollback();
+                }
+                
+                if ($attempts < $this->max_retries) {
+                    usleep($this->retry_delay);
+                    continue;
+                }
                 return false;
             }
-            
-            // Execute the query
-            $result = $this->db_connection->query($query);
-            
-            if (!$result) {
-                $this->log_message("Failed to execute $context: " . $this->db_connection->error);
-                
-                // If the connection was lost, try reconnecting and retrying once
-                if ($this->db_connection->errno == 2006 || $this->db_connection->errno == 2013) {
-                    $this->log_message("Connection lost, attempting to reconnect and retry $context");
-                    if ($this->reconnect_to_database()) {
-                        $result = $this->db_connection->query($query);
-                        if (!$result) {
-                            $this->log_message("Failed to execute $context after reconnection: " . $this->db_connection->error);
-                        }
-                    }
-                }
-            }
-            
-            return $result;
-        } catch (Exception $e) {
-            $this->log_message("Exception in $context: " . $e->getMessage());
-            return false;
         }
+        
+        return $result;
     }
     
     /**
@@ -266,9 +317,9 @@ private function ensure_valid_connection() {
             ];
         }
         
-        // Get all tables in the database
-        $query = "SELECT TABLE_NAME, 
-                 ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), 2) AS size_mb 
+        // Get all tables in the database with a single query
+        $query = "SELECT COUNT(*) as table_count, 
+                 ROUND(SUM((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), 2) AS total_size_mb 
                  FROM information_schema.TABLES 
                  WHERE TABLE_SCHEMA = '{$this->db_name}'";
         
@@ -281,16 +332,11 @@ private function ensure_valid_connection() {
             ];
         }
         
-        $total_size = 0;
-        $table_count = $result->num_rows;
-        
-        while ($row = $result->fetch_assoc()) {
-            $total_size += floatval($row['size_mb']);
-        }
+        $row = $result->fetch_assoc();
         
         return [
-            'count' => $table_count,
-            'size' => number_format($total_size, 2) . ' MB'
+            'count' => intval($row['table_count']),
+            'size' => number_format($row['total_size_mb'], 2) . ' MB'
         ];
     }
     
@@ -508,7 +554,7 @@ private function ensure_valid_connection() {
         // Ensure we have at least 1 for total to prevent division by zero
         $total = max(1, $total);
         
-        // Split items into batches
+        // Split items into batches - using larger chunk size for better performance
         $batches = array_chunk($items_to_process, $this->chunk_size);
         if (empty($batches) && $total > 0) {
             $batches = array(array()); // Add an empty batch to process
@@ -544,7 +590,7 @@ private function ensure_valid_connection() {
         $progress_file = $this->get_progress_file($task);
         file_put_contents($progress_file, json_encode($progress_data));
         
-        $this->log_message("Task $task initialized with $total items, " . count($batches) . " batches");
+        $this->log_message("Task $task initialized with $total items, " . count($batches) . " batches (chunk size: {$this->chunk_size})");
         
         return true;
     }
@@ -1258,7 +1304,7 @@ private function ensure_valid_connection() {
                 $where_clause = " WHERE modified < '$threshold_date'";
             }
             
-            // Get all sessions that need to be cleaned up
+            // Get all sessions that need to be cleaned up - Use a more efficient query
             $query = "SELECT session_id, modified FROM session" . $where_clause;
             $result = $this->safe_query($query, 'get_sessions_to_cleanup');
             
@@ -1296,7 +1342,7 @@ private function ensure_valid_connection() {
                 $where_clause = " WHERE created_at < '$threshold_date'";
             }
             
-            // Get all mail logs that need to be cleaned up
+            // Get all mail logs that need to be cleaned up - Use a more efficient query
             $query = "SELECT log_id, title, `from`, created_at FROM mail_log" . $where_clause;
             $result = $this->safe_query($query, 'get_mail_logs_to_cleanup');
             
@@ -1348,7 +1394,7 @@ private function ensure_valid_connection() {
                 $where_clause = " WHERE " . implode(' AND ', $where_conditions);
             }
             
-            // Get all source queue items that need to be cleaned up
+            // Get all source queue items that need to be cleaned up - Use a more efficient query
             $query = "SELECT source_queue_id, name, status, created_at FROM source_queue" . $where_clause;
             $result = $this->safe_query($query, 'get_source_queue_to_cleanup');
             
@@ -1386,7 +1432,7 @@ private function ensure_valid_connection() {
                 $where_clause .= " AND created_at < '$threshold_date'";
             }
             
-            // Get all backoffice alerts that need to be cleaned up
+            // Get all backoffice alerts that need to be cleaned up - Use a more efficient query
             $query = "SELECT notification_id, title, created_at FROM backoffice_notification" . $where_clause;
             $result = $this->safe_query($query, 'get_backoffice_alerts_to_cleanup');
             
@@ -1431,7 +1477,7 @@ private function ensure_valid_connection() {
                 $where_clause = " WHERE executed_at < '$threshold_date'";
             }
             
-            // Get all cleanup log entries that need to be cleaned up
+            // Get all cleanup log entries that need to be cleaned up - Use a more efficient query
             $query = "SELECT id, task_type, executed_at FROM swsib_cleanup_log" . $where_clause;
             $result = $this->safe_query($query, 'get_cleanup_log_entries_to_cleanup');
             
@@ -1452,7 +1498,7 @@ private function ensure_valid_connection() {
     }
     
     /**
-     * Batch processing methods
+     * Batch processing methods - OPTIMIZED FOR BULK OPERATIONS
      */
     private function process_sessions_batch($sessions) {
         if (!$this->ensure_valid_connection() || empty($sessions)) {
@@ -1476,9 +1522,17 @@ private function ensure_valid_connection() {
         $skipped = 0;
         $logs = [];
         $deleted_items = array();
+        $session_count = count($sessions);
         
         try {
-            // Extract session IDs
+            // Log batch processing start
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Processing batch of %d sessions', 'swiftspeed-siberian'), $session_count),
+                'type' => 'info'
+            );
+            
+            // Extract session IDs for bulk delete
             $session_ids = array_column($sessions, 'session_id');
             
             if (empty($session_ids)) {
@@ -1506,32 +1560,34 @@ private function ensure_valid_connection() {
             // Build IN clause
             $ids_clause = implode(',', $placeholders);
             
+            // Use transaction for the delete operation
+            $this->db_connection->begin_transaction();
+            
             // Delete sessions in a single query
             $query = "DELETE FROM session WHERE session_id IN ({$ids_clause})";
-            $result = $this->safe_query($query, 'delete_sessions_batch');
+            $result = $this->db_connection->query($query);
             
-            if ($result) {
-                $deleted = $this->db_connection->affected_rows;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Deleted %d sessions', 'swiftspeed-siberian'), $deleted),
-                    'type' => 'success'
-                );
-                
-                // Add details about deleted sessions
-                foreach ($sessions as $session) {
-                    $deleted_items[] = array(
-                        'id' => $session['session_id'],
-                        'modified' => $session['modified'],
-                        'timestamp' => date('Y-m-d H:i:s')
-                    );
-                }
-            } else {
-                $errors = count($session_ids);
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Failed to delete sessions', 'swiftspeed-siberian')),
-                    'type' => 'error'
+            if (!$result) {
+                $this->db_connection->rollback();
+                throw new Exception("Failed to delete sessions: " . $this->db_connection->error);
+            }
+            
+            // Commit the transaction
+            $this->db_connection->commit();
+            
+            $deleted = $this->db_connection->affected_rows;
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Deleted %d sessions', 'swiftspeed-siberian'), $deleted),
+                'type' => 'success'
+            );
+            
+            // Add details about deleted sessions
+            foreach ($sessions as $session) {
+                $deleted_items[] = array(
+                    'id' => $session['session_id'],
+                    'modified' => $session['modified'],
+                    'timestamp' => date('Y-m-d H:i:s')
                 );
             }
             
@@ -1544,9 +1600,19 @@ private function ensure_valid_connection() {
             );
         } catch (Exception $e) {
             $this->log_message("Exception in process_sessions_batch: " . $e->getMessage());
+            
+            // Make sure to rollback if there was an exception
+            if ($this->db_connection && $this->db_connection->connect_errno === 0) {
+                try {
+                    $this->db_connection->rollback();
+                } catch (Exception $rollback_e) {
+                    $this->log_message("Failed to rollback transaction: " . $rollback_e->getMessage());
+                }
+            }
+            
             return array(
                 'deleted' => 0,
-                'errors' => count($sessions),
+                'errors' => $session_count,
                 'skipped' => 0,
                 'logs' => [
                     array(
@@ -1582,9 +1648,17 @@ private function ensure_valid_connection() {
         $skipped = 0;
         $logs = [];
         $deleted_items = array();
+        $logs_count = count($mail_logs);
         
         try {
-            // Extract log IDs
+            // Log batch processing start
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Processing batch of %d mail logs', 'swiftspeed-siberian'), $logs_count),
+                'type' => 'info'
+            );
+            
+            // Extract log IDs for bulk delete
             $log_ids = array_column($mail_logs, 'log_id');
             
             if (empty($log_ids)) {
@@ -1603,7 +1677,7 @@ private function ensure_valid_connection() {
                 );
             }
             
-            // Create placeholders and clean log IDs
+            // Create placeholders and clean log IDs - use intval for numeric IDs
             $placeholders = array();
             foreach ($log_ids as $id) {
                 $placeholders[] = intval($id);
@@ -1612,34 +1686,36 @@ private function ensure_valid_connection() {
             // Build IN clause
             $ids_clause = implode(',', $placeholders);
             
+            // Use transaction for the delete operation
+            $this->db_connection->begin_transaction();
+            
             // Delete mail logs in a single query
             $query = "DELETE FROM mail_log WHERE log_id IN ({$ids_clause})";
-            $result = $this->safe_query($query, 'delete_mail_logs_batch');
+            $result = $this->db_connection->query($query);
             
-            if ($result) {
-                $deleted = $this->db_connection->affected_rows;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Deleted %d mail logs', 'swiftspeed-siberian'), $deleted),
-                    'type' => 'success'
-                );
-                
-                // Add details about deleted mail logs
-                foreach ($mail_logs as $mail_log) {
-                    $deleted_items[] = array(
-                        'id' => $mail_log['log_id'],
-                        'title' => $mail_log['title'],
-                        'from' => $mail_log['from'],
-                        'created_at' => $mail_log['created_at'],
-                        'timestamp' => date('Y-m-d H:i:s')
-                    );
-                }
-            } else {
-                $errors = count($log_ids);
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Failed to delete mail logs', 'swiftspeed-siberian')),
-                    'type' => 'error'
+            if (!$result) {
+                $this->db_connection->rollback();
+                throw new Exception("Failed to delete mail logs: " . $this->db_connection->error);
+            }
+            
+            // Commit the transaction
+            $this->db_connection->commit();
+            
+            $deleted = $this->db_connection->affected_rows;
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Deleted %d mail logs', 'swiftspeed-siberian'), $deleted),
+                'type' => 'success'
+            );
+            
+            // Add details about deleted mail logs
+            foreach ($mail_logs as $mail_log) {
+                $deleted_items[] = array(
+                    'id' => $mail_log['log_id'],
+                    'title' => $mail_log['title'],
+                    'from' => $mail_log['from'],
+                    'created_at' => $mail_log['created_at'],
+                    'timestamp' => date('Y-m-d H:i:s')
                 );
             }
             
@@ -1652,9 +1728,19 @@ private function ensure_valid_connection() {
             );
         } catch (Exception $e) {
             $this->log_message("Exception in process_mail_logs_batch: " . $e->getMessage());
+            
+            // Make sure to rollback if there was an exception
+            if ($this->db_connection && $this->db_connection->connect_errno === 0) {
+                try {
+                    $this->db_connection->rollback();
+                } catch (Exception $rollback_e) {
+                    $this->log_message("Failed to rollback transaction: " . $rollback_e->getMessage());
+                }
+            }
+            
             return array(
                 'deleted' => 0,
-                'errors' => count($mail_logs),
+                'errors' => $logs_count,
                 'skipped' => 0,
                 'logs' => [
                     array(
@@ -1690,9 +1776,17 @@ private function ensure_valid_connection() {
         $skipped = 0;
         $logs = [];
         $deleted_items = array();
+        $items_count = count($source_queue_items);
         
         try {
-            // Extract item IDs
+            // Log batch processing start
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Processing batch of %d source queue items', 'swiftspeed-siberian'), $items_count),
+                'type' => 'info'
+            );
+            
+            // Extract item IDs for bulk delete
             $item_ids = array_column($source_queue_items, 'source_queue_id');
             
             if (empty($item_ids)) {
@@ -1711,7 +1805,7 @@ private function ensure_valid_connection() {
                 );
             }
             
-            // Create placeholders and clean item IDs
+            // Create placeholders and clean item IDs - use intval for numeric IDs
             $placeholders = array();
             foreach ($item_ids as $id) {
                 $placeholders[] = intval($id);
@@ -1720,34 +1814,36 @@ private function ensure_valid_connection() {
             // Build IN clause
             $ids_clause = implode(',', $placeholders);
             
+            // Use transaction for the delete operation
+            $this->db_connection->begin_transaction();
+            
             // Delete source queue items in a single query
             $query = "DELETE FROM source_queue WHERE source_queue_id IN ({$ids_clause})";
-            $result = $this->safe_query($query, 'delete_source_queue_batch');
+            $result = $this->db_connection->query($query);
             
-            if ($result) {
-                $deleted = $this->db_connection->affected_rows;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Deleted %d source queue items', 'swiftspeed-siberian'), $deleted),
-                    'type' => 'success'
-                );
-                
-                // Add details about deleted source queue items
-                foreach ($source_queue_items as $item) {
-                    $deleted_items[] = array(
-                        'id' => $item['source_queue_id'],
-                        'name' => $item['name'],
-                        'status' => $item['status'],
-                        'created_at' => $item['created_at'],
-                        'timestamp' => date('Y-m-d H:i:s')
-                    );
-                }
-            } else {
-                $errors = count($item_ids);
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Failed to delete source queue items', 'swiftspeed-siberian')),
-                    'type' => 'error'
+            if (!$result) {
+                $this->db_connection->rollback();
+                throw new Exception("Failed to delete source queue items: " . $this->db_connection->error);
+            }
+            
+            // Commit the transaction
+            $this->db_connection->commit();
+            
+            $deleted = $this->db_connection->affected_rows;
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Deleted %d source queue items', 'swiftspeed-siberian'), $deleted),
+                'type' => 'success'
+            );
+            
+            // Add details about deleted source queue items
+            foreach ($source_queue_items as $item) {
+                $deleted_items[] = array(
+                    'id' => $item['source_queue_id'],
+                    'name' => $item['name'],
+                    'status' => $item['status'],
+                    'created_at' => $item['created_at'],
+                    'timestamp' => date('Y-m-d H:i:s')
                 );
             }
             
@@ -1760,9 +1856,19 @@ private function ensure_valid_connection() {
             );
         } catch (Exception $e) {
             $this->log_message("Exception in process_source_queue_batch: " . $e->getMessage());
+            
+            // Make sure to rollback if there was an exception
+            if ($this->db_connection && $this->db_connection->connect_errno === 0) {
+                try {
+                    $this->db_connection->rollback();
+                } catch (Exception $rollback_e) {
+                    $this->log_message("Failed to rollback transaction: " . $rollback_e->getMessage());
+                }
+            }
+            
             return array(
                 'deleted' => 0,
-                'errors' => count($source_queue_items),
+                'errors' => $items_count,
                 'skipped' => 0,
                 'logs' => [
                     array(
@@ -1798,47 +1904,127 @@ private function ensure_valid_connection() {
         $skipped = 0;
         $logs = [];
         $optimized_tables = array();
+        $tables_count = count($tables);
         
         try {
-            // Process each table
+            // Log batch processing start
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Optimizing batch of %d tables', 'swiftspeed-siberian'), $tables_count),
+                'type' => 'info'
+            );
+            
+            // Collect table names for bulk optimize
+            $table_names = array();
             foreach ($tables as $table) {
-                $table_name = $table['TABLE_NAME'];
-                
-                // Add log about current table
+                $table_names[] = "`" . $this->db_connection->real_escape_string($table['TABLE_NAME']) . "`";
+            }
+            
+            // Build table list for optimize
+            $tables_clause = implode(', ', $table_names);
+            
+            // Optimize tables in a single query
+            $query = "OPTIMIZE TABLE {$tables_clause}";
+            $result = $this->db_connection->query($query);
+            
+            if (!$result) {
+                // If bulk optimize fails, fall back to individual table optimization
                 $logs[] = array(
                     'time' => time(),
-                    'message' => sprintf(__('Optimizing table: %s', 'swiftspeed-siberian'), $table_name),
-                    'type' => 'info'
+                    'message' => 'Bulk optimize failed, falling back to individual table optimization',
+                    'type' => 'warning'
                 );
                 
-                // Run optimize
-                $query = "OPTIMIZE TABLE `{$table_name}`";
-                $result = $this->safe_query($query, "optimize_table_{$table_name}");
-                
-                if ($result) {
-                    $optimized++;
-                    $logs[] = array(
-                        'time' => time(),
-                        'message' => sprintf(__('Successfully optimized table: %s', 'swiftspeed-siberian'), $table_name),
-                        'type' => 'success'
-                    );
+                // Process each table individually
+                foreach ($tables as $table) {
+                    $table_name = $table['TABLE_NAME'];
+                    $escaped_table_name = "`" . $this->db_connection->real_escape_string($table_name) . "`";
                     
-                    // Add details about optimized table
-                    $optimized_tables[] = array(
-                        'table_name' => $table_name,
-                        'size_mb' => $table['size_mb'],
-                        'free_space' => $table['free_space'],
-                        'timestamp' => date('Y-m-d H:i:s')
-                    );
-                } else {
-                    $errors++;
-                    $logs[] = array(
-                        'time' => time(),
-                        'message' => sprintf(__('Failed to optimize table %s', 'swiftspeed-siberian'), $table_name),
-                        'type' => 'error'
-                    );
+                    $query = "OPTIMIZE TABLE {$escaped_table_name}";
+                    $result = $this->db_connection->query($query);
+                    
+                    if ($result) {
+                        $optimized++;
+                        $logs[] = array(
+                            'time' => time(),
+                            'message' => sprintf(__('Successfully optimized table: %s', 'swiftspeed-siberian'), $table_name),
+                            'type' => 'success'
+                        );
+                        
+                        // Add details about optimized table
+                        $optimized_tables[] = array(
+                            'table_name' => $table_name,
+                            'size_mb' => $table['size_mb'],
+                            'free_space' => $table['free_space'],
+                            'timestamp' => date('Y-m-d H:i:s')
+                        );
+                    } else {
+                        $errors++;
+                        $logs[] = array(
+                            'time' => time(),
+                            'message' => sprintf(__('Failed to optimize table %s: %s', 'swiftspeed-siberian'), $table_name, $this->db_connection->error),
+                            'type' => 'error'
+                        );
+                    }
                 }
+            } else {
+                // Bulk optimize succeeded
+                $optimize_results = array();
+                while ($row = $result->fetch_assoc()) {
+                    $optimize_results[] = $row;
+                }
+                
+                // Process results
+                $successful_tables = 0;
+                foreach ($optimize_results as $row) {
+                    $table_name = $row['Table'];
+                    $msg = $row['Msg_text'];
+                    $status = $row['Status'];
+                    
+                    // Find matching table in original list
+                    $table_info = null;
+                    foreach ($tables as $table) {
+                        if ($table['TABLE_NAME'] === $table_name) {
+                            $table_info = $table;
+                            break;
+                        }
+                    }
+                    
+                    if ($status === 'OK' || $status === 'Table is already up to date') {
+                        $successful_tables++;
+                        $logs[] = array(
+                            'time' => time(),
+                            'message' => sprintf(__('Successfully optimized table: %s - %s', 'swiftspeed-siberian'), $table_name, $msg),
+                            'type' => 'success'
+                        );
+                        
+                        if ($table_info) {
+                            // Add details about optimized table
+                            $optimized_tables[] = array(
+                                'table_name' => $table_name,
+                                'size_mb' => $table_info['size_mb'],
+                                'free_space' => $table_info['free_space'],
+                                'timestamp' => date('Y-m-d H:i:s')
+                            );
+                        }
+                    } else {
+                        $errors++;
+                        $logs[] = array(
+                            'time' => time(),
+                            'message' => sprintf(__('Failed to optimize table %s: %s', 'swiftspeed-siberian'), $table_name, $msg),
+                            'type' => 'error'
+                        );
+                    }
+                }
+                
+                $optimized = $successful_tables;
             }
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Optimized %d tables successfully, %d errors', 'swiftspeed-siberian'), $optimized, $errors),
+                'type' => 'info'
+            );
             
             return array(
                 'deleted' => $optimized, // Using 'deleted' for consistency with other methods
@@ -1851,7 +2037,7 @@ private function ensure_valid_connection() {
             $this->log_message("Exception in process_optimize_batch: " . $e->getMessage());
             return array(
                 'deleted' => 0,
-                'errors' => count($tables),
+                'errors' => $tables_count,
                 'skipped' => 0,
                 'logs' => [
                     array(
@@ -1887,9 +2073,17 @@ private function ensure_valid_connection() {
         $skipped = 0;
         $logs = [];
         $deleted_items = array();
+        $alerts_count = count($alerts);
         
         try {
-            // Extract alert IDs
+            // Log batch processing start
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Processing batch of %d backoffice alerts', 'swiftspeed-siberian'), $alerts_count),
+                'type' => 'info'
+            );
+            
+            // Extract alert IDs for bulk delete
             $alert_ids = array_column($alerts, 'notification_id');
             
             if (empty($alert_ids)) {
@@ -1908,7 +2102,7 @@ private function ensure_valid_connection() {
                 );
             }
             
-            // Create placeholders and clean alert IDs
+            // Create placeholders and clean alert IDs - use intval for numeric IDs
             $placeholders = array();
             foreach ($alert_ids as $id) {
                 $placeholders[] = intval($id);
@@ -1917,33 +2111,35 @@ private function ensure_valid_connection() {
             // Build IN clause
             $ids_clause = implode(',', $placeholders);
             
+            // Use transaction for the delete operation
+            $this->db_connection->begin_transaction();
+            
             // Delete backoffice alerts in a single query
             $query = "DELETE FROM backoffice_notification WHERE notification_id IN ({$ids_clause})";
-            $result = $this->safe_query($query, 'delete_backoffice_alerts_batch');
+            $result = $this->db_connection->query($query);
             
-            if ($result) {
-                $deleted = $this->db_connection->affected_rows;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Deleted %d backoffice alerts', 'swiftspeed-siberian'), $deleted),
-                    'type' => 'success'
-                );
-                
-                // Add details about deleted alerts
-                foreach ($alerts as $alert) {
-                    $deleted_items[] = array(
-                        'id' => $alert['notification_id'],
-                        'title' => $alert['title'],
-                        'created_at' => $alert['created_at'],
-                        'timestamp' => date('Y-m-d H:i:s')
-                    );
-                }
-            } else {
-                $errors = count($alert_ids);
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Failed to delete backoffice alerts', 'swiftspeed-siberian')),
-                    'type' => 'error'
+            if (!$result) {
+                $this->db_connection->rollback();
+                throw new Exception("Failed to delete backoffice alerts: " . $this->db_connection->error);
+            }
+            
+            // Commit the transaction
+            $this->db_connection->commit();
+            
+            $deleted = $this->db_connection->affected_rows;
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Deleted %d backoffice alerts', 'swiftspeed-siberian'), $deleted),
+                'type' => 'success'
+            );
+            
+            // Add details about deleted alerts
+            foreach ($alerts as $alert) {
+                $deleted_items[] = array(
+                    'id' => $alert['notification_id'],
+                    'title' => $alert['title'],
+                    'created_at' => $alert['created_at'],
+                    'timestamp' => date('Y-m-d H:i:s')
                 );
             }
             
@@ -1956,9 +2152,19 @@ private function ensure_valid_connection() {
             );
         } catch (Exception $e) {
             $this->log_message("Exception in process_backoffice_alerts_batch: " . $e->getMessage());
+            
+            // Make sure to rollback if there was an exception
+            if ($this->db_connection && $this->db_connection->connect_errno === 0) {
+                try {
+                    $this->db_connection->rollback();
+                } catch (Exception $rollback_e) {
+                    $this->log_message("Failed to rollback transaction: " . $rollback_e->getMessage());
+                }
+            }
+            
             return array(
                 'deleted' => 0,
-                'errors' => count($alerts),
+                'errors' => $alerts_count,
                 'skipped' => 0,
                 'logs' => [
                     array(
@@ -2014,8 +2220,16 @@ private function ensure_valid_connection() {
             $skipped = 0;
             $logs = [];
             $deleted_items = array();
+            $entries_count = count($entries);
             
-            // Extract entry IDs
+            // Log batch processing start
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Processing batch of %d cleanup log entries', 'swiftspeed-siberian'), $entries_count),
+                'type' => 'info'
+            );
+            
+            // Extract entry IDs for bulk delete
             $entry_ids = array_column($entries, 'id');
             
             if (empty($entry_ids)) {
@@ -2034,7 +2248,7 @@ private function ensure_valid_connection() {
                 );
             }
             
-            // Create placeholders and clean entry IDs
+            // Create placeholders and clean entry IDs - use intval for numeric IDs
             $placeholders = array();
             foreach ($entry_ids as $id) {
                 $placeholders[] = intval($id);
@@ -2043,33 +2257,35 @@ private function ensure_valid_connection() {
             // Build IN clause
             $ids_clause = implode(',', $placeholders);
             
+            // Use transaction for the delete operation
+            $this->db_connection->begin_transaction();
+            
             // Delete cleanup log entries in a single query
             $query = "DELETE FROM swsib_cleanup_log WHERE id IN ({$ids_clause})";
-            $result = $this->safe_query($query, 'delete_cleanup_log_batch');
+            $result = $this->db_connection->query($query);
             
-            if ($result) {
-                $deleted = $this->db_connection->affected_rows;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Deleted %d cleanup log entries', 'swiftspeed-siberian'), $deleted),
-                    'type' => 'success'
-                );
-                
-                // Add details about deleted entries
-                foreach ($entries as $entry) {
-                    $deleted_items[] = array(
-                        'id' => $entry['id'],
-                        'task_type' => $entry['task_type'],
-                        'executed_at' => $entry['executed_at'],
-                        'timestamp' => date('Y-m-d H:i:s')
-                    );
-                }
-            } else {
-                $errors = count($entry_ids);
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => sprintf(__('Failed to delete cleanup log entries', 'swiftspeed-siberian')),
-                    'type' => 'error'
+            if (!$result) {
+                $this->db_connection->rollback();
+                throw new Exception("Failed to delete cleanup log entries: " . $this->db_connection->error);
+            }
+            
+            // Commit the transaction
+            $this->db_connection->commit();
+            
+            $deleted = $this->db_connection->affected_rows;
+            $logs[] = array(
+                'time' => time(),
+                'message' => sprintf(__('Deleted %d cleanup log entries', 'swiftspeed-siberian'), $deleted),
+                'type' => 'success'
+            );
+            
+            // Add details about deleted entries
+            foreach ($entries as $entry) {
+                $deleted_items[] = array(
+                    'id' => $entry['id'],
+                    'task_type' => $entry['task_type'],
+                    'executed_at' => $entry['executed_at'],
+                    'timestamp' => date('Y-m-d H:i:s')
                 );
             }
             
@@ -2082,6 +2298,16 @@ private function ensure_valid_connection() {
             );
         } catch (Exception $e) {
             $this->log_message("Exception in process_cleanup_log_batch: " . $e->getMessage());
+            
+            // Make sure to rollback if there was an exception
+            if ($this->db_connection && $this->db_connection->connect_errno === 0) {
+                try {
+                    $this->db_connection->rollback();
+                } catch (Exception $rollback_e) {
+                    $this->log_message("Failed to rollback transaction: " . $rollback_e->getMessage());
+                }
+            }
+            
             return array(
                 'deleted' => 0,
                 'errors' => count($entries),
@@ -2157,17 +2383,17 @@ private function ensure_valid_connection() {
                 $this->safe_query($add_column, 'add_items_skipped_column');
             }
             
-            // Insert cleanup results
-            $query = "INSERT INTO swsib_cleanup_log (task_type, items_deleted, errors, executed_at, items_skipped)
-                     VALUES ('{$type}', {$deleted}, {$errors}, '{$timestamp}', {$skipped})";
-            
-            $result = $this->safe_query($query, 'insert_cleanup_results');
+            // Insert cleanup results - use prepared statement for better performance
+            $stmt = $this->db_connection->prepare("INSERT INTO swsib_cleanup_log (task_type, items_deleted, errors, executed_at, items_skipped) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("siisi", $type, $deleted, $errors, $timestamp, $skipped);
+            $result = $stmt->execute();
+            $stmt->close();
             
             if ($result) {
                 $this->log_message("Recorded cleanup results for $type: deleted=$deleted, errors=$errors, skipped=$skipped");
                 return true;
             } else {
-                $this->log_message("Failed to record cleanup results for $type");
+                $this->log_message("Failed to record cleanup results for $type: " . $this->db_connection->error);
                 return false;
             }
         } catch (Exception $e) {

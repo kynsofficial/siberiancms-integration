@@ -1,7 +1,8 @@
 <?php
 /**
  * Base abstract class for backup functionality.
- * OPTIMIZED VERSION 3.0: Enhanced archiving for large files, improved memory management
+ * FIXED VERSION 4.0: Enhanced storage handling, proper history management,
+ * single ZIP creation, and improved error handling
  */
 abstract class SwiftSpeed_Siberian_Base_Backup {
     /**
@@ -118,15 +119,21 @@ abstract class SwiftSpeed_Siberian_Base_Backup {
     
 
 /**
- * Create final backup archive with optimized chunking approach for large files.
+ * Create final backup archive with proper storage provider handling.
  *
  * @param array $status Current backup status.
  * @return array|WP_Error Updated backup status or error.
  */
 protected function create_final_archive($status) {
-    // Get session tracking for already added backups
-    $history_added_session = get_option('swsib_history_added_session', array());
-    $backup_key = $status['id'] . '-' . (isset($status['file']) ? $status['file'] : '');
+    // Check if this is a sub-backup that should not create history
+    if (!empty($status['params']['prevent_history_add'])) {
+        $this->log_message('Skipping archive creation for sub-backup: ' . $status['id']);
+        $status['status'] = 'completed';
+        $status['progress'] = 100;
+        $status['message'] = __('Sub-backup completed successfully', 'swiftspeed-siberian');
+        $this->update_status($status);
+        return $status;
+    }
     
     // CRITICAL CHECK: Fail if there are critical errors
     if (!empty($status['critical_errors'])) {
@@ -155,31 +162,17 @@ protected function create_final_archive($status) {
     $status['progress'] = 95;
     $this->update_status($status);
     
-    // Determine where to save the final ZIP file - in the main backup directory, not temp
+    // Determine where to save the final ZIP file
     $backup_filename = 'siberian-backup-' . $status['backup_type'] . '-' . date('Y-m-d-H-i-s') . '.zip';
     $temp_zip_file = $status['temp_dir'] . $backup_filename;
     $final_zip_file = $this->backup_dir . $backup_filename;
     
     $this->log_message('Creating final backup archive: ' . $temp_zip_file);
     
-    // First, try to use system zip command if available for better performance with large files
-    if ($this->is_system_zip_available()) {
-        $this->log_message('Using system zip command for better performance');
-        $result = $this->create_archive_with_system_zip($status['temp_dir'], $temp_zip_file);
-        if ($result === true) {
-            $this->log_message('Successfully created archive with system zip');
-        } else {
-            $this->log_message('System zip failed, falling back to PHP ZipArchive');
-            $result = $this->create_archive_with_php($status, $temp_zip_file);
-            if (!$result) {
-                return $status; // Error already set in create_archive_with_php
-            }
-        }
-    } else {
-        $result = $this->create_archive_with_php($status, $temp_zip_file);
-        if (!$result) {
-            return $status; // Error already set in create_archive_with_php
-        }
+    // Create the archive
+    $result = $this->create_archive_with_php($status, $temp_zip_file);
+    if (!$result) {
+        return $status; // Error already set in create_archive_with_php
     }
     
     // Ensure the backup directory exists
@@ -209,90 +202,114 @@ protected function create_final_archive($status) {
         $final_zip_file = $temp_zip_file; // Just use the temp location even though it's missing
     }
     
+    // Get storage providers from params - handle all selected providers
+    $storage_providers = [];
+    if (!empty($status['params']['storage_providers']) && is_array($status['params']['storage_providers'])) {
+        $storage_providers = $status['params']['storage_providers'];
+    } else if (!empty($status['params']['storage'])) {
+        $storage_providers = [$status['params']['storage']];
+    } else {
+        $storage_providers = ['local'];
+    }
+    
+    // Ensure local is always included
+    if (!in_array('local', $storage_providers)) {
+        $storage_providers[] = 'local';
+    }
+    
+    $this->log_message('Processing storage providers: ' . implode(', ', $storage_providers));
+    
     // Initialize storage tracking arrays
     $status['uploaded_to'] = ['local']; // Always start with local storage
     $status['all_storage_info'] = [];
+    $upload_errors = [];
     
     // Upload to all selected storage providers
-    if (!empty($status['params']['storage_providers']) && is_array($status['params']['storage_providers'])) {
-        foreach ($status['params']['storage_providers'] as $provider) {
-            // Skip local as it's already saved locally
-            if ($provider === 'local') {
-                continue;
-            }
-            
-            $this->log_message('Uploading backup to storage provider: ' . $provider);
-            
-            // Update status message to indicate current provider
-            $status['status'] = 'uploading';
-            $status['message'] = sprintf(
-                __('Uploading backup to %s...', 'swiftspeed-siberian'),
-                ucfirst($provider)
-            );
-            $status['progress'] = 97;
-            $this->update_status($status);
-            
-            // Load the appropriate storage provider
-            $storage = $this->get_storage_provider($provider);
-            if (is_wp_error($storage)) {
-                $this->log_message('Error getting storage provider: ' . $storage->get_error_message());
-                $status['errors'][] = [
-                    'provider' => $provider,
-                    'message' => $storage->get_error_message()
-                ];
-                continue;
-            }
-            
-            // Initialize storage
-            $init_result = $storage->initialize();
-            if (is_wp_error($init_result)) {
-                $this->log_message('Error initializing storage provider: ' . $init_result->get_error_message());
-                $status['errors'][] = [
-                    'provider' => $provider,
-                    'message' => $init_result->get_error_message()
-                ];
-                continue;
-            }
-            
-            // Upload file
-            $destination = basename($final_zip_file);
-            $metadata = [
-                'type' => 'backup',
-                'backup_type' => $status['backup_type'],
-                'timestamp' => time(),
-                'source' => site_url(),
-            ];
-            
-            // For large files, use chunked upload if available
-            $file_size = file_exists($final_zip_file) ? filesize($final_zip_file) : 0;
-            $upload_result = null;
-            
-            if ($file_size > 100 * 1024 * 1024 && method_exists($storage, 'upload_file_chunked')) { // 100 MB
-                $this->log_message('Using chunked upload for large file: ' . size_format($file_size, 2));
-                $upload_result = $storage->upload_file_chunked($final_zip_file, $destination, $metadata);
-            } else {
-                $upload_result = $storage->upload_file($final_zip_file, $destination, $metadata);
-            }
-            
-            if (is_wp_error($upload_result)) {
-                $this->log_message('Error uploading to ' . $provider . ': ' . $upload_result->get_error_message());
-                $status['errors'][] = [
-                    'provider' => $provider,
-                    'message' => $upload_result->get_error_message()
-                ];
-                continue;
-            }
-            
-            // Add to successful uploads
-            $status['uploaded_to'][] = $provider;
-            $status['all_storage_info'][$provider] = $upload_result;
-            
-            $this->log_message(sprintf(
-                'Backup uploaded to %s: %s',
-                ucfirst($provider),
-                !empty($upload_result['url']) ? $upload_result['url'] : $destination
-            ));
+    foreach ($storage_providers as $provider) {
+        // Skip local as it's already saved locally
+        if ($provider === 'local') {
+            continue;
         }
+        
+        $this->log_message('Uploading backup to storage provider: ' . $provider);
+        
+        // Update status message to indicate current provider
+        $status['status'] = 'uploading';
+        $status['message'] = sprintf(
+            __('Uploading backup to %s...', 'swiftspeed-siberian'),
+            ucfirst($provider)
+        );
+        $status['progress'] = 97;
+        $this->update_status($status);
+        
+        // Load the appropriate storage provider
+        $storage = $this->get_storage_provider($provider);
+        if (is_wp_error($storage)) {
+            $this->log_message('Error getting storage provider: ' . $storage->get_error_message());
+            $upload_errors[] = [
+                'provider' => $provider,
+                'message' => $storage->get_error_message()
+            ];
+            continue;
+        }
+        
+        // Initialize storage
+        $init_result = $storage->initialize();
+        if (is_wp_error($init_result)) {
+            $this->log_message('Error initializing storage provider: ' . $init_result->get_error_message());
+            $upload_errors[] = [
+                'provider' => $provider,
+                'message' => $init_result->get_error_message()
+            ];
+            continue;
+        }
+        
+        // Upload file
+        $destination = basename($final_zip_file);
+        $metadata = [
+            'type' => 'backup',
+            'backup_type' => $status['backup_type'],
+            'timestamp' => time(),
+            'source' => site_url(),
+        ];
+        
+        // For large files, use chunked upload if available
+        $file_size = file_exists($final_zip_file) ? filesize($final_zip_file) : 0;
+        $upload_result = null;
+        
+        if ($file_size > 100 * 1024 * 1024 && method_exists($storage, 'upload_file_chunked')) { // 100 MB
+            $this->log_message('Using chunked upload for large file: ' . size_format($file_size, 2));
+            $upload_result = $storage->upload_file_chunked($final_zip_file, $destination, $metadata);
+        } else {
+            $upload_result = $storage->upload_file($final_zip_file, $destination, $metadata);
+        }
+        
+        if (is_wp_error($upload_result)) {
+            $this->log_message('Error uploading to ' . $provider . ': ' . $upload_result->get_error_message());
+            $upload_errors[] = [
+                'provider' => $provider,
+                'message' => $upload_result->get_error_message()
+            ];
+            continue;
+        }
+        
+        // Add to successful uploads
+        $status['uploaded_to'][] = $provider;
+        $status['all_storage_info'][$provider] = $upload_result;
+        
+        $this->log_message(sprintf(
+            'Backup uploaded to %s: %s',
+            ucfirst($provider),
+            !empty($upload_result['url']) ? $upload_result['url'] : $destination
+        ));
+    }
+    
+    // Add any upload errors to the main errors array
+    if (!empty($upload_errors)) {
+        if (!isset($status['errors'])) {
+            $status['errors'] = [];
+        }
+        $status['errors'] = array_merge($status['errors'], $upload_errors);
     }
     
     // Set primary storage (for backward compatibility)
@@ -327,28 +344,26 @@ protected function create_final_archive($status) {
     // Log detailed info about storage providers before adding to history
     $this->log_message('Backup completed with uploaded_to: ' . json_encode($status['uploaded_to']));
     
-    // IMPORTANT: Use both static variable and session option to track if we've already added this backup to history
-    // This prevents duplicate entries when multiple storage providers are used
-    static $history_added = array();
-    $backup_key = $status['id'] . '-' . $status['file'];
+    // Add to backup history only once
+    static $history_added = [];
+    $backup_key = $status['id'];
     
-    if (!isset($history_added[$backup_key]) && !isset($history_added_session[$backup_key])) {
+    if (!isset($history_added[$backup_key])) {
         $this->log_message('Adding backup to history: ' . json_encode([
             'id' => $status['id'],
             'file' => $status['file'],
             'status' => $status['status'],
             'backup_type' => $status['backup_type'],
-            'uploaded_to' => $status['uploaded_to']
+            'uploaded_to' => $status['uploaded_to'],
+            'storage_providers' => $storage_providers,
         ]));
         
         // Add to backup history
         $history_result = $this->add_to_backup_history($status);
         $this->log_message('Add to history result: ' . ($history_result ? 'success' : 'failed'));
         
-        // Mark this backup as added to history in both static array and session option
+        // Mark this backup as added to history
         $history_added[$backup_key] = true;
-        $history_added_session[$backup_key] = time();
-        update_option('swsib_history_added_session', $history_added_session);
     } else {
         $this->log_message('Skipping duplicate add to history for: ' . $backup_key);
     }
@@ -358,71 +373,7 @@ protected function create_final_archive($status) {
     
     $this->log_message('Backup completed successfully. Archive: ' . $status['file'] . ' (' . $status['size'] . ')');
     
-    // Clean up old session entries (older than 1 hour)
-    $current_time = time();
-    foreach ($history_added_session as $key => $timestamp) {
-        if ($current_time - $timestamp > 3600) { // 1 hour
-            unset($history_added_session[$key]);
-        }
-    }
-    update_option('swsib_history_added_session', $history_added_session);
-    
     return $status;
-}
-
-/**
- * Check if system zip command is available
- * 
- * @return bool True if system zip is available
- */
-protected function is_system_zip_available() {
-    if (!function_exists('exec') || !function_exists('shell_exec')) {
-        return false;
-    }
-    
-    // Check if exec is disabled
-    $disabled_functions = ini_get('disable_functions');
-    if ($disabled_functions) {
-        $disabled = explode(',', $disabled_functions);
-        if (in_array('exec', $disabled) || in_array('shell_exec', $disabled)) {
-            return false;
-        }
-    }
-    
-    // Check if zip command exists
-    @exec('which zip 2>&1', $output, $return_code);
-    
-    return $return_code === 0;
-}
-
-/**
- * Create archive using system zip command
- * 
- * @param string $source_dir Source directory
- * @param string $zip_file Destination zip file
- * @return bool True on success, false on failure
- */
-protected function create_archive_with_system_zip($source_dir, $zip_file) {
-    // Change to the source directory
-    $original_dir = getcwd();
-    chdir($source_dir);
-    
-    // Create README file
-    $readme = $this->create_backup_readme($this->status);
-    file_put_contents('README.txt', $readme);
-    
-    // Use system zip to create archive
-    $command = sprintf(
-        'zip -r -9 %s * > /dev/null 2>&1',
-        escapeshellarg($zip_file)
-    );
-    
-    @exec($command, $output, $return_code);
-    
-    // Return to original directory
-    chdir($original_dir);
-    
-    return $return_code === 0 && file_exists($zip_file);
 }
 
 /**
@@ -492,17 +443,11 @@ protected function create_archive_with_php($status, $zip_file) {
             // Handle large file
             $this->log_message('Adding large file to archive: ' . $relative_path . ' (' . size_format($size, 2) . ')');
             
-            // For extremely large files, use external method if available
-            if ($size > 500 * 1024 * 1024 && method_exists($zip, 'addFileWithoutCompression')) {
-                // Some PHP installations have this method for large files
-                $result = $zip->addFileWithoutCompression($file, $relative_path);
-            } else {
-                // Use regular addFile but ensure we have enough memory
-                $required_memory = $size * 2; // Estimate 2x file size needed
-                $this->ensure_memory_available($required_memory);
-                
-                $result = $zip->addFile($file, $relative_path);
-            }
+            // Use regular addFile but ensure we have enough memory
+            $required_memory = $size * 2; // Estimate 2x file size needed
+            $this->ensure_memory_available($required_memory);
+            
+            $result = $zip->addFile($file, $relative_path);
             
             if (!$result) {
                 $this->log_message('Failed to add large file: ' . $relative_path);
@@ -650,89 +595,6 @@ protected function get_memory_limit() {
     }
     
     /**
-     * Upload backup to a storage provider.
-     *
-     * @param array $status Current backup status.
-     * @param string $zip_file Path to the ZIP file.
-     * @return array|WP_Error Updated backup status or error.
-     */
-    protected function upload_to_storage($status, $zip_file) {
-        if (empty($status['params']['storage'])) {
-            return $status;
-        }
-        
-        $storage_type = $status['params']['storage'];
-        if ($storage_type === 'local') {
-            return $status; // No need to upload
-        }
-        
-        $status['status'] = 'uploading';
-        $status['message'] = sprintf(
-            __('Uploading backup to %s...', 'swiftspeed-siberian'),
-            ucfirst($storage_type)
-        );
-        $status['progress'] = 97;
-        $this->update_status($status);
-        
-        // Load the appropriate storage provider
-        $storage = $this->get_storage_provider($storage_type);
-        if (is_wp_error($storage)) {
-            $status['status'] = 'error';
-            $status['message'] = $storage->get_error_message();
-            $this->update_status($status);
-            return $status;
-        }
-        
-        // Initialize storage
-        $init_result = $storage->initialize();
-        if (is_wp_error($init_result)) {
-            $status['status'] = 'error';
-            $status['message'] = $init_result->get_error_message();
-            $this->update_status($status);
-            return $status;
-        }
-        
-        // Upload file
-        $destination = basename($zip_file);
-        $metadata = [
-            'type' => 'backup',
-            'backup_type' => $status['backup_type'],
-            'timestamp' => time(),
-            'source' => site_url(),
-        ];
-        
-        // For large files, use chunked upload if available
-        $file_size = file_exists($zip_file) ? filesize($zip_file) : 0;
-        $upload_result = null;
-        
-        if ($file_size > 100 * 1024 * 1024 && method_exists($storage, 'upload_file_chunked')) { // 100 MB
-            $this->log_message('Using chunked upload for large file: ' . size_format($file_size, 2));
-            $upload_result = $storage->upload_file_chunked($zip_file, $destination, $metadata);
-        } else {
-            $upload_result = $storage->upload_file($zip_file, $destination, $metadata);
-        }
-        
-        if (is_wp_error($upload_result)) {
-            $status['status'] = 'error';
-            $status['message'] = $upload_result->get_error_message();
-            $this->update_status($status);
-            return $status;
-        }
-        
-        // Update status with storage info
-        $status['storage'] = $storage_type;
-        $status['storage_info'] = $upload_result;
-        
-        $this->log_message(sprintf(
-            'Backup uploaded to %s: %s',
-            ucfirst($storage_type),
-            !empty($upload_result['url']) ? $upload_result['url'] : $destination
-        ));
-        
-        return $status;
-    }
-    
-    /**
      * Cleanup temporary files.
      *
      * @param string $temp_dir Temporary directory to clean up.
@@ -877,6 +739,12 @@ protected function add_to_backup_history($status) {
         return false;
     }
     
+    // Skip if this is a sub-backup
+    if (!empty($status['params']['prevent_history_add'])) {
+        $this->log_message('Skipping history add for sub-backup: ' . $status['id']);
+        return false;
+    }
+    
     $this->log_message('Adding backup to history: ' . json_encode([
         'id' => isset($status['id']) ? $status['id'] : 'unknown',
         'file' => isset($status['file']) ? $status['file'] : 'unknown',
@@ -980,29 +848,6 @@ protected function add_to_backup_history($status) {
         return true;
     }
     
-    // Check if a backup with the same filename already exists
-    $existing_backup_id = null;
-    foreach ($history as $id => $backup) {
-        if ($backup['file'] === $status['file']) {
-            $existing_backup_id = $id;
-            break;
-        }
-    }
-    
-    if ($existing_backup_id) {
-        $this->log_message('Found existing backup in history with same filename: ' . $existing_backup_id);
-        
-        // Special case: if the existing backup has the same filename but a different ID,
-        // we need to decide which one to keep. In this case, keep both but mark differently.
-        if ($existing_backup_id !== $status['id']) {
-            $this->log_message('Warning: Same filename but different ID detected. This should not happen normally.');
-            
-            // Add a special flag and timestamp to the entry
-            $status['duplicate_warning'] = true;
-            $status['duplicate_detected_at'] = time();
-        }
-    }
-    
     // Create a new history entry
     $entry = [
         'id' => $status['id'],
@@ -1013,7 +858,7 @@ protected function add_to_backup_history($status) {
         'storage' => !empty($status['storage']) ? $status['storage'] : 'local',
         'storage_info' => !empty($status['storage_info']) ? $status['storage_info'] : [],
         'created' => isset($status['completed']) ? $status['completed'] : time(),
-        // FIX: Ensure scheduled flag is correctly set from params or fallback to params directly
+        // FIXED: Ensure scheduled flag is correctly set from params
         'scheduled' => !empty($status['params']['scheduled']) ? true : false,
         // Set lock status - auto-lock if enabled in params
         'locked' => !empty($status['params']['auto_lock']),
@@ -1035,6 +880,11 @@ protected function add_to_backup_history($status) {
     
     if (isset($status['all_storage_info']) && is_array($status['all_storage_info'])) {
         $entry['all_storage_info'] = $status['all_storage_info'];
+    }
+    
+    // Add storage providers list for reference
+    if (isset($status['params']['storage_providers']) && is_array($status['params']['storage_providers'])) {
+        $entry['storage_providers'] = $status['params']['storage_providers'];
     }
     
     // Add to history

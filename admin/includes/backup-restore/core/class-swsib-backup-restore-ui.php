@@ -609,13 +609,14 @@ class SwiftSpeed_Siberian_Backup_Restore_UI {
                     <div class="swsib-notice info">
                         <p><strong><?php _e('Server Requirements:', 'swiftspeed-siberian'); ?></strong></p>
                         <ul>
-                            <li><?php _e('Minimum (2-5): Basic server configuration', 'swiftspeed-siberian'); ?></li>
-                            <li><?php _e('Balanced (10): Memory: 512M, Max execution time: 60s', 'swiftspeed-siberian'); ?></li>
+                            <li><?php _e('Minimum (2-5): Basic server configuration (Best of Large sites above 1G)', 'swiftspeed-siberian'); ?></li>
+                            <li><?php _e('Balanced (10): Memory: 512M, Max execution time: 60s ', 'swiftspeed-siberian'); ?></li>
                             <li><?php _e('Faster (15): Memory: 1024M, Max execution time: 120s', 'swiftspeed-siberian'); ?></li>
-                            <li><?php _e('Aggressive (20): Memory: 1536M, Max execution time: 300s', 'swiftspeed-siberian'); ?></li>
-                            <li><?php _e('Maximum (25): Memory: 2048M, Max execution time: 600s, Post size: 100M+', 'swiftspeed-siberian'); ?></li>
+                            <li><?php _e('Aggressive (20): Memory: 1536M, Max execution time: 300s (May fail for large sites above 1G)', 'swiftspeed-siberian'); ?></li>
+                            <li><?php _e('Maximum (25): Memory: 2048M, Max execution time: 600s, Post size: 100M+ (Will fail for large sites above 1G)', 'swiftspeed-siberian'); ?></li>
                         </ul>
                         <p><?php _e('If your backup or restore fails, try lowering this value. Higher values are only recommended for powerful servers.', 'swiftspeed-siberian'); ?></p>
+                        <p><?php _e('NOTE: Aggressive and Maximum should only be selected for sites lesser than 2G in total. Anything above 4G should use Balanced or Minimum, else backup/restore will fail', 'swiftspeed-siberian'); ?></p>
                     </div>
                 </div>
 

@@ -38,9 +38,19 @@ class SwiftSpeed_Siberian_App_Management {
     private $settings;
     
     /**
-     * Chunk size for batch processing
+     * Chunk size for batch processing - SIGNIFICANTLY INCREASED
      */
-    private $chunk_size = 50;
+    private $chunk_size = 20;
+    
+    /**
+     * Maximum batches to process in a single run
+     */
+    private $max_batches_per_run = 10;
+    
+    /**
+     * Flag to indicate if we're processing in the background
+     */
+    private $is_background_processing = false;
     
     /**
      * Constructor
@@ -62,6 +72,13 @@ class SwiftSpeed_Siberian_App_Management {
         
         // Add action for task execution
         add_action('swsib_process_app_management', array($this, 'process_app_management'), 10, 2);
+        
+        // Add handler for loopback requests
+        add_action('wp_ajax_nopriv_swsib_app_management_loopback', array($this, 'handle_loopback_request'));
+        add_action('wp_ajax_swsib_app_management_loopback', array($this, 'handle_loopback_request'));
+        
+        // Set up background processing check for active tasks
+        add_action('admin_init', array($this, 'check_active_background_tasks'));
     }
     
     /**
@@ -95,6 +112,9 @@ class SwiftSpeed_Siberian_App_Management {
         // Settings AJAX handlers
         add_action('wp_ajax_swsib_save_app_management_automation', array($this->settings, 'ajax_save_app_management_automation'));
         add_action('wp_ajax_swsib_save_subscription_size_limits', array($this->settings, 'ajax_save_subscription_size_limits'));
+        
+        // Background processing status check
+        add_action('wp_ajax_swsib_check_app_background_task_status', array($this, 'ajax_check_background_task_status'));
     }
     
     /**
@@ -131,6 +151,93 @@ class SwiftSpeed_Siberian_App_Management {
     }
     
     /**
+     * Check for active background tasks on admin page load
+     */
+    public function check_active_background_tasks() {
+        // Only check in admin area
+        if (!is_admin()) {
+            return;
+        }
+        
+        // Check for running tasks
+        $tasks = array('zero_size', 'inactive', 'size_violation', 'no_users');
+        $active_tasks = array();
+        
+        foreach ($tasks as $task) {
+            $progress_file = $this->get_progress_file($task);
+            if (file_exists($progress_file)) {
+                $progress_data = json_decode(file_get_contents($progress_file), true);
+                if ($progress_data && isset($progress_data['status']) && $progress_data['status'] === 'running') {
+                    // Check if task has been updated recently (within 5 minutes)
+                    if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) < 300) {
+                        $active_tasks[$task] = $progress_data;
+                    }
+                }
+            }
+        }
+        
+        if (!empty($active_tasks)) {
+            // Store active tasks in transient for JS to pick up
+            set_transient('swsib_active_app_background_tasks', $active_tasks, 300);
+            
+            // For each active task, ensure a loopback is triggered if needed
+            foreach ($active_tasks as $task => $data) {
+                $this->ensure_background_processing($task);
+            }
+        } else {
+            delete_transient('swsib_active_app_background_tasks');
+        }
+    }
+    
+    /**
+     * AJAX handler to check background task status
+     */
+    public function ajax_check_background_task_status() {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'swsib-automate-nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed.'));
+            return;
+        }
+        
+        // Get active tasks
+        $active_tasks = get_transient('swsib_active_app_background_tasks');
+        
+        if ($active_tasks) {
+            wp_send_json_success(array(
+                'active_tasks' => $active_tasks
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'No active background tasks.'));
+        }
+    }
+    
+    /**
+     * Ensure background processing is continuing for a task
+     */
+    private function ensure_background_processing($task) {
+        $progress_file = $this->get_progress_file($task);
+        if (!file_exists($progress_file)) {
+            return false;
+        }
+        
+        $progress_data = json_decode(file_get_contents($progress_file), true);
+        if (!$progress_data || !isset($progress_data['status']) || $progress_data['status'] !== 'running') {
+            return false;
+        }
+        
+        // Check if the last update was less than 1 minute ago - if so, assume it's still running
+        if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) < 60) {
+            return true;
+        }
+        
+        // If it's been more than 1 minute, trigger a new loopback request
+        $this->log_message("Restarting background processing for task: $task");
+        $this->trigger_loopback_request($task);
+        
+        return true;
+    }
+    
+    /**
      * AJAX handler for app management tasks
      */
     public function ajax_manage_apps() {
@@ -159,14 +266,20 @@ class SwiftSpeed_Siberian_App_Management {
             // Process the first batch - this will get things started
             $batch_result = $this->process_batch($task, 0);
             
+            // If there are more batches to process, trigger a loopback request
+            if ($batch_result['success'] && !$batch_result['completed']) {
+                $this->trigger_loopback_request($task);
+            }
+            
             // Return the result
             if ($batch_result['success']) {
                 wp_send_json_success(array(
-                    'message' => 'Task started. First batch processed.',
+                    'message' => 'Task started. First batch processed. Continuing in background.',
                     'progress' => $batch_result['progress'],
                     'next_batch' => $batch_result['next_batch'],
                     'completed' => $batch_result['completed'],
-                    'batch_count' => $batch_result['batch_count'] ?? 1
+                    'batch_count' => $batch_result['batch_count'] ?? 1,
+                    'background_enabled' => true
                 ));
             } else {
                 wp_send_json_error(array(
@@ -208,6 +321,11 @@ class SwiftSpeed_Siberian_App_Management {
         // Process the batch
         $batch_result = $this->process_batch($task, $batch_index);
         
+        // If there are more batches to process and not a background process, trigger a loopback request
+        if ($batch_result['success'] && !$batch_result['completed'] && !$this->is_background_processing) {
+            $this->trigger_loopback_request($task);
+        }
+        
         // Return the result
         if ($batch_result['success']) {
             wp_send_json_success(array(
@@ -225,7 +343,7 @@ class SwiftSpeed_Siberian_App_Management {
     }
     
     /**
-     * AJAX handler for getting app management task progress
+     * AJAX handler for getting app management task progress - FIXED
      */
     public function ajax_get_app_management_progress() {
         // Check nonce
@@ -251,12 +369,52 @@ class SwiftSpeed_Siberian_App_Management {
         // Get progress data
         $progress_data = $this->get_progress_data($task_type);
         
+        // Set proper is_running and background_enabled flags based on actual status
+        if (isset($progress_data['status'])) {
+            if ($progress_data['status'] === 'completed' || $progress_data['status'] === 'cancelled') {
+                // Task is done - not running
+                $progress_data['is_running'] = false;
+                $progress_data['background_enabled'] = false;
+                $progress_data['heartbeat_age'] = 0;
+            } else if ($progress_data['status'] === 'running') {
+                // Task is running - check if it needs restart
+                if (isset($progress_data['last_update']) && (time() - $progress_data['last_update']) > 60) {
+                    // Trigger a new loopback request
+                    $this->ensure_background_processing($task_type);
+                    $progress_data['is_running'] = true;
+                    $progress_data['background_enabled'] = true;
+                    $progress_data['heartbeat_age'] = time() - $progress_data['last_update'];
+                } else {
+                    // Task is running normally
+                    $progress_data['is_running'] = true;
+                    $progress_data['background_enabled'] = true;
+                    $progress_data['heartbeat_age'] = isset($progress_data['last_update']) ? time() - $progress_data['last_update'] : 0;
+                }
+            } else {
+                // Unknown status - assume not running
+                $progress_data['is_running'] = false;
+                $progress_data['background_enabled'] = false;
+                $progress_data['heartbeat_age'] = 0;
+            }
+        } else {
+            // No status - assume not running
+            $progress_data['is_running'] = false;
+            $progress_data['background_enabled'] = false;
+            $progress_data['heartbeat_age'] = 0;
+        }
+        
         // Fix progress if not set but we have totals
-        if ($progress_data['progress'] === 0 && $progress_data['total'] > 0 && $progress_data['processed'] > 0) {
+        if (isset($progress_data['progress']) && $progress_data['progress'] === 0 && 
+            isset($progress_data['total']) && $progress_data['total'] > 0 && 
+            isset($progress_data['processed']) && $progress_data['processed'] > 0) {
             $progress_data['progress'] = min(100, round(($progress_data['processed'] / $progress_data['total']) * 100));
         }
         
-        $this->log_message("Returning progress data: progress={$progress_data['progress']}, processed={$progress_data['processed']}, total={$progress_data['total']}");
+        $this->log_message("Returning progress data: status=" . ($progress_data['status'] ?? 'unknown') .
+                           ", is_running=" . ($progress_data['is_running'] ? 'true' : 'false') .
+                           ", progress=" . ($progress_data['progress'] ?? 0) . 
+                           ", processed=" . ($progress_data['processed'] ?? 0) . 
+                           ", total=" . ($progress_data['total'] ?? 0));
         
         wp_send_json_success($progress_data);
     }
@@ -298,6 +456,83 @@ class SwiftSpeed_Siberian_App_Management {
         }
         
         return $progress_data;
+    }
+    
+    /**
+     * Trigger a loopback request to continue processing in the background
+     */
+    private function trigger_loopback_request($task) {
+        // Create a specific persistent nonce key for the task
+        $nonce_action = 'swsib_app_management_loopback_' . $task;
+        $nonce = wp_create_nonce($nonce_action);
+        
+        // Store the nonce in an option for validation later
+        update_option('swsib_app_loopback_nonce_' . $task, $nonce, false);
+        
+        $url = admin_url('admin-ajax.php?action=swsib_app_management_loopback&task=' . urlencode($task) . '&nonce=' . $nonce);
+        
+        $args = array(
+            'timeout'   => 0.01,
+            'blocking'  => false,
+            'sslverify' => apply_filters('https_local_ssl_verify', false),
+            'headers'   => array('Cache-Control' => 'no-cache'),
+        );
+        
+        $this->log_message("Triggering loopback request for task: $task");
+        wp_remote_get($url, $args);
+    }
+    
+    /**
+     * Handle loopback request to continue processing batches
+     */
+    public function handle_loopback_request() {
+        // Get task
+        $task = isset($_GET['task']) ? sanitize_text_field($_GET['task']) : '';
+        
+        if (empty($task)) {
+            $this->log_message("No task specified in loopback request");
+            wp_die('No task specified.', 'Error', array('response' => 400));
+        }
+        
+        // Get and verify nonce
+        $nonce = isset($_GET['nonce']) ? sanitize_text_field($_GET['nonce']) : '';
+        $stored_nonce = get_option('swsib_app_loopback_nonce_' . $task);
+        
+        if (empty($nonce) || $nonce !== $stored_nonce) {
+            $this->log_message("Invalid nonce in loopback request");
+            // Don't die here - check if the task is valid and continue anyway
+            if (!$this->is_valid_running_task($task)) {
+                wp_die('Security check failed.', 'Security Error', array('response' => 403));
+            }
+        }
+        
+        $this->log_message("Handling loopback request for task: $task");
+        
+        // Set background processing flag
+        $this->is_background_processing = true;
+        
+        // Process batches for this task
+        $this->process_app_management('app_management_' . $task, $task);
+        
+        // Always die to prevent output
+        wp_die();
+    }
+    
+    /**
+     * Check if a task is valid and running
+     */
+    private function is_valid_running_task($task) {
+        $progress_file = $this->get_progress_file($task);
+        if (!file_exists($progress_file)) {
+            return false;
+        }
+        
+        $progress_data = json_decode(file_get_contents($progress_file), true);
+        if (!$progress_data || !isset($progress_data['status']) || $progress_data['status'] !== 'running') {
+            return false;
+        }
+        
+        return true;
     }
     
     /**
@@ -387,13 +622,20 @@ class SwiftSpeed_Siberian_App_Management {
             'errors' => 0,
             'skipped' => 0,
             'warned' => 0,
+            'is_running' => true,
+            'background_enabled' => true,
             'detailed_item_list' => array()
         );
         
         // Save to progress file
         file_put_contents($progress_file, json_encode($progress_data));
         
-        $this->log_message("Task $task initialized with $total items, $batch_count batches");
+        // Store in transient for other parts of the system to know there's an active task
+        $active_tasks = get_transient('swsib_active_app_background_tasks') ?: array();
+        $active_tasks[$task] = $progress_data;
+        set_transient('swsib_active_app_background_tasks', $active_tasks, 300);
+        
+        $this->log_message("Task $task initialized with $total items, $batch_count batches (chunk size: {$this->chunk_size})");
         
         return true;
     }
@@ -448,7 +690,21 @@ class SwiftSpeed_Siberian_App_Management {
                 'type' => 'success'
             );
             
+            // Remove from active tasks transient
+            $active_tasks = get_transient('swsib_active_app_background_tasks');
+            if ($active_tasks && isset($active_tasks[$task])) {
+                unset($active_tasks[$task]);
+                if (!empty($active_tasks)) {
+                    set_transient('swsib_active_app_background_tasks', $active_tasks, 300);
+                } else {
+                    delete_transient('swsib_active_app_background_tasks');
+                }
+            }
+            
             file_put_contents($progress_file, json_encode($progress_data));
+            
+            // Record the cleanup results
+            $this->data->record_app_deletion_results($task, $progress_data['deleted'], $progress_data['errors'], $progress_data['skipped']);
             
             return array(
                 'success' => true,
@@ -461,6 +717,13 @@ class SwiftSpeed_Siberian_App_Management {
         }
         
         $batch_items = $progress_data['batches'][$batch_index];
+        
+        // Add batch processing log
+        $progress_data['logs'][] = array(
+            'time' => time(),
+            'message' => sprintf(__('Processing batch %d of %d', 'swiftspeed-siberian'), $batch_index + 1, $progress_data['batch_count']),
+            'type' => 'info'
+        );
         
         // Process batch based on task type
         $result = array(
@@ -498,6 +761,7 @@ class SwiftSpeed_Siberian_App_Management {
         // Update processed count (includes all items processed - deleted, error, skipped, warned)
         $progress_data['processed'] += count($batch_items);
         $progress_data['current_batch'] = $batch_index + 1;
+        $progress_data['last_update'] = time();
         
         // Add detailed items to the list (for reporting in action logs)
         if (!empty($result['detailed_items'])) {
@@ -521,6 +785,14 @@ class SwiftSpeed_Siberian_App_Management {
             }
         }
         
+        // Add batch completion log with summary
+        $progress_data['logs'][] = array(
+            'time' => time(),
+            'message' => sprintf(__('Batch %d completed: Deleted %d items, skipped %d, warned %d, with %d errors', 'swiftspeed-siberian'), 
+                               $batch_index + 1, $result['deleted'], $result['skipped'], $result['warned'] ?? 0, $result['errors']),
+            'type' => $result['errors'] > 0 ? 'warning' : 'success'
+        );
+        
         // Check if we're done
         $completed = ($batch_index + 1 >= $progress_data['batch_count']);
         
@@ -541,8 +813,24 @@ class SwiftSpeed_Siberian_App_Management {
                 'type' => 'success'
             );
             
+            // Remove from active tasks transient
+            $active_tasks = get_transient('swsib_active_app_background_tasks');
+            if ($active_tasks && isset($active_tasks[$task])) {
+                unset($active_tasks[$task]);
+                if (!empty($active_tasks)) {
+                    set_transient('swsib_active_app_background_tasks', $active_tasks, 300);
+                } else {
+                    delete_transient('swsib_active_app_background_tasks');
+                }
+            }
+            
             // Record the cleanup results
             $this->data->record_app_deletion_results($task, $progress_data['deleted'], $progress_data['errors'], $progress_data['skipped']);
+        } else {
+            // Update active tasks transient
+            $active_tasks = get_transient('swsib_active_app_background_tasks') ?: array();
+            $active_tasks[$task] = $progress_data;
+            set_transient('swsib_active_app_background_tasks', $active_tasks, 300);
         }
         
         // Update progress file
@@ -634,7 +922,7 @@ class SwiftSpeed_Siberian_App_Management {
     }
     
     /**
-     * Process a batch of zero size apps
+     * Process a batch of zero size apps - OPTIMIZED FOR BULK OPERATIONS WITH INDIVIDUAL REPORTING
      */
     private function process_zero_size_apps_batch($apps) {
         if (!$this->db_connection) {
@@ -659,56 +947,64 @@ class SwiftSpeed_Siberian_App_Management {
         $skipped = 0;
         $detailed_items = [];
         
-        // Process each app in the batch
+        // Extract app IDs for bulk operations
+        $app_ids = array_column($apps, 'app_id');
+        $batch_size = count($app_ids);
+        
+        // Add individual processing logs for UI
         foreach ($apps as $app) {
-            $app_id = $app['app_id'];
-            $app_name = $app['name'];
-            
             $logs[] = array(
                 'time' => time(),
-                'message' => "Processing app: $app_name (ID: $app_id)",
+                'message' => "Processing app: {$app['name']} (ID: {$app['app_id']})",
                 'type' => 'info'
             );
+        }
+        
+        try {
+            // Start single transaction for entire batch
+            $this->db_connection->begin_transaction();
             
-            try {
-                // Start transaction for each app
-                $this->db_connection->begin_transaction();
-                
-                // Delete all related data for this app
-                $this->data->delete_app_data($app_id);
-                
-                // Delete the application itself
-                $app_query = "DELETE FROM application WHERE app_id = $app_id";
-                if (!$this->db_connection->query($app_query)) {
-                    throw new Exception("Failed to delete application $app_id: " . $this->db_connection->error);
-                }
-                
+            // Bulk delete all related data for these apps
+            $this->data->bulk_delete_app_data($app_ids);
+            
+            // Bulk delete the applications themselves
+            if ($this->data->bulk_delete_applications($app_ids)) {
                 // Commit the transaction
                 $this->db_connection->commit();
                 
-                $deleted++;
+                $deleted = $batch_size;
+                
+                // Add individual success logs for UI (like the original)
+                foreach ($apps as $app) {
+                    $logs[] = array(
+                        'time' => time(),
+                        'message' => "Successfully deleted zero size app: {$app['name']} (ID: {$app['app_id']})",
+                        'type' => 'success'
+                    );
+                    
+                    $detailed_items[] = array(
+                        'app_id' => $app['app_id'],
+                        'name' => $app['name'],
+                        'action' => 'deleted',
+                        'timestamp' => date('Y-m-d H:i:s')
+                    );
+                }
+                
+            } else {
+                throw new Exception("Failed to bulk delete applications");
+            }
+            
+        } catch (Exception $e) {
+            // Rollback the transaction
+            $this->db_connection->rollback();
+            
+            $errors = $batch_size;
+            
+            // Add individual error logs for UI
+            foreach ($apps as $app) {
                 $logs[] = array(
                     'time' => time(),
-                    'message' => "Successfully deleted zero size app: $app_name (ID: $app_id)",
-                    'type' => 'success'
-                );
-                
-                // Add to detailed items
-                $detailed_items[] = array(
-                    'app_id' => $app_id,
-                    'name' => $app_name,
-                    'action' => 'deleted',
-                    'timestamp' => date('Y-m-d H:i:s')
-                );
-                
-            } catch (Exception $e) {
-                // Rollback the transaction
-                $this->db_connection->rollback();
-                
-                $errors++;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => "Error deleting app $app_id: " . $e->getMessage(),
+                    'message' => "Error deleting app {$app['app_id']}: " . $e->getMessage(),
                     'type' => 'error'
                 );
             }
@@ -724,7 +1020,7 @@ class SwiftSpeed_Siberian_App_Management {
     }
     
     /**
-     * Process a batch of inactive apps
+     * Process a batch of inactive apps - OPTIMIZED FOR BULK OPERATIONS WITH INDIVIDUAL REPORTING
      */
     private function process_inactive_apps_batch($apps) {
         if (!$this->db_connection) {
@@ -761,116 +1057,173 @@ class SwiftSpeed_Siberian_App_Management {
         $warned_transient = get_transient('swsib_warned_inactive_apps');
         $warned_data = $warned_transient ? $warned_transient : array();
         
-        // Process each app in the batch
+        $batch_size = count($apps);
+        
+        // Separate apps into different categories for bulk processing
+        $apps_to_delete = array();
+        $apps_to_warn = array();
+        $apps_to_skip = array();
+        
         foreach ($apps as $app) {
             $app_id = $app['app_id'];
-            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
-            $email = isset($app['email']) ? $app['email'] : '';
             
-            $logs[] = array(
-                'time' => time(),
-                'message' => "Processing deleted app: $app_name (ID: $app_id)",
-                'type' => 'info'
-            );
-            
-            // Check if warning is required
             if ($send_warning) {
                 if (!isset($warned_data[$app_id])) {
-                    // Send warning email
-                    if ($this->send_inactive_app_warning($app, $settings)) {
-                        $warned++;
-                        $warned_data[$app_id] = array(
-                            'timestamp' => time(),
-                            'expires' => time() + ($warning_period * 86400)
-                        );
-                        
-                        $logs[] = array(
-                            'time' => time(),
-                            'message' => "Warning sent for inactive app $app_id",
-                            'type' => 'info'
-                        );
-                        
-                        // Add to detailed items
-                        $detailed_items[] = array(
-                            'app_id' => $app_id,
-                            'name' => $app_name,
-                            'email' => $email,
-                            'action' => 'warned',
-                            'timestamp' => date('Y-m-d H:i:s')
-                        );
-                        
-                        continue;
-                    } else {
-                        $logs[] = array(
-                            'time' => time(),
-                            'message' => "Failed to send warning for app $app_id",
-                            'type' => 'error'
-                        );
-                        $errors++;
-                        continue;
-                    }
+                    // Needs warning
+                    $apps_to_warn[] = $app;
                 } else {
                     // Check if warning period has expired
                     if (isset($warned_data[$app_id]['expires']) && time() < $warned_data[$app_id]['expires']) {
-                        $logs[] = array(
-                            'time' => time(),
-                            'message' => "Warning period not expired for app $app_id",
-                            'type' => 'info'
-                        );
-                        $skipped++;
-                        continue;
+                        $apps_to_skip[] = $app;
+                    } else {
+                        $apps_to_delete[] = $app;
                     }
                 }
+            } else {
+                // No warning required, delete directly
+                $apps_to_delete[] = $app;
             }
+        }
+        
+        // Process warnings (these need individual handling for email)
+        foreach ($apps_to_warn as $app) {
+            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
             
-            // Delete the app
-            try {
-                // Start transaction for each app
-                $this->db_connection->begin_transaction();
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Processing deleted app: $app_name (ID: {$app['app_id']})",
+                'type' => 'info'
+            );
+            
+            if ($this->send_inactive_app_warning($app, $settings)) {
+                $warned++;
+                $warned_data[$app['app_id']] = array(
+                    'timestamp' => time(),
+                    'expires' => time() + ($warning_period * 86400)
+                );
                 
-                // Delete all related data for this app
-                $this->data->delete_app_data($app_id);
-                
-                // Delete the application itself
-                $app_query = "DELETE FROM application WHERE app_id = $app_id";
-                if (!$this->db_connection->query($app_query)) {
-                    throw new Exception("Failed to delete application $app_id: " . $this->db_connection->error);
-                }
-                
-                // Commit the transaction
-                $this->db_connection->commit();
-                
-                $deleted++;
                 $logs[] = array(
                     'time' => time(),
-                    'message' => "Successfully deleted inactive app: $app_name (ID: $app_id)",
-                    'type' => 'success'
+                    'message' => "Warning sent for inactive app $app_name (ID: {$app['app_id']})",
+                    'type' => 'info'
                 );
                 
-                // Add to detailed items
                 $detailed_items[] = array(
-                    'app_id' => $app_id,
+                    'app_id' => $app['app_id'],
                     'name' => $app_name,
-                    'email' => $email,
-                    'action' => 'deleted',
+                    'email' => $app['email'] ?? '',
+                    'action' => 'warned',
                     'timestamp' => date('Y-m-d H:i:s')
                 );
+            } else {
+                $errors++;
+                $logs[] = array(
+                    'time' => time(),
+                    'message' => "Failed to send warning for app {$app['app_id']}",
+                    'type' => 'error'
+                );
+            }
+        }
+        
+        // Process skipped apps
+        foreach ($apps_to_skip as $app) {
+            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Processing deleted app: $app_name (ID: {$app['app_id']})",
+                'type' => 'info'
+            );
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Warning period not expired for app $app_name (ID: {$app['app_id']})",
+                'type' => 'info'
+            );
+            
+            $skipped++;
+            $detailed_items[] = array(
+                'app_id' => $app['app_id'],
+                'name' => $app_name,
+                'email' => $app['email'] ?? '',
+                'action' => 'skipped - warning period not expired',
+                'timestamp' => date('Y-m-d H:i:s')
+            );
+        }
+        
+        // Process apps for deletion with individual logging
+        foreach ($apps_to_delete as $app) {
+            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Processing deleted app: $app_name (ID: {$app['app_id']})",
+                'type' => 'info'
+            );
+        }
+        
+        // Bulk delete apps that are ready for deletion
+        if (!empty($apps_to_delete)) {
+            $app_ids_to_delete = array_column($apps_to_delete, 'app_id');
+            
+            try {
+                // Start transaction for bulk deletion
+                $this->db_connection->begin_transaction();
                 
-                // Remove from warned apps if present
-                if (isset($warned_data[$app_id])) {
-                    unset($warned_data[$app_id]);
+                // Bulk delete all related data
+                $this->data->bulk_delete_app_data($app_ids_to_delete);
+                
+                // Bulk delete the applications themselves
+                if ($this->data->bulk_delete_applications($app_ids_to_delete)) {
+                    // Commit the transaction
+                    $this->db_connection->commit();
+                    
+                    $deleted = count($apps_to_delete);
+                    
+                    // Add individual success logs for UI (like the original)
+                    foreach ($apps_to_delete as $app) {
+                        $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+                        
+                        $logs[] = array(
+                            'time' => time(),
+                            'message' => "Successfully deleted inactive app: $app_name (ID: {$app['app_id']})",
+                            'type' => 'success'
+                        );
+                        
+                        $detailed_items[] = array(
+                            'app_id' => $app['app_id'],
+                            'name' => $app_name,
+                            'email' => $app['email'] ?? '',
+                            'action' => 'deleted',
+                            'timestamp' => date('Y-m-d H:i:s')
+                        );
+                        
+                        // Remove from warned apps if present
+                        if (isset($warned_data[$app['app_id']])) {
+                            unset($warned_data[$app['app_id']]);
+                        }
+                    }
+                    
+                } else {
+                    throw new Exception("Failed to bulk delete inactive applications");
                 }
                 
             } catch (Exception $e) {
                 // Rollback the transaction
                 $this->db_connection->rollback();
                 
-                $errors++;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => "Error deleting app $app_id: " . $e->getMessage(),
-                    'type' => 'error'
-                );
+                $errors += count($apps_to_delete);
+                
+                // Add individual error logs for UI
+                foreach ($apps_to_delete as $app) {
+                    $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+                    
+                    $logs[] = array(
+                        'time' => time(),
+                        'message' => "Error deleting app {$app['app_id']}: " . $e->getMessage(),
+                        'type' => 'error'
+                    );
+                }
             }
         }
         
@@ -888,7 +1241,7 @@ class SwiftSpeed_Siberian_App_Management {
     }
     
     /**
-     * Process a batch of size violation apps
+     * Process a batch of size violation apps - OPTIMIZED FOR BULK OPERATIONS WITH INDIVIDUAL REPORTING
      */
     private function process_size_violation_apps_batch($apps) {
         if (!$this->db_connection) {
@@ -931,139 +1284,193 @@ class SwiftSpeed_Siberian_App_Management {
         $warned_transient = get_transient('swsib_warned_size_violation_apps');
         $warned_data = $warned_transient ? $warned_transient : array();
         
-        // Process each app in the batch
+        $batch_size = count($apps);
+        
+        // Separate apps into different categories for bulk processing
+        $apps_to_delete = array();
+        $apps_to_warn = array();
+        $apps_to_skip = array();
+        
         foreach ($apps as $app) {
             $app_id = $app['app_id'];
-            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
             $subscription_id = $app['subscription_id'];
-            $email = isset($app['email']) ? $app['email'] : '';
-            
-            // Calculate sizes in MB for logging
-            $size_mb = round($app['size_on_disk'] / (1024 * 1024), 2);
             $size_limit_mb = isset($size_limits[$subscription_id]) ? $size_limits[$subscription_id] : 'Not set';
             
-            $logs[] = array(
-                'time' => time(),
-                'message' => "Processing size violation app: $app_name (ID: $app_id) - Size: {$size_mb}MB (Limit: {$size_limit_mb}MB)",
-                'type' => 'info'
-            );
+            // Add size limit info to app data
+            $app['size_limit_mb'] = $size_limit_mb;
             
-            // Check if deletion should be immediate
             if ($delete_immediately) {
-                // Delete immediately
+                $apps_to_delete[] = $app;
             } else if ($send_warning) {
-                // Handle warning flow
                 if (!isset($warned_data[$app_id])) {
-                    // Send warning email
-                    if ($this->send_size_violation_warning($app, $settings, $size_limit_mb)) {
-                        $warned++;
-                        $warned_data[$app_id] = array(
-                            'timestamp' => time(),
-                            'expires' => time() + ($warning_period * 86400)
-                        );
-                        
-                        $logs[] = array(
-                            'time' => time(),
-                            'message' => "Warning sent for size violation app $app_id",
-                            'type' => 'info'
-                        );
-                        
-                        // Add to detailed items
-                        $detailed_items[] = array(
-                            'app_id' => $app_id,
-                            'name' => $app_name,
-                            'email' => $email,
-                            'subscription_id' => $subscription_id,
-                            'size_mb' => $size_mb,
-                            'size_limit_mb' => $size_limit_mb,
-                            'action' => 'warned',
-                            'timestamp' => date('Y-m-d H:i:s')
-                        );
-                        
-                        continue;
-                    } else {
-                        $logs[] = array(
-                            'time' => time(),
-                            'message' => "Failed to send warning for app $app_id",
-                            'type' => 'error'
-                        );
-                        $errors++;
-                        continue;
-                    }
+                    $apps_to_warn[] = $app;
                 } else {
                     // Check if warning period has expired
                     if (isset($warned_data[$app_id]['expires']) && time() < $warned_data[$app_id]['expires']) {
-                        $logs[] = array(
-                            'time' => time(),
-                            'message' => "Warning period not expired for app $app_id",
-                            'type' => 'info'
-                        );
-                        $skipped++;
-                        continue;
+                        $apps_to_skip[] = $app;
+                    } else {
+                        $apps_to_delete[] = $app;
                     }
                 }
             } else {
-                // No immediate deletion and no warning configured
+                // No action configured
+                $apps_to_skip[] = $app;
+            }
+        }
+        
+        // Process warnings (these need individual handling for email)
+        foreach ($apps_to_warn as $app) {
+            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+            $size_mb = round($app['size_on_disk'] / (1024 * 1024), 2);
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Processing size violation app: $app_name (ID: {$app['app_id']}) - Size: {$size_mb}MB (Limit: {$app['size_limit_mb']}MB)",
+                'type' => 'info'
+            );
+            
+            if ($this->send_size_violation_warning($app, $settings, $app['size_limit_mb'])) {
+                $warned++;
+                $warned_data[$app['app_id']] = array(
+                    'timestamp' => time(),
+                    'expires' => time() + ($warning_period * 86400)
+                );
+                
                 $logs[] = array(
                     'time' => time(),
-                    'message' => "Skipping app $app_id - no action configured",
+                    'message' => "Warning sent for size violation app $app_name (ID: {$app['app_id']})",
                     'type' => 'info'
                 );
-                $skipped++;
-                continue;
-            }
-            
-            // Delete the app (either immediately or after warning period)
-            try {
-                // Start transaction for each app
-                $this->db_connection->begin_transaction();
                 
-                // Delete all related data for this app
-                $this->data->delete_app_data($app_id);
-                
-                // Delete the application itself
-                $app_query = "DELETE FROM application WHERE app_id = $app_id";
-                if (!$this->db_connection->query($app_query)) {
-                    throw new Exception("Failed to delete application $app_id: " . $this->db_connection->error);
-                }
-                
-                // Commit the transaction
-                $this->db_connection->commit();
-                
-                $deleted++;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => "Successfully deleted size violation app: $app_name (ID: $app_id) - Size: {$size_mb}MB (Limit: {$size_limit_mb}MB)",
-                    'type' => 'success'
-                );
-                
-                // Add to detailed items
                 $detailed_items[] = array(
-                    'app_id' => $app_id,
+                    'app_id' => $app['app_id'],
                     'name' => $app_name,
-                    'email' => $email,
-                    'subscription_id' => $subscription_id,
+                    'email' => $app['email'] ?? '',
+                    'subscription_id' => $app['subscription_id'],
                     'size_mb' => $size_mb,
-                    'size_limit_mb' => $size_limit_mb,
-                    'action' => 'deleted',
+                    'size_limit_mb' => $app['size_limit_mb'],
+                    'action' => 'warned',
                     'timestamp' => date('Y-m-d H:i:s')
                 );
+            } else {
+                $errors++;
+                $logs[] = array(
+                    'time' => time(),
+                    'message' => "Failed to send warning for app {$app['app_id']}",
+                    'type' => 'error'
+                );
+            }
+        }
+        
+        // Process skipped apps
+        foreach ($apps_to_skip as $app) {
+            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+            $size_mb = round($app['size_on_disk'] / (1024 * 1024), 2);
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Processing size violation app: $app_name (ID: {$app['app_id']}) - Size: {$size_mb}MB (Limit: {$app['size_limit_mb']}MB)",
+                'type' => 'info'
+            );
+            
+            $reason = !$delete_immediately && !$send_warning ? 'no action configured' : 'warning period not expired';
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Skipping app {$app['app_id']} - {$reason}",
+                'type' => 'info'
+            );
+            
+            $skipped++;
+            $detailed_items[] = array(
+                'app_id' => $app['app_id'],
+                'name' => $app_name,
+                'email' => $app['email'] ?? '',
+                'subscription_id' => $app['subscription_id'],
+                'size_mb' => $size_mb,
+                'size_limit_mb' => $app['size_limit_mb'],
+                'action' => "skipped - {$reason}",
+                'timestamp' => date('Y-m-d H:i:s')
+            );
+        }
+        
+        // Process apps for deletion with individual logging
+        foreach ($apps_to_delete as $app) {
+            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+            $size_mb = round($app['size_on_disk'] / (1024 * 1024), 2);
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Processing size violation app: $app_name (ID: {$app['app_id']}) - Size: {$size_mb}MB (Limit: {$app['size_limit_mb']}MB)",
+                'type' => 'info'
+            );
+        }
+        
+        // Bulk delete apps that are ready for deletion
+        if (!empty($apps_to_delete)) {
+            $app_ids_to_delete = array_column($apps_to_delete, 'app_id');
+            
+            try {
+                // Start transaction for bulk deletion
+                $this->db_connection->begin_transaction();
                 
-                // Remove from warned apps if present
-                if (isset($warned_data[$app_id])) {
-                    unset($warned_data[$app_id]);
+                // Bulk delete all related data
+                $this->data->bulk_delete_app_data($app_ids_to_delete);
+                
+                // Bulk delete the applications themselves
+                if ($this->data->bulk_delete_applications($app_ids_to_delete)) {
+                    // Commit the transaction
+                    $this->db_connection->commit();
+                    
+                    $deleted = count($apps_to_delete);
+                    
+                    // Add individual success logs for UI (like the original)
+                    foreach ($apps_to_delete as $app) {
+                        $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+                        $size_mb = round($app['size_on_disk'] / (1024 * 1024), 2);
+                        
+                        $logs[] = array(
+                            'time' => time(),
+                            'message' => "Successfully deleted size violation app: $app_name (ID: {$app['app_id']}) - Size: {$size_mb}MB (Limit: {$app['size_limit_mb']}MB)",
+                            'type' => 'success'
+                        );
+                        
+                        $detailed_items[] = array(
+                            'app_id' => $app['app_id'],
+                            'name' => $app_name,
+                            'email' => $app['email'] ?? '',
+                            'subscription_id' => $app['subscription_id'],
+                            'size_mb' => $size_mb,
+                            'size_limit_mb' => $app['size_limit_mb'],
+                            'action' => 'deleted',
+                            'timestamp' => date('Y-m-d H:i:s')
+                        );
+                        
+                        // Remove from warned apps if present
+                        if (isset($warned_data[$app['app_id']])) {
+                            unset($warned_data[$app['app_id']]);
+                        }
+                    }
+                    
+                } else {
+                    throw new Exception("Failed to bulk delete size violation applications");
                 }
                 
             } catch (Exception $e) {
                 // Rollback the transaction
                 $this->db_connection->rollback();
                 
-                $errors++;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => "Error deleting app $app_id: " . $e->getMessage(),
-                    'type' => 'error'
-                );
+                $errors += count($apps_to_delete);
+                
+                // Add individual error logs for UI
+                foreach ($apps_to_delete as $app) {
+                    $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+                    
+                    $logs[] = array(
+                        'time' => time(),
+                        'message' => "Error deleting app {$app['app_id']}: " . $e->getMessage(),
+                        'type' => 'error'
+                    );
+                }
             }
         }
         
@@ -1081,7 +1488,7 @@ class SwiftSpeed_Siberian_App_Management {
     }
     
     /**
-     * Process a batch of apps without users
+     * Process a batch of apps without users - OPTIMIZED FOR BULK OPERATIONS WITH INDIVIDUAL REPORTING
      */
     private function process_apps_without_users_batch($apps) {
         if (!$this->db_connection) {
@@ -1106,96 +1513,136 @@ class SwiftSpeed_Siberian_App_Management {
         $skipped = 0;
         $detailed_items = [];
         
-        // Process each app in the batch
-        foreach ($apps as $app) {
-            $app_id = $app['app_id'];
+        $batch_size = count($apps);
+        
+        // Verify which apps still don't have users (in case they were recently assigned)
+        $apps_to_delete = array();
+        $apps_to_skip = array();
+        
+        $app_ids_str = implode(',', array_map('intval', array_column($apps, 'app_id')));
+        if (!empty($app_ids_str)) {
+            $verify_query = "SELECT app.app_id 
+                           FROM application app 
+                           LEFT JOIN admin adm ON app.admin_id = adm.admin_id 
+                           WHERE app.app_id IN ({$app_ids_str}) 
+                           AND (adm.admin_id IS NULL OR app.admin_id IS NULL)";
+            
+            $verify_result = $this->db_connection->query($verify_query);
+            
+            if ($verify_result) {
+                $verified_app_ids = array();
+                while ($row = $verify_result->fetch_assoc()) {
+                    $verified_app_ids[] = $row['app_id'];
+                }
+                
+                // Separate apps based on verification
+                foreach ($apps as $app) {
+                    if (in_array($app['app_id'], $verified_app_ids)) {
+                        $apps_to_delete[] = $app;
+                    } else {
+                        $apps_to_skip[] = $app;
+                    }
+                }
+            } else {
+                // If verification fails, delete all (as per original logic)
+                $apps_to_delete = $apps;
+            }
+        }
+        
+        // Process skipped apps with individual logging
+        foreach ($apps_to_skip as $app) {
             $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
-            $size_mb = isset($app['size_mb']) ? $app['size_mb'] : 0;
             
             $logs[] = array(
                 'time' => time(),
-                'message' => "Processing app without user: $app_name (ID: $app_id)",
+                'message' => "Processing app without user: $app_name (ID: {$app['app_id']})",
                 'type' => 'info'
             );
             
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Skipping app {$app['app_id']} as it now has a user",
+                'type' => 'info'
+            );
+            
+            $skipped++;
+            $detailed_items[] = array(
+                'app_id' => $app['app_id'],
+                'name' => $app_name,
+                'size_mb' => $app['size_mb'] ?? 0,
+                'action' => 'skipped - user found upon verification',
+                'timestamp' => date('Y-m-d H:i:s')
+            );
+        }
+        
+        // Process apps for deletion with individual logging
+        foreach ($apps_to_delete as $app) {
+            $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+            
+            $logs[] = array(
+                'time' => time(),
+                'message' => "Processing app without user: $app_name (ID: {$app['app_id']})",
+                'type' => 'info'
+            );
+        }
+        
+        // Bulk delete apps that still don't have users
+        if (!empty($apps_to_delete)) {
+            $app_ids_to_delete = array_column($apps_to_delete, 'app_id');
+            
             try {
-                // Start transaction for each app
+                // Start transaction for bulk deletion
                 $this->db_connection->begin_transaction();
                 
-                // Modified verification to match initial query logic
-                // Check if admin exists but with slightly different logic to match our search query
-                if ($app['admin_id'] !== null) {
-                    $verify_query = "SELECT COUNT(*) as user_count FROM admin WHERE admin_id = " . intval($app['admin_id']);
-                    $verify_result = $this->db_connection->query($verify_query);
+                // Bulk delete all related data
+                $this->data->bulk_delete_app_data($app_ids_to_delete);
+                
+                // Bulk delete the applications themselves
+                if ($this->data->bulk_delete_applications($app_ids_to_delete)) {
+                    // Commit the transaction
+                    $this->db_connection->commit();
                     
-                    if (!$verify_result) {
-                        throw new Exception("Failed to verify user for app $app_id: " . $this->db_connection->error);
-                    }
+                    $deleted = count($apps_to_delete);
                     
-                    $verify_row = $verify_result->fetch_assoc();
-                    $verify_result->free_result();
-                    
-                    if (intval($verify_row['user_count']) > 0) {
-                        // App now has a user, skip it
-                        $this->db_connection->rollback();
-                        $skipped++;
+                    // Add individual success logs for UI (like the original)
+                    foreach ($apps_to_delete as $app) {
+                        $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+                        
                         $logs[] = array(
                             'time' => time(),
-                            'message' => "Skipping app $app_id as it now has a user",
-                            'type' => 'info'
+                            'message' => "Successfully deleted app without user: $app_name (ID: {$app['app_id']})",
+                            'type' => 'success'
                         );
                         
-                        // Add to detailed items to track skipped apps
                         $detailed_items[] = array(
-                            'app_id' => $app_id,
+                            'app_id' => $app['app_id'],
                             'name' => $app_name,
-                            'size_mb' => $size_mb,
-                            'action' => 'skipped - user found upon verification',
+                            'size_mb' => $app['size_mb'] ?? 0,
+                            'action' => 'deleted',
                             'timestamp' => date('Y-m-d H:i:s')
                         );
-                        
-                        continue;
                     }
+                    
+                } else {
+                    throw new Exception("Failed to bulk delete applications without users");
                 }
-                
-                // Delete all related data for this app
-                $this->data->delete_app_data($app_id);
-                
-                // Delete the application itself
-                $app_query = "DELETE FROM application WHERE app_id = $app_id";
-                if (!$this->db_connection->query($app_query)) {
-                    throw new Exception("Failed to delete application $app_id: " . $this->db_connection->error);
-                }
-                
-                // Commit the transaction
-                $this->db_connection->commit();
-                
-                $deleted++;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => "Successfully deleted app without user: $app_name (ID: $app_id)",
-                    'type' => 'success'
-                );
-                
-                // Add to detailed items
-                $detailed_items[] = array(
-                    'app_id' => $app_id,
-                    'name' => $app_name,
-                    'size_mb' => $size_mb,
-                    'action' => 'deleted',
-                    'timestamp' => date('Y-m-d H:i:s')
-                );
                 
             } catch (Exception $e) {
                 // Rollback the transaction
                 $this->db_connection->rollback();
                 
-                $errors++;
-                $logs[] = array(
-                    'time' => time(),
-                    'message' => "Error deleting app $app_id: " . $e->getMessage(),
-                    'type' => 'error'
-                );
+                $errors += count($apps_to_delete);
+                
+                // Add individual error logs for UI
+                foreach ($apps_to_delete as $app) {
+                    $app_name = isset($app['name']) ? $app['name'] : 'Unknown';
+                    
+                    $logs[] = array(
+                        'time' => time(),
+                        'message' => "Error deleting app {$app['app_id']}: " . $e->getMessage(),
+                        'type' => 'error'
+                    );
+                }
             }
         }
         
@@ -1309,90 +1756,109 @@ class SwiftSpeed_Siberian_App_Management {
             $progress_data = json_decode(file_get_contents($progress_file), true);
         }
         
-        // Get current batch index
+        // Set background processing flag
+        $this->is_background_processing = true;
+        
+        // Process multiple batches in this run, up to max_batches_per_run
+        $batches_processed = 0;
+        $continue_processing = true;
+        $task_completed = false;
         $batch_index = isset($progress_data['current_batch']) ? $progress_data['current_batch'] : 0;
         
-        $this->log_message("Processing batch $batch_index for task $task_type");
+        $this->log_message("Starting to process batches for task $task_type from batch $batch_index");
         
-        // Process just a single batch in this run
-        $batch_result = $this->process_batch($task_type, $batch_index);
+        while ($continue_processing && $batches_processed < $this->max_batches_per_run) {
+            // Process the next batch
+            $batch_result = $this->process_batch($task_type, $batch_index);
+            $batches_processed++;
+            
+            if (!$batch_result['success']) {
+                $this->log_message("Error processing batch $batch_index: " . $batch_result['message']);
+                $continue_processing = false;
+            }
+            
+            // Check if the task is now complete
+            if ($batch_result['completed']) {
+                $task_completed = true;
+                $continue_processing = false;
+                $this->log_message("Task $task_type completed after processing $batches_processed batches");
+            } else {
+                // Update batch index for next iteration
+                $batch_index = $batch_result['next_batch'];
+                
+                // Check if we've processed enough batches for this run
+                if ($batches_processed >= $this->max_batches_per_run) {
+                    $this->log_message("Reached max batches per run ($this->max_batches_per_run), will continue via loopback");
+                    
+                    // Trigger a loopback request to continue processing in the background
+                    $this->trigger_loopback_request($task_type);
+                    $continue_processing = false;
+                }
+            }
+        }
         
-        // Get updated progress data
+        // Get final progress data
         $progress_data = json_decode(file_get_contents($progress_file), true);
         
-        // Check if the task is now complete
-        if (isset($batch_result['completed']) && $batch_result['completed']) {
-            $this->log_message("Task $task_type completed in this run");
+        // Prepare operation details
+        $operation_details = array(
+            'task' => $task_type,
+            'processed' => $progress_data['processed'],
+            'total' => $progress_data['total'],
+            'progress_percentage' => $progress_data['progress'],
+            'timestamp' => time(),
+            'timestamp_formatted' => date('Y-m-d H:i:s', time())
+        );
+        
+        if (isset($progress_data['deleted'])) {
+            $operation_details['deleted'] = $progress_data['deleted'];
+        }
+        
+        if (isset($progress_data['errors'])) {
+            $operation_details['errors'] = $progress_data['errors'];
+        }
+        
+        if (isset($progress_data['skipped'])) {
+            $operation_details['skipped'] = $progress_data['skipped'];
+        }
+        
+        if (isset($progress_data['warned'])) {
+            $operation_details['warned'] = $progress_data['warned'];
+        }
+        
+        // Add detailed item list for reporting in action logs
+        if (isset($progress_data['detailed_item_list']) && !empty($progress_data['detailed_item_list'])) {
+            $operation_details['deleted_apps_list'] = $progress_data['detailed_item_list'];
             
-            // Format operation details for the report
-            $operation_details = array(
-                'task' => $task_type,
-                'processed' => $progress_data['processed'],
-                'total' => $progress_data['total'],
-                'progress_percentage' => 100, // Force 100% for completed tasks
-                'timestamp' => time(),
-                'timestamp_formatted' => date('Y-m-d H:i:s', time())
-            );
+            // Filter just the deleted items for a summary
+            $deleted_apps = array_filter($progress_data['detailed_item_list'], function($app) {
+                return isset($app['action']) && $app['action'] === 'deleted';
+            });
             
-            if (isset($progress_data['deleted'])) {
-                $operation_details['deleted'] = $progress_data['deleted'];
+            if (!empty($deleted_apps)) {
+                $operation_details['deleted_apps'] = array_slice($deleted_apps, -10); // Last 10 for display
+                $operation_details['deleted_apps_count'] = count($deleted_apps);
             }
-            
-            if (isset($progress_data['errors'])) {
-                $operation_details['errors'] = $progress_data['errors'];
-            }
-            
-            if (isset($progress_data['skipped'])) {
-                $operation_details['skipped'] = $progress_data['skipped'];
-            }
-            
-            if (isset($progress_data['warned'])) {
-                $operation_details['warned'] = $progress_data['warned'];
-            }
-            
-            // Add detailed items list for reporting
-            if (isset($progress_data['detailed_item_list']) && !empty($progress_data['detailed_item_list'])) {
-                $operation_details['deleted_apps_list'] = $progress_data['detailed_item_list'];
-                
-                // Also provide a UI-friendly format for display in action logs
-                $formatted_apps = array();
-                foreach ($progress_data['detailed_item_list'] as $app) {
-                    if (isset($app['action']) && $app['action'] === 'deleted') {
-                        $timestamp = isset($app['timestamp']) ? $app['timestamp'] : date('Y-m-d H:i:s');
-                        $id = isset($app['app_id']) ? $app['app_id'] : "unknown";
-                        $name = isset($app['name']) ? $app['name'] : "unknown";
-                        $size_info = isset($app['size_mb']) ? " - Size: {$app['size_mb']} MB" : "";
-                        $limit_info = isset($app['size_limit_mb']) ? " - Limit: {$app['size_limit_mb']} MB" : "";
-                        $email_info = isset($app['email']) && !empty($app['email']) ? " - Owner: {$app['email']}" : "";
-                        
-                        $formatted_apps[] = array(
-                            'app_id' => $id,
-                            'name' => $name,
-                            'size_mb' => isset($app['size_mb']) ? $app['size_mb'] : '',
-                            'size_limit_mb' => isset($app['size_limit_mb']) ? $app['size_limit_mb'] : '',
-                            'email' => isset($app['email']) ? $app['email'] : '',
-                            'timestamp' => $timestamp
-                        );
-                    }
-                }
-                
-                // $operation_details['deleted_apps'] = $formatted_apps;
-            }
-            
-            // Create a summary message with explicit 100% progress
-            $summary = sprintf(
-                __("Processed %d out of %d items (100%%). Deleted %d, skipped %d, warned %d, with %d errors.", 'swiftspeed-siberian'),
-                $progress_data['processed'],
-                $progress_data['total'],
-                $progress_data['deleted'] ?? 0,
-                $progress_data['skipped'] ?? 0,
-                $progress_data['warned'] ?? 0,
-                $progress_data['errors'] ?? 0
-            );
-            
-            $operation_details['summary'] = $summary;
-            
-            // Generate a message for the result
+        }
+        
+        // Create a summary message
+        $summary = sprintf(
+            __("Processed %d out of %d items (%d%%). Deleted %d, skipped %d, warned %d, with %d errors.", 'swiftspeed-siberian'),
+            $progress_data['processed'],
+            $progress_data['total'],
+            $progress_data['progress'],
+            $progress_data['deleted'] ?? 0,
+            $progress_data['skipped'] ?? 0,
+            $progress_data['warned'] ?? 0,
+            $progress_data['errors'] ?? 0
+        );
+        
+        $operation_details['summary'] = $summary;
+        
+        $success = true; // Consider it a success even with some errors
+        $message = '';
+        
+        if ($task_completed) {
             $message = sprintf(
                 __("Task %s completed. Processed %d items: Deleted %d, Skipped %d, Warned %d, with %d errors.", 'swiftspeed-siberian'),
                 $task_type,
@@ -1406,109 +1872,38 @@ class SwiftSpeed_Siberian_App_Management {
             // For compatibility with the action logs system
             global $swsib_last_task_result;
             $swsib_last_task_result = array(
-                'success' => true,
+                'success' => $success,
                 'message' => $message,
-                'operation_details' => $operation_details
+                'operation_details' => $operation_details,
+                'completed' => true
             );
             
             return array(
-                'success' => true,
+                'success' => $success,
                 'message' => $message,
                 'operation_details' => $operation_details,
                 'completed' => true
             );
         } else {
-            // Task is not complete yet, we'll continue in the next scheduler run
-            $this->log_message("Task $task_type not completed yet, will continue in next run at batch {$batch_result['next_batch']}");
-            
-            // Format operation details for partial progress reporting
-            $operation_details = array(
-                'task' => $task_type,
-                'processed' => $progress_data['processed'],
-                'total' => $progress_data['total'],
-                'progress_percentage' => $progress_data['progress'],
-                'timestamp' => time(),
-                'timestamp_formatted' => date('Y-m-d H:i:s', time()),
-                'status' => 'in_progress',
-                'batch_index' => $batch_index,
-                'next_batch' => $batch_result['next_batch']
-            );
-            
-            if (isset($progress_data['deleted'])) {
-                $operation_details['deleted'] = $progress_data['deleted'];
-            }
-            
-            if (isset($progress_data['errors'])) {
-                $operation_details['errors'] = $progress_data['errors'];
-            }
-            
-            if (isset($progress_data['skipped'])) {
-                $operation_details['skipped'] = $progress_data['skipped'];
-            }
-            
-            if (isset($progress_data['warned'])) {
-                $operation_details['warned'] = $progress_data['warned'];
-            }
-            
-            // Create a summary for progress reporting with explicit progress percentage
-            $summary = sprintf(
-                __("Processed %d out of %d items (%d%%).", 'swiftspeed-siberian'),
+            // Task is continuing via loopback, return current progress
+            $message = sprintf(
+                __("Task in progress. Processed %d out of %d items (%d%%).", 'swiftspeed-siberian'),
                 $progress_data['processed'],
                 $progress_data['total'],
                 $progress_data['progress']
             );
             
-            $operation_details['summary'] = $summary;
-            
-            // Check if we have any deleted items already to report
-            if (isset($progress_data['detailed_item_list']) && !empty($progress_data['detailed_item_list'])) {
-                $deleted_apps = array_filter($progress_data['detailed_item_list'], function($app) {
-                    return isset($app['action']) && $app['action'] === 'deleted';
-                });
-                
-                if (!empty($deleted_apps)) {
-                    $formatted_apps = array();
-                    $deleted_apps_slice = array_slice($deleted_apps, -10); // Last 10 for display
-                    
-                    foreach ($deleted_apps_slice as $app) {
-                        $timestamp = isset($app['timestamp']) ? $app['timestamp'] : date('Y-m-d H:i:s');
-                        $id = isset($app['app_id']) ? $app['app_id'] : "unknown";
-                        $name = isset($app['name']) ? $app['name'] : "unknown";
-                        $size_info = isset($app['size_mb']) ? " - Size: {$app['size_mb']} MB" : "";
-                        $limit_info = isset($app['size_limit_mb']) ? " - Limit: {$app['size_limit_mb']} MB" : "";
-                        $email_info = isset($app['email']) && !empty($app['email']) ? " - Owner: {$app['email']}" : "";
-                        
-                        $formatted_apps[] = array(
-                            'app_id' => $id,
-                            'name' => $name,
-                            'size_mb' => isset($app['size_mb']) ? $app['size_mb'] : '',
-                            'size_limit_mb' => isset($app['size_limit_mb']) ? $app['size_limit_mb'] : '',
-                            'email' => isset($app['email']) ? $app['email'] : '',
-                            'timestamp' => $timestamp
-                        );
-                    }
-                    
-                    $operation_details['deleted_apps'] = $formatted_apps;
-                    $operation_details['deleted_apps_count'] = count($deleted_apps);
-                }
-            }
-            
-            // Format the message for this run
-            $message = sprintf(
-                __("Batch %d processed. Will continue next run.", 'swiftspeed-siberian'),
-                $batch_index
-            );
-            
             // For compatibility with the action logs system
             global $swsib_last_task_result;
             $swsib_last_task_result = array(
-                'success' => true,
+                'success' => $success,
                 'message' => $message,
-                'operation_details' => $operation_details
+                'operation_details' => $operation_details,
+                'completed' => false
             );
             
             return array(
-                'success' => true,
+                'success' => $success,
                 'message' => $message,
                 'operation_details' => $operation_details,
                 'completed' => false

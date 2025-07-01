@@ -175,24 +175,8 @@
      * Initialize shared components
      */
     function initSharedComponents() {
-        // Initialize modals
-        $(document).on('click', '.swsib-clean-modal-close, .swsib-clean-modal-cancel', function() {
-            closeModal();
-        });
-        
-        // Close modal when clicking on the overlay
-        $(document).on('click', '.swsib-clean-modal-overlay', function(e) {
-            if ($(e.target).hasClass('swsib-clean-modal-overlay')) {
-                closeModal();
-            }
-        });
-        
-        // Press Escape to close modal
-        $(document).keydown(function(e) {
-            if (e.keyCode === 27 && $('.swsib-clean-modal-overlay').hasClass('active')) {
-                closeModal();
-            }
-        });
+        // Initialize modals - make sure we set up common modal handlers
+        setupCommonModalHandlers();
         
         // Initialize column sorting for all tables
         $(document).on('click', '.swsib-clean-table th.sortable', function() {
@@ -234,6 +218,49 @@
             
             // Update sort indicators
             updateSortIndicators(tabType);
+        });
+    }
+    
+    /**
+     * Set up common modal handlers across the application
+     */
+    function setupCommonModalHandlers() {
+        // Create a common modal if it doesn't exist yet
+        if ($('#swsib-common-modal').length === 0) {
+            var modalHTML = '<div id="swsib-common-modal" class="swsib-clean-modal-overlay">' +
+                '   <div class="swsib-clean-modal">' +
+                '       <div class="swsib-clean-modal-header">' +
+                '           <h3></h3>' +
+                '           <button type="button" class="swsib-clean-modal-close">&times;</button>' +
+                '       </div>' +
+                '       <div class="swsib-clean-modal-body"></div>' +
+                '       <div class="swsib-clean-modal-footer">' +
+                '           <button type="button" class="swsib-clean-button swsib-clean-modal-cancel">Cancel</button>' +
+                '           <button type="button" class="swsib-clean-button primary swsib-clean-modal-confirm">Confirm</button>' +
+                '       </div>' +
+                '   </div>' +
+                '</div>';
+            
+            $('body').append(modalHTML);
+        }
+        
+        // Set up handlers for the common modal
+        $(document).on('click', '#swsib-common-modal .swsib-clean-modal-close, #swsib-common-modal .swsib-clean-modal-cancel', function() {
+            closeModal();
+        });
+        
+        // Close modal when clicking on the overlay
+        $(document).on('click', '#swsib-common-modal', function(e) {
+            if ($(e.target).is('#swsib-common-modal')) {
+                closeModal();
+            }
+        });
+        
+        // Press Escape to close modal
+        $(document).keydown(function(e) {
+            if (e.keyCode === 27 && $('#swsib-common-modal').hasClass('active')) {
+                closeModal();
+            }
         });
     }
     
@@ -309,33 +336,18 @@
     
     /**
      * Show a modal with the given title, message and callbacks
+     * This is the central modal function used by all tabs except folder-cleanup
      */
     function showModal(title, message, confirmCallback, cancelCallback) {
-        // Create modal if it doesn't exist
-        if ($('.swsib-clean-modal-overlay').length === 0) {
-            var modalHTML = '<div class="swsib-clean-modal-overlay">' +
-                '   <div class="swsib-clean-modal">' +
-                '       <div class="swsib-clean-modal-header">' +
-                '           <h3></h3>' +
-                '           <button type="button" class="swsib-clean-modal-close">&times;</button>' +
-                '       </div>' +
-                '       <div class="swsib-clean-modal-body"></div>' +
-                '       <div class="swsib-clean-modal-footer">' +
-                '           <button type="button" class="swsib-clean-button swsib-clean-modal-cancel">Cancel</button>' +
-                '           <button type="button" class="swsib-clean-button primary swsib-clean-modal-confirm">Confirm</button>' +
-                '       </div>' +
-                '   </div>' +
-                '</div>';
-            
-            $('body').append(modalHTML);
-        }
+        // Get the common modal
+        var $modal = $('#swsib-common-modal');
         
         // Set modal content
-        $('.swsib-clean-modal-header h3').text(title);
-        $('.swsib-clean-modal-body').html(message);
+        $modal.find('.swsib-clean-modal-header h3').text(title);
+        $modal.find('.swsib-clean-modal-body').html(message);
         
         // Set confirm button callback
-        $('.swsib-clean-modal-confirm').off('click').on('click', function() {
+        $modal.find('.swsib-clean-modal-confirm').off('click').on('click', function() {
             if (typeof confirmCallback === 'function') {
                 confirmCallback();
             }
@@ -344,21 +356,27 @@
         
         // Set cancel button callback
         if (typeof cancelCallback === 'function') {
-            $('.swsib-clean-modal-cancel').off('click').on('click', function() {
+            $modal.find('.swsib-clean-modal-cancel').off('click').on('click', function() {
                 cancelCallback();
+                closeModal();
+            });
+        } else {
+            // Default cancel behavior just closes the modal
+            $modal.find('.swsib-clean-modal-cancel').off('click').on('click', function() {
                 closeModal();
             });
         }
         
         // Show modal
-        $('.swsib-clean-modal-overlay').addClass('active');
+        $modal.addClass('active');
     }
     
     /**
      * Close the modal
+     * This is used by all tabs except folder-cleanup
      */
     function closeModal() {
-        $('.swsib-clean-modal-overlay').removeClass('active');
+        $('#swsib-common-modal').removeClass('active');
     }
     
     /**
@@ -594,7 +612,7 @@
             
             showModal(
                 'Activate Selected Users',
-                'Are you sure you want to activate these users?',
+                swsib_clean.confirm_activate_admins,
                 function() {
                     activateUsers(selectedUsers);
                 }
@@ -2408,6 +2426,8 @@
     
     /**
      * Initialize the Folder Cleanup tab
+     * Note: This tab uses its own script in folder-cleanup.php,
+     * we just create an empty load function here to avoid errors
      */
     function initFolderCleanupTab() {
         // Store load function in the global scope if needed
@@ -2473,4 +2493,17 @@
             '>Next</button>'
         );
     }
+    
+    // Make these functions available to the global scope
+    window.swsib_clean_utils = {
+        showModal: showModal,
+        closeModal: closeModal,
+        updateProgressDisplay: updateProgressDisplay,
+        resetProgress: resetProgress,
+        showMessage: showMessage,
+        formatDate: formatDate,
+        formatFileSize: formatFileSize,
+        operationProgress: operationProgress
+    };
+    
 })(jQuery);

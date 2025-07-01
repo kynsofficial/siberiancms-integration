@@ -19,6 +19,8 @@
     let currentBatch = 0; // Current batch being processed
     let previewModal = null; // Preview modal reference
     let currentPage = 1; // Current page for data preview
+    let progressUpdateInterval = 3000; // Time between progress updates (3 seconds)
+    let resumptionMessageShown = false; // Flag to track if resumption message has been shown
     
     // Initialize the image cleanup module
     function initImageCleanup() {
@@ -82,6 +84,7 @@
             logHashes = {};
             batchProcessing = false;
             currentBatch = 0;
+            resumptionMessageShown = false;
             
             // Store original text and disable button
             $button.data('original-text', originalText);
@@ -93,6 +96,7 @@
             // Add direct information about what we're doing
             addLocalLog('Starting image cleanup task...', 'info');
             addLocalLog('This will scan for orphaned image folders and remove them', 'info');
+            addLocalLog('Processing will continue in the background even if you leave this page', 'info');
             
             // Start the task with batch processing
             $.ajax({
@@ -108,25 +112,8 @@
                     if (response.success) {
                         addLocalLog('Image cleanup task initialized successfully', 'success');
                         
-                        // If there are batches to process, start batch processing
-                        if (response.data && response.data.next_batch !== undefined) {
-                            batchProcessing = true;
-                            currentBatch = response.data.next_batch;
-                            
-                            // Check if we need to process more batches
-                            if (!response.data.completed) {
-                                // Process the next batch after a short delay
-                                setTimeout(function() {
-                                    processNextBatch(currentBatch);
-                                }, 500);
-                            } else {
-                                // Task is already complete (no batches to process)
-                                completeTask();
-                            }
-                        } else {
-                            // No batch information, fall back to progress tracking
-                            trackImageCleanupProgress();
-                        }
+                        // Start tracking progress
+                        startProgressTracking();
                     } else {
                         addLocalLog('Error: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                         failTask();
@@ -212,8 +199,170 @@
             loadFoldersPreview(currentPage);
         });
         
+        // Check if a task is currently running on page load
+        checkForRunningTasks();
+        
         // Load orphaned images count
         loadOrphanedImagesCount();
+    }
+    
+    /**
+     * Check if a task is currently running on page load
+     */
+    function checkForRunningTasks() {
+        console.log("Checking for running Image Cleanup tasks...");
+        
+        // Check for cleanup task
+        checkTaskStatus('cleanup');
+    }
+    
+    /**
+     * Check if a specific task is running
+     */
+    function checkTaskStatus(task) {
+        console.log("Checking status for task:", task);
+        
+        $.ajax({
+            url: swsib_automate.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swsib_get_cleanup_progress',
+                nonce: swsib_automate.nonce,
+                task_type: task
+            },
+            success: function(response) {
+                if (response.success) {
+                    const progressData = response.data;
+                    console.log("Got progress data for task:", task, progressData);
+                    
+                    // Check if the task is running
+                    if (progressData.status === 'running' || progressData.is_running) {
+                        console.log('Found running task:', task);
+                        
+                        // Resume progress tracking
+                        resumeTaskTracking(task, progressData);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log("Error checking task status for " + task + ":", error);
+                // Don't show any visible error to the user
+            }
+        });
+    }
+    
+    /**
+     * Resume tracking a task that was already running
+     */
+    function resumeTaskTracking(task, progressData) {
+        // Set task as running
+        const taskId = 'image_cleanup';
+        taskRunning = true;
+        currentTaskId = taskId;
+        
+        // Update UI
+        const $button = $('.run-image-cleanup');
+        $button.prop('disabled', true).text(swsib_automate.task_running);
+        
+        // Show progress container
+        $('#task-progress-container').show();
+        
+        // Update progress bar
+        const progress = progressData.progress || 0;
+        $('#task-progress-container .task-progress-bar').css('width', progress + '%');
+        $('#task-progress-container .task-progress-percentage').text(progress + '%');
+        
+        // Update processed/total
+        if (progressData.total > 0) {
+            $('#task-progress-container .task-processed').text(progressData.processed || 0);
+            $('#task-progress-container .task-total').text(progressData.total);
+        }
+        
+        // Update current item
+        if (progressData.current_item) {
+            $('#task-progress-container .task-current-item').text(progressData.current_item);
+        }
+        
+        // Update title
+        $('#task-progress-container .task-title').text('Task in Progress: Image Folder Cleanup');
+        
+        // Only add resumption log once
+        if (!resumptionMessageShown) {
+            // Add resumption log
+            const timestamp = new Date().toLocaleTimeString();
+            const $log = $('#task-progress-container .task-progress-log');
+            const $entry = $('<div class="log-entry info"></div>');
+            $entry.text('[' + timestamp + '] Resumed task tracking after page reload');
+            $log.append($entry);
+            resumptionMessageShown = true;
+        }
+        
+        // Clear existing logs to avoid duplicates
+        logHashes[task] = {};
+        
+        // Display existing logs if any
+        if (progressData.logs && progressData.logs.length > 0) {
+            const $log = $('#task-progress-container .task-progress-log');
+            
+            progressData.logs.forEach(function(log) {
+                if (!log.message) return; // Skip empty messages
+                
+                // Create a unique hash for this log
+                const logHash = log.time + '-' + log.message.substring(0, 50);
+                
+                // Only add if we haven't shown this exact log yet
+                if (!logHashes[task] || !logHashes[task][logHash]) {
+                    const timestamp = new Date(log.time * 1000).toLocaleTimeString();
+                    const $entry = $('<div class="log-entry ' + (log.type || 'info') + '"></div>');
+                    $entry.text('[' + timestamp + '] ' + log.message);
+                    $log.append($entry);
+                    
+                    // Store this log hash
+                    if (!logHashes[task]) {
+                        logHashes[task] = {};
+                    }
+                    logHashes[task][logHash] = true;
+                }
+            });
+            
+            // Auto-scroll to bottom
+            $log.scrollTop($log[0].scrollHeight);
+        }
+        
+        // Start progress tracking with a delay to avoid immediate hammering
+        setTimeout(function() {
+            startProgressTracking();
+        }, 1000);
+    }
+    
+    /**
+     * Start tracking progress for a task
+     */
+    function startProgressTracking() {
+        // Set task start time
+        taskStartTime = new Date().getTime();
+        
+        // Start elapsed time counter
+        if (taskProgressInterval) {
+            clearInterval(taskProgressInterval);
+        }
+        
+        taskProgressInterval = setInterval(function() {
+            if (taskRunning) {
+                // Update elapsed time
+                updateElapsedTime();
+                
+                // Fetch progress updates
+                trackImageCleanupProgress();
+            } else {
+                // Stop interval if task is no longer running
+                clearInterval(taskProgressInterval);
+                taskProgressInterval = null;
+            }
+        }, progressUpdateInterval);
+        
+        // Fetch initial progress update immediately
+        trackImageCleanupProgress();
     }
     
     /**
@@ -323,8 +472,21 @@
             timeout: 10000, // 10-second timeout
             success: function(response) {
                 if (response.success) {
+                    // Reset retry counter on success
+                    retryCount = 0;
+                    
                     // Get progress data
                     const progressData = response.data;
+                    
+                    // Check if task is completed or cancelled
+                    if (progressData.status === 'completed') {
+                        completeTask();
+                        return;
+                    } else if (progressData.status === 'cancelled') {
+                        addLocalLog('Task was cancelled', 'warning');
+                        failTask();
+                        return;
+                    }
                     
                     // Update progress with real data
                     const progress = progressData.progress || 0;
@@ -334,6 +496,28 @@
                     if (progressData.total > 0) {
                         $('.task-processed').text(progressData.processed || 0);
                         $('.task-total').text(progressData.total);
+                    }
+                    
+                    // Show deleted, skipped, errors details if available
+                    if ($('.task-details').length === 0) {
+                        // Create details element if it doesn't exist
+                        const $details = $('<div class="task-details"></div>');
+                        $('.task-progress-info').append($details);
+                    }
+                    
+                    let detailsText = '';
+                    if (progressData.deleted !== undefined) {
+                        detailsText += 'Deleted: ' + progressData.deleted;
+                    }
+                    if (progressData.skipped !== undefined) {
+                        detailsText += (detailsText ? ' | ' : '') + 'Skipped: ' + progressData.skipped;
+                    }
+                    if (progressData.errors !== undefined) {
+                        detailsText += (detailsText ? ' | ' : '') + 'Errors: ' + progressData.errors;
+                    }
+                    
+                    if (detailsText) {
+                        $('.task-details').text(detailsText);
                     }
                     
                     // Update current item
@@ -364,176 +548,194 @@
                         });
                     }
                     
-                    // If task is completed and we're not batch processing, complete task
-                    if (progressData.status === 'completed' && !batchProcessing) {
-                        completeTask();
-                    } else if (progressData.status === 'failed') {
+                    // If task is no longer running or the background processing was disabled, check status
+                    if (!progressData.is_running || !progressData.background_enabled) {
+                        if (progressData.status === 'running') {
+                            // Task is in an inconsistent state - either stalled or just initialized
+                            // Check heartbeat age
+                            const heartbeatAge = progressData.heartbeat_age || 0;
+                            
+                            if (heartbeatAge > 300) { // 5 minutes
+                                // Task has stalled
+                                addLocalLog('Task appears to be stalled (no updates for ' + Math.floor(heartbeatAge / 60) + ' minutes)', 'warning');
+                            }
+                        }
+                    }
+                } else {
+                    console.log("Error getting progress:", response.data ? response.data.message : 'Unknown error');
+                    
+                    // Increment retry counter
+                    retryCount++;
+                    
+                    if (retryCount >= maxRetries) {
+                        // Too many failures, assume task is no longer running
+                        addLocalLog('Failed to get progress updates after multiple attempts. Task may have stopped.', 'error');
                         failTask();
                     }
                 }
                 
                 // If we're not batch processing and task is still running, check progress again after a delay
-                if (taskRunning && !batchProcessing && response.data.status === 'running') {
-                    setTimeout(function() {
-                        trackImageCleanupProgress();
-                    }, 3000);
+                if (taskRunning && !batchProcessing && response.data && response.data.status === 'running') {
+                    // Progress will be checked by the interval timer
                 }
             },
             error: function(xhr, status, error) {
                 console.log("Error getting progress:", error);
                 
-                // If we're not batch processing and task is still running, check progress again after a delay
-                if (taskRunning && !batchProcessing) {
-                    setTimeout(function() {
-                        trackImageCleanupProgress();
-                    }, 5000);
+                // Increment retry counter
+                retryCount++;
+                
+                if (retryCount >= maxRetries) {
+                    // Too many failures, assume task is no longer running
+                    addLocalLog('Failed to get progress updates after multiple attempts. Task may have stopped.', 'error');
+                    failTask();
                 }
             }
         });
     }
     
-/**
- * Load folders preview
- */
-function loadFoldersPreview(page) {
-    // Remove any existing modals first
-    if (previewModal) {
-        previewModal.remove();
-        previewModal = null;
-    }
-    
-    // Create modal
-    previewModal = $('<div class="swsib-image-modal"></div>');
-    const modalContent = $('<div class="swsib-image-modal-content"></div>');
-    const modalHeader = $('<div class="swsib-image-modal-header"><h3>Orphaned Image Folders Preview</h3><button type="button" class="image-modal-close" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
-    const modalBody = $('<div class="swsib-image-modal-body"></div>');
-    const modalFooter = $('<div class="swsib-image-modal-footer"><div class="swsib-image-pagination"><button class="button image-pagination-prev">&laquo; Previous</button><span class="image-pagination-info">Page 1</span><button class="button image-pagination-next">Next &raquo;</button></div></div>');
-    
-    modalContent.append(modalHeader);
-    modalContent.append(modalBody);
-    modalContent.append(modalFooter);
-    previewModal.append(modalContent);
-    $('body').append(previewModal);
-    
-    // Add delay before showing to allow animation
-    setTimeout(function() {
-        previewModal.addClass('show');
-        // Set up close button handlers after modal is created
-        $('.image-modal-close').off('click').on('click', function() {
-            if (previewModal) {
-                previewModal.removeClass('show');
-                setTimeout(function() {
-                    previewModal.remove();
-                    previewModal = null;
-                }, 300);
-            }
-        });
-    }, 10);
-
-    // Show loading
-    previewModal.find('.swsib-image-modal-body').html('<div class="loading"><div class="spinner"></div><span>Loading folders...</span></div>');
-    previewModal.find('.image-pagination-info').text('Loading...');
-    
-    // Set current page
-    currentPage = page;
-    
-    // Load data via AJAX
-    $.ajax({
-        url: swsib_automate.ajax_url,
-        type: 'POST',
-        data: {
-            action: 'swsib_preview_orphaned_folders',
-            nonce: swsib_automate.nonce,
-            page: page,
-            per_page: 10
-        },
-        success: function(response) {
-            if (response.success && response.data) {
-                // Update modal title with counts
-                if (response.data.orphaned_count !== undefined && response.data.non_app_count !== undefined) {
-                    previewModal.find('.swsib-image-modal-header h3').text(
-                        'Orphaned Image Folders Preview (' + response.data.orphaned_count + ' orphaned, ' + 
-                        response.data.non_app_count + ' non-application)'
-                    );
-                } else {
-                    previewModal.find('.swsib-image-modal-header h3').text(response.data.title || 'Orphaned Image Folders Preview');
-                }
-                
-                // Create table with responsive wrapper
-                const tableWrapper = $('<div class="table-responsive"></div>');
-                const table = $('<table class="wp-list-table widefat striped"></table>');
-                const thead = $('<thead></thead>');
-                const tbody = $('<tbody></tbody>');
-                
-                // Add headers
-                const headerRow = $('<tr></tr>');
-                if (response.data.headers && Array.isArray(response.data.headers)) {
-                    response.data.headers.forEach(function(header) {
-                        headerRow.append('<th>' + header + '</th>');
-                    });
-                    thead.append(headerRow);
-                    table.append(thead);
-                    
-                    // Add data rows
-                    if (response.data.items && response.data.items.length > 0) {
-                        response.data.items.forEach(function(item) {
-                            const row = $('<tr></tr>');
-                            response.data.fields.forEach(function(field) {
-                                // Format the field data
-                                let cellValue = item[field] !== null && item[field] !== undefined ? item[field] : '';
-                                
-                                // Apply status formatting
-                                if (field === 'status') {
-                                    if (cellValue.includes('Orphaned')) {
-                                        cellValue = '<span class="status-orphaned">' + cellValue + '</span>';
-                                    } else if (cellValue.includes('Non-Application')) {
-                                        cellValue = '<span class="status-non-app">' + cellValue + '</span>';
-                                    }
-                                }
-                                
-                                row.append('<td>' + cellValue + '</td>');
-                            });
-                            tbody.append(row);
-                        });
-                    } else {
-                        // No items found
-                        const emptyRow = $('<tr><td colspan="' + response.data.headers.length + '" class="no-items">No orphaned folders found</td></tr>');
-                        tbody.append(emptyRow);
-                    }
-                    
-                    table.append(tbody);
-                    tableWrapper.append(table);
-                    
-                    // Add to modal
-                    previewModal.find('.swsib-image-modal-body').html(tableWrapper);
-                    
-                    // Update pagination
-                    previewModal.find('.image-pagination-info').text('Page ' + page + ' of ' + response.data.total_pages);
-                    
-                    // Enable/disable pagination buttons
-                    if (page <= 1) {
-                        previewModal.find('.image-pagination-prev').prop('disabled', true);
-                    } else {
-                        previewModal.find('.image-pagination-prev').prop('disabled', false);
-                    }
-                    
-                    if (page >= response.data.total_pages) {
-                        previewModal.find('.image-pagination-next').prop('disabled', true);
-                    } else {
-                        previewModal.find('.image-pagination-next').prop('disabled', false);
-                    }
-                } else {
-                    previewModal.find('.swsib-image-modal-body').html('<div class="error-message">Error: Invalid response format</div>');
-                }
-            } else {
-                previewModal.find('.swsib-image-modal-body').html('<div class="error-message">Error: ' + (response.data && response.data.message ? response.data.message : 'Failed to load folders') + '</div>');
-            }
-        },
-        error: function() {
-            previewModal.find('.swsib-image-modal-body').html('<div class="error-message">Failed to load folders. Please try again.</div>');
+    /**
+     * Load folders preview
+     */
+    function loadFoldersPreview(page) {
+        // Remove any existing modals first
+        if (previewModal) {
+            previewModal.remove();
+            previewModal = null;
         }
-    });
-}
+        
+        // Create modal
+        previewModal = $('<div class="swsib-image-modal"></div>');
+        const modalContent = $('<div class="swsib-image-modal-content"></div>');
+        const modalHeader = $('<div class="swsib-image-modal-header"><h3>Orphaned Image Folders Preview</h3><button type="button" class="image-modal-close" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        const modalBody = $('<div class="swsib-image-modal-body"></div>');
+        const modalFooter = $('<div class="swsib-image-modal-footer"><div class="swsib-image-pagination"><button class="button image-pagination-prev">&laquo; Previous</button><span class="image-pagination-info">Page 1</span><button class="button image-pagination-next">Next &raquo;</button></div></div>');
+        
+        modalContent.append(modalHeader);
+        modalContent.append(modalBody);
+        modalContent.append(modalFooter);
+        previewModal.append(modalContent);
+        $('body').append(previewModal);
+        
+        // Add delay before showing to allow animation
+        setTimeout(function() {
+            previewModal.addClass('show');
+            // Set up close button handlers after modal is created
+            $('.image-modal-close').off('click').on('click', function() {
+                if (previewModal) {
+                    previewModal.removeClass('show');
+                    setTimeout(function() {
+                        previewModal.remove();
+                        previewModal = null;
+                    }, 300);
+                }
+            });
+        }, 10);
+
+        // Show loading
+        previewModal.find('.swsib-image-modal-body').html('<div class="loading"><div class="spinner"></div><span>Loading folders...</span></div>');
+        previewModal.find('.image-pagination-info').text('Loading...');
+        
+        // Set current page
+        currentPage = page;
+        
+        // Load data via AJAX
+        $.ajax({
+            url: swsib_automate.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swsib_preview_orphaned_folders',
+                nonce: swsib_automate.nonce,
+                page: page,
+                per_page: 10
+            },
+            success: function(response) {
+                if (response.success && response.data) {
+                    // Update modal title with counts
+                    if (response.data.orphaned_count !== undefined && response.data.non_app_count !== undefined) {
+                        previewModal.find('.swsib-image-modal-header h3').text(
+                            'Orphaned Image Folders Preview (' + response.data.orphaned_count + ' orphaned, ' + 
+                            response.data.non_app_count + ' non-application)'
+                        );
+                    } else {
+                        previewModal.find('.swsib-image-modal-header h3').text(response.data.title || 'Orphaned Image Folders Preview');
+                    }
+                    
+                    // Create table with responsive wrapper
+                    const tableWrapper = $('<div class="table-responsive"></div>');
+                    const table = $('<table class="wp-list-table widefat striped"></table>');
+                    const thead = $('<thead></thead>');
+                    const tbody = $('<tbody></tbody>');
+                    
+                    // Add headers
+                    const headerRow = $('<tr></tr>');
+                    if (response.data.headers && Array.isArray(response.data.headers)) {
+                        response.data.headers.forEach(function(header) {
+                            headerRow.append('<th>' + header + '</th>');
+                        });
+                        thead.append(headerRow);
+                        table.append(thead);
+                        
+                        // Add data rows
+                        if (response.data.items && response.data.items.length > 0) {
+                            response.data.items.forEach(function(item) {
+                                const row = $('<tr></tr>');
+                                response.data.fields.forEach(function(field) {
+                                    // Format the field data
+                                    let cellValue = item[field] !== null && item[field] !== undefined ? item[field] : '';
+                                    
+                                    // Apply status formatting
+                                    if (field === 'status') {
+                                        if (cellValue.includes('Orphaned')) {
+                                            cellValue = '<span class="status-orphaned">' + cellValue + '</span>';
+                                        } else if (cellValue.includes('Non-Application')) {
+                                            cellValue = '<span class="status-non-app">' + cellValue + '</span>';
+                                        }
+                                    }
+                                    
+                                    row.append('<td>' + cellValue + '</td>');
+                                });
+                                tbody.append(row);
+                            });
+                        } else {
+                            // No items found
+                            const emptyRow = $('<tr><td colspan="' + response.data.headers.length + '" class="no-items">No orphaned folders found</td></tr>');
+                            tbody.append(emptyRow);
+                        }
+                        
+                        table.append(tbody);
+                        tableWrapper.append(table);
+                        
+                        // Add to modal
+                        previewModal.find('.swsib-image-modal-body').html(tableWrapper);
+                        
+                        // Update pagination
+                        previewModal.find('.image-pagination-info').text('Page ' + page + ' of ' + response.data.total_pages);
+                        
+                        // Enable/disable pagination buttons
+                        if (page <= 1) {
+                            previewModal.find('.image-pagination-prev').prop('disabled', true);
+                        } else {
+                            previewModal.find('.image-pagination-prev').prop('disabled', false);
+                        }
+                        
+                        if (page >= response.data.total_pages) {
+                            previewModal.find('.image-pagination-next').prop('disabled', true);
+                        } else {
+                            previewModal.find('.image-pagination-next').prop('disabled', false);
+                        }
+                    } else {
+                        previewModal.find('.swsib-image-modal-body').html('<div class="error-message">Error: Invalid response format</div>');
+                    }
+                } else {
+                    previewModal.find('.swsib-image-modal-body').html('<div class="error-message">Error: ' + (response.data && response.data.message ? response.data.message : 'Failed to load folders') + '</div>');
+                }
+            },
+            error: function() {
+                previewModal.find('.swsib-image-modal-body').html('<div class="error-message">Failed to load folders. Please try again.</div>');
+            }
+        });
+    }
     
     /**
      * Load orphaned images count
@@ -572,6 +774,7 @@ function loadFoldersPreview(page) {
         notificationShown = {};
         localTaskLogs = {};
         logHashes = {};
+        resumptionMessageShown = false;
         
         // Reset progress UI
         $('.task-progress-bar').css('width', '0%');
@@ -581,6 +784,9 @@ function loadFoldersPreview(page) {
         $('.task-time-elapsed').text('00:00:00');
         $('.task-current-item').text('');
         $('.task-progress-log').empty();
+        
+        // Reset progress bar color
+        $('.task-progress-bar').css('background-color', '#2271b1');
         
         // Update title
         $('.task-title').text('Task in Progress: Image Folder Cleanup');
